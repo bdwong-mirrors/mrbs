@@ -275,11 +275,12 @@ if ($debug_flag)
             {
 	    echo "<SCRIPT language=\"JavaScript\" type=\"text/javascript\" src=\"xbLib.js\"></SCRIPT>\n";
             echo "<SCRIPT language=\"JavaScript\">InitActiveCell("
-               . ($show_plus_link ? "true" : "false") . ", "
-               . "true, "
-               . ((FALSE != $times_right_side) ? "true" : "false") . ", "
-               . "\"$highlight_method\", "
-               . "\"" . get_vocab("click_to_reserve") . "\""
+               . ($show_plus_link ? "true" : "false") . ", "			// Show (+)
+               . "true, "							// Highlight left title column
+               . ((FALSE != $times_right_side) ? "true" : "false") . ", "	// Highlight right title column
+               . "\"$highlight_method\", "					// "bgcolor", "class", or "hybrid"
+               . "\"" . get_vocab("click_to_reserve") . "\", "			// Status bar message
+	       . "2"								// Drag effect: 0=None; 1=Rectangle; 2=Columns; 3=Rows
                . ");</SCRIPT>\n";
             }
 

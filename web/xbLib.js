@@ -6,10 +6,8 @@
  * $Id$
  */
 
-var doAlert = false;
-var xbDump = function(string, tag) {return;} // If indeed not defined, define as a dummy routine.
-
-// var xbDump = function(string, tag) {alert(string);} // If indeed not defined, define as a dummy routine.
+if (!window.doAlert) var doAlert = false;
+if (!window.xbDump) var xbDump = function(string, tag) {return;} // If indeed not defined, define as a dummy routine.
 
 if (doAlert) alert("Started xbLib.js v4");
 xbDump("Started xbLib.js v4");
@@ -22,12 +20,12 @@ xbDump("Started xbLib.js v4");
 function xblGetNodeBgColor(node)
     {
     if (!node) return null;
-    xbDump("node.bgColor = " + (node.bgColor ? node.bgColor : "<undefined>"));
+//    xbDump("node.bgColor = " + (node.bgColor ? node.bgColor : "<undefined>"));
     if (node.style)
 	{
-        xbDump("node.style.getPropertyValue(\"background-color\") = " + (node.style.getPropertyValue ? ("\""+node.style.getPropertyValue("background-color")+"\"") : "<undefined>"));
-        xbDump("node.style.getAttribute(\"backgroundColor\") = " + (node.style.getAttribute ? ("\""+node.style.getAttribute("backgroundColor")+"\"") : "<undefined>"));
-        xbDump("node.style.backgroundColor = " + (node.style.backgroundColor ? node.style.backgroundColor : "<undefined>"));
+//        xbDump("node.style.getPropertyValue(\"background-color\") = " + (node.style.getPropertyValue ? ("\""+node.style.getPropertyValue("background-color")+"\"") : "<undefined>"));
+//        xbDump("node.style.getAttribute(\"backgroundColor\") = " + (node.style.getAttribute ? ("\""+node.style.getAttribute("backgroundColor")+"\"") : "<undefined>"));
+//        xbDump("node.style.backgroundColor = " + (node.style.backgroundColor ? node.style.backgroundColor : "<undefined>"));
 	if (node.style.getPropertyValue)	// If DOM level 2 supported, the NS 6 way
             {
             return node.style.getPropertyValue("background-color");
@@ -155,13 +153,8 @@ function ForEachChild(obj, callback, ref)
   {
   if (!obj) return null;
   
-  var children = null;
-  if (obj.childNodes)           // DOM-compliant browsers
-    children = obj.childNodes;
-  else if (obj.children)        // Pre-DOM browsers like Opera 6
-    children = obj.children;
-  else
-    return null;
+  var children = xblChildNodes(obj);
+  if (!children) return null;
     
   var nChildren = children.length;
   for (var i=0; i<nChildren; i++) 
@@ -214,6 +207,56 @@ function ForEachDescendant(obj, callback, ref)
   return result;
   }
 
+//----------------------------------------------------//
+
+function GetNodeType(node)
+  {
+  if (!node) return "null";
+  if (node.tagName) return node.tagName;	// DOM-compliant tag name.
+  if (node.nodeName) return node.nodeName;	// Implicit nodes, such as #text.
+  if (window.xbDebugPersistToString) return xbDebugPersistToString(node);
+  return "Unknown";
+  }
+
+// Debug routine for getting a canonic DOM pathname to a node.
+function GetNodePathname(node)
+  {
+  var name = null;
+  for (lastnode = null; node && (node != lastnode); lastnode = node, node = node.parentNode)
+    {
+    var nodename = GetNodeType(node);
+    var siblings = xblChildNodes(node.parentNode);
+    if (siblings)
+      {
+      var nSiblings = siblings.length;
+      var nAkin = 0;
+      var iAkin = -1;
+      for (var i=0; i<nSiblings ; i++) 
+        {
+        var siblingname = GetNodeType(siblings[i]);
+        if (siblingname && (siblingname == nodename))
+          {
+          if (siblings[i] == node) iAkin = nAkin;
+          nAkin += 1;
+          }
+        }
+      if ((nAkin > 1) && (iAkin >= 0)) nodename = nodename + "[" + iAkin + "]";
+      }
+    if (name)
+      name = nodename + "." + name;
+    else
+      name = nodename;
+    }
+  return name;
+  }
+
+function GetAncestor(node, type)
+  {
+  for (node=node.parentNode; node; node=node.parentNode)
+    { if (node.tagName == type) return node; }
+  return null;
+  }
+
 /*****************************************************************************\
 *            Part 2: MRBS-specific Active Cell Management routines            *
 \*****************************************************************************/
@@ -226,6 +269,7 @@ var highlight_left_column = false;
 var highlight_right_column = false;
 var highlightColor = "#999999"; // Default highlight color, if we don't find the one in the CSS.
 var statusBarMsg = "Click on the cell to make a reservation."; // Message to write on the status bar when activating a cell.
+var areaType = 0;	// The effect of clicking and dragging. 0=None; 1=Rectangle; 2=Columns; 3=Rows.
 
 // Duplicate at JavaScript level the relevant PHP configuration variables.
 var show_plus_link = true;
@@ -296,6 +340,7 @@ function SearchTdHighlight(rule, ref)	// Callback called by the CSS scan routine
 |                   Boolean right	Whether to highlight the right column.|
 |                   String method	One of "bgcolor", "class", "hybrid".  |
 |                   String message      The message to put on the status bar. |
+|		    Integer area        0=None; 1=Rectangle; 2=Columns; 3=Rows.
 |									      |
 |   Returns:        Nothing.						      |
 |									      |
@@ -327,13 +372,16 @@ function SearchTdHighlight(rule, ref)	// Callback called by the CSS scan routine
 *									      *
 \*---------------------------------------------------------------------------*/
 
-function InitActiveCell(show, left, right, method, message)
+function InitActiveCell(show, left, right, method, message, area)
     {
     show_plus_link = show;
     highlight_method = method;
     highlight_left_column = left;
     highlight_right_column = right;
     statusBarMsg = message;
+    areaType = area;
+
+    // document.write("<table id=\"test_table\" onClick=\"document.write(msg);\" border=1><h1>xbDump</h1></table>\n");
 
     xbDump("show_plus_link = " + show_plus_link);
     xbDump("highlight_method = " + highlight_method);
@@ -360,9 +408,18 @@ function InitActiveCell(show, left, right, method, message)
     var useCssClass = ((highlight_method=="class") && test_table && test_table.style
                        && (test_table.style.setProperty || test_table.style.setAttribute) && true);
     if (useCssClass)			// DOM-compliant browsers
-        GetNodeColorClass = function(node) { return node.className; }
+        GetNodeColorClass = function(node) 
+	    {
+            // xbDump("GetNodeColorClass<css>() returns " + (node.className ? node.className : "<undefined>"));
+	    return node.className;
+	    }
     else					// Pre-DOM browsers like Opera 6
-        GetNodeColorClass = function(node) { return xblGetNodeBgColor(node); } // Can't get class, so get color.
+        GetNodeColorClass = function(node)
+	    {
+	    color = xblGetNodeBgColor(node);
+            // xbDump("GetNodeColorClass<dhtml>() returns " + (color ? color : "<undefined>"));
+	    return color;
+	    } // Can't get class, so get color.
 
     xbDump("JavaScript feature detection: Table class setting supported = " + useCssClass);
 
@@ -388,13 +445,13 @@ function InitActiveCell(show, left, right, method, message)
     if (useCssClass)			 // DOM-compliant browsers
         SetNodeColorClass = function(node, colorClass) 
             { 
-            xbDump("SetNodeColorClass(" + colorClass + ")");
+            // xbDump("SetNodeColorClass<css>(" + colorClass + ")");
             node.className = colorClass;  // Use the TD.highlight color from mrbs.css.
             }
     else				 // Pre-DOM browsers like Opera 6
         SetNodeColorClass = function(node, colorClass) 
             {
-            xbDump("SetNodeColorClass(" + colorClass + ")");
+            // xbDump("SetNodeColorClass<dhtml>(" + colorClass + ")");
             if (colorClass == "highlight") colorClass = highlightColor; // Cannot use the CSS color class. Use the color computed above.
             xblSetNodeBgColor(node, colorClass);
             }
@@ -402,27 +459,34 @@ function InitActiveCell(show, left, right, method, message)
 
 //----------------------------------------------------//
 
-// Cell activation
-function HighlightNode(node)	// Change one TD cell color class
+var rootCell = null;	// The first link cell clicked.
+var firstCell = null;	// The top-left corner.
+var lastCell = null;	// The bottom-right corner.
+
+// Cell coloration
+function HighlightNode(node)	// Change one TD cell color class -> highlight color.
     {
-    node.oldColorClass = GetNodeColorClass(node);
+    if (!node.oldColorClassSet)
+    {
+	node.oldColorClassSet = true;
+	node.oldColorClass = GetNodeColorClass(node); // Remember the initial color. (may be null)
+	}
     SetNodeColorClass(node, "highlight");
     }
-function ActivateCell(cell)	// Activate the TD cell under the mouse, and optionally the corresponding hour cells on both sides of the table.
+function LightOffNode(node)	// Change one TD cell color class -> initial color.
     {
-    if (cell.isActive) return;	// Prevent problems with reentrancy. (It happens on slow systems)
-    cell.isActive = true;
-    if (statusBarMsg) window.status = statusBarMsg; // Write into the status bar.
-    // First find the enclosing table data cell.
-    for (var tdCell=cell.parentNode; tdCell; tdCell=tdCell.parentNode)
-	{ if (tdCell.tagName == "TD") break; }
+    if (node.oldColorClassSet) SetNodeColorClass(node, node.oldColorClass);
+    }
+
+// Active side columns coloration
+function SetSidesLight(tdCell, lightProc)	// Change TD cell + both side columns cells.
+    {
     if (!tdCell) return;
-    HighlightNode(tdCell);
     if (highlight_left_column)
         {
         // Locate the head node for the current row.
         var leftMostCell = xblFirstSibling(tdCell);
-        if (leftMostCell) HighlightNode(leftMostCell);
+        if (leftMostCell) lightProc(leftMostCell);
         }
     if (highlight_right_column)
         {
@@ -430,34 +494,265 @@ function ActivateCell(cell)	// Activate the TD cell under the mouse, and optiona
         var rightMostCell = xblLastSibling(tdCell);
         // Now work around a Netscape peculiarity: The #text object is a sibling and not a child of the TD!
         while (rightMostCell && (rightMostCell.tagName != "TD")) rightMostCell = rightMostCell.previousSibling;
-        if (rightMostCell) HighlightNode(rightMostCell);
+        if (rightMostCell) lightProc(rightMostCell);
         }
     }
+
+// Active cell + side columns coloration
+function SetNodesLight(tdCell, lightProc)	// Change TD cell + both side columns cells.
+    {
+    if (!tdCell) return;
+    lightProc(tdCell);
+    SetSidesLight(tdCell, lightProc);
+    }
+
+// Cross-link all cells together in all 4 directions.
+function PrepareTable(cell)
+        {
+    var row = GetAncestor(cell, "TR");
+    var table = GetAncestor(row, "TABLE");
+    var rows = xblChildNodes(row.parentNode);
+// xbDump("Preparing Table. There are "+rows.length+" rows.");
+    var iRow=0
+    var previousRow = null;
+    for (var i=0; i<rows.length; i++)
+        {
+        row = rows[i];
+// xbDump("Preparing row["+i+"] = " + GetNodePathname(row));
+        if (GetNodeType(row) != "TR") continue;
+        var cells = xblChildNodes(row);
+        var iCol=0;
+        var previousCell = null;
+        var aboveCell = null;
+        if (previousRow) 
+            {
+            aboveCell = previousRow.firstCell;
+            previousRow.rowBelow = row;
+            row.rowAbove = previousRow;
+            }
+        for (var j=0; j<cells.length; j++)
+            {
+            cell = cells[j];
+// xbDump("Preparing cell["+i+","+j+"] = " + GetNodePathname(cell));
+            if (GetNodeType(cell) != "TD") continue;
+            if (!table.firstTdRow) table.firstTdRow = row;
+            if (iCol == 0) row.firstCell = cell;
+            if (aboveCell)
+                {
+                aboveCell.cellBelow = cell;
+                cell.cellAbove = aboveCell;
+                aboveCell = aboveCell.cellRight;
+                }
+            if (previousCell)
+                {
+                cell.cellLeft = previousCell;
+                previousCell.cellRight = cell;
+                }
+            cell.iRow = iRow;
+            cell.iCol = iCol;
+            cell.prepared = true;
+            previousCell = cell;
+            iCol += 1;
+            }
+        previousRow = row;
+        iRow += 1;
+        }
+    // Now MRBS-specific extensions.
+    // First build a linear chain of entries, by row.
+    var lastCell = null;
+    var n = 0;
+    for (row = table.firstTdRow; row; row = row.rowBelow)
+        for (cell = row.firstCell; cell; cell = cell.cellRight)
+            {
+            if (highlight_left_column && (cell.iCol == 0)) continue; // The left time column is not part of the link.
+            if (highlight_right_column && !cell.cellRight) continue; // The right time column, if present, isn't either.
+            if (lastCell) lastCell.cellNextH = cell;
+            cell.cellPrevH = lastCell;
+            cell.ixH = n++;
+            lastCell = cell;
+            }
+    xbDump("Found "+n+" cells in horizontal chain");
+    // Then build a linear chain of entries, by column.
+    var lastCell = null;
+    var n = 0;
+    for (var head = table.firstTdRow.firstCell; head; head = head.cellRight)
+        {
+        if (highlight_left_column && (head.iCol == 0)) continue; // The left time column is not part of the link.
+        if (highlight_right_column && !head.cellRight) continue; // The right time column, if present, isn't either.
+        for (cell = head; cell; cell = cell.cellBelow)
+            {
+            if (lastCell) lastCell.cellNextV = cell;
+            cell.cellPrevV = lastCell;
+            cell.ixV = n++;
+            lastCell = cell;
+            }
+        }
+    xbDump("Found "+n+" cells in vertical chain");
+    }
+
+function GrowRect(fromCell, proc1, proc2, n1, n2, sides)
+    {
+    // xbDump("GrowRect(" + GetNodePathname(fromCell) + ", " + proc1 + ", " + proc2 + ", " + n1 + ", " + n2 + ", " + sides + ")");
+    for (c1 = eval("fromCell.cell"+proc1); n1; --n1 && (c1 = eval("c1.cell"+proc1)))
+        for (c2 = c1, n = n2; n; --n && (c2 = eval("c2.cell"+proc2)))
+            if (sides)
+                SetNodesLight(c2, HighlightNode);
+            else
+                HighlightNode(c2);
+    return c1;
+        }
+
+function ShrinkRect(fromCell, proc1, proc2, n1, n2, sides)
+        {
+    // xbDump("ShrinkRect(" + GetNodePathname(fromCell) + ", " + proc1 + ", " + proc2 + ", " + n1 + ", " + n2 + ", " + sides + ")");
+    for (c1 = fromCell; n1; --n1 && (c1 = eval("c1.cell"+proc1)))
+        for (c2 = c1, n = n2; n; --n && (c2 = eval("c2.cell"+proc2)))
+            if (sides)
+                SetNodesLight(c2, LightOffNode);
+            else
+                LightOffNode(c2);
+    return eval("c1.cell"+proc1);
+    }
+
+function GrowChain(from, to, proc)
+    {
+    // xbDump("GrowChain(" + GetNodePathname(from) + ", " + GetNodePathname(to) + ", " + proc + ")");
+    if (from.iRow != to.iRow)
+	{
+	SetSidesLight(from, LightOffNode);
+	SetSidesLight(to, HighlightNode);
+	}
+    while (from != to)
+	{
+	from = eval("from.cell"+proc);
+        HighlightNode(from);
+	}
+    return to;
+    }
+
+function ShrinkChain(from, to, proc)
+    {
+    // xbDump("ShrinkChain(" + GetNodePathname(from) + ", " + GetNodePathname(to) + ", " + proc + ")");
+    if (from.iRow != to.iRow)
+	{
+	SetSidesLight(from, LightOffNode);
+	SetSidesLight(to, HighlightNode);
+	}
+    while (from != to)
+	{
+        LightOffNode(from);
+	from = eval("from.cell"+proc);
+	}
+    return to;
+    }
+
+// Cell activation
+function ActivateCell(cell)	// Activate the TD cell under the mouse, and optionally the corresponding hour cells on both sides of the table.
+    {
+    xbDump("ActivateCell(" + GetNodePathname(cell) + ")");
+    // Find the enclosing table data cell, since we fired on the hidden inner table.
+    td = GetAncestor(cell, "TD");
+    if (!td.prepared) PrepareTable(td);
+    if (td.isActive) return;	// Prevent problems with reentrancy. (It happens on slow systems)
+    td.isActive = true;
+    if (statusBarMsg) window.status = statusBarMsg; // Write into the status bar.
+    // Highlight the cells and exit, unless we're in a click-drag operation.
+    if (!rootCell) { SetNodesLight(td, HighlightNode); return; }
+    // Else we're in a click-drag operation. Update the area.
+    switch (areaType)
+	{
+	case 1:	// Rectangle.
+    if (td.iRow < firstCell.iRow)					// Top side grew?
+	firstCell = GrowRect(firstCell, "Above", "Right", firstCell.iRow-td.iRow, lastCell.iCol+1-firstCell.iCol, 1);
+    else if (td.iRow > lastCell.iRow)					// Bottom side grew?
+	lastCell = GrowRect(lastCell, "Below", "Left",td.iRow-lastCell.iRow, lastCell.iCol+1-firstCell.iCol, 1);
+    else if ((firstCell.iRow < td.iRow) && (td.iRow <= rootCell.iRow))	// Top side shrank?
+	firstCell = ShrinkRect(firstCell, "Below", "Right", td.iRow-firstCell.iRow, lastCell.iCol+1-firstCell.iCol, 1);
+    else if ((rootCell.iRow <= td.iRow) && (td.iRow < lastCell.iRow))	// Bottom side shrank?
+	lastCell = ShrinkRect(lastCell, "Above", "Left", lastCell.iRow-td.iRow, lastCell.iCol+1-firstCell.iCol, 1);
+
+    if (td.iCol < firstCell.iCol)					// Left side grew?
+	firstCell = GrowRect(firstCell, "Left", "Below", firstCell.iCol-td.iCol, lastCell.iRow+1-firstCell.iRow, 0);
+    else if (td.iCol > lastCell.iCol)					// Right side grew?
+	lastCell = GrowRect(lastCell, "Right", "Above", td.iCol-lastCell.iCol, lastCell.iRow+1-firstCell.iRow, 0);
+    else if ((firstCell.iCol < td.iCol) && (td.iCol <= rootCell.iCol))	// Left side shrank?
+	firstCell = ShrinkRect(firstCell, "Right", "Below", td.iCol-firstCell.iCol, lastCell.iRow+1-firstCell.iRow, 0);
+    else if ((rootCell.iCol <= td.iCol) && (td.iCol < lastCell.iCol))	// Right side shrank?
+	lastCell = ShrinkRect(lastCell, "Left", "Above", lastCell.iCol-td.iCol, lastCell.iRow+1-firstCell.iRow, 0);
+	    break;
+
+	case 2:	// Columns.
+    if ((lastCell == rootCell) && (td != firstCell))			// Beginning moved?
+        {
+        if (td.ixV < firstCell.ixV)					    // Beginning grew?
+            firstCell = GrowChain(firstCell, td, "PrevV");
+	else if (td.ixV < rootCell.ixV)					    // Shrank towards the center?
+	    firstCell = ShrinkChain(firstCell, td, "NextV");
+	else								    // Else moved right past the center.
+	    {
+	    firstCell = ShrinkChain(firstCell, rootCell, "NextV");
+	    lastCell = GrowChain(rootCell, td, "NextV");
+	    }
+        }
+    else if ((firstCell == rootCell) && (td != lastCell))		// End Moved?
+        {
+        if (td.ixV > lastCell.ixV)					    // End grew?
+            lastCell = GrowChain(lastCell, td, "NextV");
+	if (td.ixV > rootCell.ixV)					    // Shrank towards the center?
+	    lastCell = ShrinkChain(lastCell, td, "PrevV");
+	else								    // Else moved left past the center.
+	    {
+	    lastCell = ShrinkChain(lastCell, rootCell, "PrevV");
+	    firstCell = GrowChain(rootCell, td, "PrevV");
+        }
+    }
+    else xbDump("No column move needed");
+	    break;
+
+	case 3:	// Rows.
+    if ((lastCell == rootCell) && (td != firstCell))			// Beginning moved?
+        {
+        if (td.ixH < firstCell.ixH)					    // Beginning grew?
+            firstCell = GrowChain(firstCell, td, "PrevH");
+	else if (td.ixH < rootCell.ixH)					    // Shrank towards the center?
+	    firstCell = ShrinkChain(firstCell, td, "NextH");
+	else								    // Else moved right past the center.
+	    {
+	    firstCell = ShrinkChain(firstCell, rootCell, "NextH");
+	    lastCell = GrowChain(rootCell, td, "NextH");
+	    }
+        }
+    else if ((firstCell == rootCell) && (td != lastCell))		// End Moved?
+        {
+        if (td.ixH > lastCell.ixH)					    // End grew?
+            lastCell = GrowChain(lastCell, td, "NextH");
+	if (td.ixH > rootCell.ixH)					    // Shrank towards the center?
+	    lastCell = ShrinkChain(lastCell, td, "PrevH");
+	else								    // Else moved left past the center.
+	    {
+	    lastCell = ShrinkChain(lastCell, rootCell, "PrevH");
+	    firstCell = GrowChain(rootCell, td, "PrevH");
+	    }
+	}
+    else xbDump("No row move needed");
+	    break;
+
+	default:
+	    break;
+	}
+    }
+
 // Cell unactivation
 function UnactivateCell(cell)
     {
-    if (!cell.isActive) return; // Prevent problems with reentrancy.
-    cell.isActive = null;
+    xbDump("UnactivateCell(" + GetNodePathname(cell) + ")");
+    // Find the enclosing table data cell, since we fired on the hidden inner table.
+    td = GetAncestor(cell, "TD");
+    if (!td.isActive) return; // Prevent problems with reentrancy.
+    td.isActive = null;
     window.status = "";		// Clear the status bar.
-    // First find the enclosing table data cell.
-    for (var tdCell=cell.parentNode; tdCell; tdCell=tdCell.parentNode)
-	{ if (tdCell.tagName == "TD") break; }
-    if (!tdCell) return;
-    SetNodeColorClass(tdCell, tdCell.oldColorClass);
-    if (highlight_left_column)
-        {
-        // Locate the head node for the current row.
-        var leftMostCell= xblFirstSibling(tdCell);
-        if (leftMostCell) SetNodeColorClass(leftMostCell, leftMostCell.oldColorClass);
-        }
-    if (highlight_right_column)
-        {
-        // Locate the last node for the current row. (Only when configured to display times at right too.)
-        var rightMostCell = xblLastSibling(tdCell);
-        // Now work around a NetScape peculiarity: The #text object is a sibling and not a child of the TD!
-        while (rightMostCell && (rightMostCell.tagName != "TD")) rightMostCell = rightMostCell.previousSibling;
-        if (rightMostCell) SetNodeColorClass(rightMostCell, rightMostCell.oldColorClass);
-        }
+    // Remove the highlight colors, unless we're in a click-drag operation.
+    if (!rootCell) SetNodesLight(td, LightOffNode);
     }
 
 xbDump("Cell activation routines defined.");
@@ -467,47 +762,111 @@ xbDump("Cell activation routines defined.");
 // Cell click handling
 
 // Callback used to find the A link inside the cell clicked.
-function GotoLinkCB(node, ref)
-{
+function GetLinkCB(node, ref)
+    {
     var tag = null;
     if (node.tagName) tag = node.tagName;		// DOM-compliant tag name.
     else if (node.nodeName) tag = node.nodeName;	// Implicit nodes, such as #text.
     if (tag && (tag.toUpperCase() == "A")) return node;
     return null;
-}
+    }
+
+function GetLink(node)
+    {
+    link = ForEachDescendant(node, GetLinkCB, null);
+    if (!link) return null;
+    return link.href;
+    }
 
 // Handler for going to the period reservation edition page.
 function GotoLink(node)
-{
-    xbDump("GotoLink()");
-    link = ForEachDescendant(node, GotoLinkCB, null);
-    if (link) window.location = link.href;
-}
+    {
+    xbDump("GotoLink(" + GetNodePathname(node) + ")");
+    // Sometimes, we miss the mouseUp event. (IE6 sometimes, and Opera 6 always)
+    // Allow clicking in the active area to validate the selected area.
+    if (rootCell) MarkLastCell(node);
+    // Normal case: Follow the link.
+    link = GetLink(node);
+    if (link) window.location = link;
+    }
 
 xbDump("Cell click handlers defined.");
+
+//----------------------------------------------------//
+
+function MarkFirstCell(cell) // Invoked onMouseDown events.
+    {
+    xbDump("MarkFirstCell(" + GetNodePathname(cell) + ")");
+    if (!rootCell) // Avoid doing it twice (Fix for Opera 6 where a mouseDown event occurs before every click event).
+	{
+        // Find the enclosing table data cell, since we fired on the hidden inner table.
+        cell = GetAncestor(cell, "TD");
+        rootCell = firstCell = lastCell = cell;
+	}
+    return false; // Prevent browser default drag action.
+    }
+
+function MarkLastCell(cell) // Invoked onMouseUp events.
+    {
+    xbDump("MarkLastCell(" + GetNodePathname(cell) + ")");
+    var link = null;
+    if (rootCell) // Don't do anything if MouseDown occured out of the active zone.
+	{
+        // Find the enclosing table data cell, since we fired on the hidden inner table.
+        var tdCell = GetAncestor(cell, "TD");
+        if ((rootCell == firstCell) && (rootCell == lastCell) && (rootCell != tdCell))
+            { // Some browsers (IE5, O6) don't generate mouse move events while the button is down.
+            ActivateCell(cell);       // So in this case, record the movement done.
+            }
+        // Build the link to the reservation edit page.
+        link = GetLink(firstCell);
+        link += "&nperiods=" + (lastCell.iRow + 1 - firstCell.iRow);
+        link += "&nrooms=" + (lastCell.iCol + 1 - firstCell.iCol);
+        link += "&shape=" + areaType;
+        // Erase the highlighted zone. This allows reusing the page later on.
+        switch (areaType)
+            {
+            case 1: // Rectangle.
+                ShrinkRect(firstCell, "Right", "Below", lastCell.iCol+1-firstCell.iCol, lastCell.iRow+1-firstCell.iRow, 1);
+                break;
+            case 2: // Vertical chain.
+                ShrinkChain(firstCell, lastCell, "NextV");
+                break;
+            case 3: // Horizontal chain.
+                ShrinkChain(firstCell, lastCell, "NextH");
+                break;
+            default:
+                break;
+            }
+        }
+    // Cleanup state variables.
+    rootCell = firstCell = lastCell = null;
+    // And finally jump to the reservation edit page.
+    if (link) window.location = link;
+    }
 
 //----------------------------------------------------//
 
 // Cell content generation
 
 function BeginActiveCell()
-{
+    {
     if (useJS)
         {
-        document.write("<table class=\"naked\" width=\"100%\" cellSpacing=\"0\" onMouseOver=\"ActivateCell(this)\" onMouseOut=\"UnactivateCell(this)\" onClick=\"GotoLink(this)\">\n<td class=\"naked\">\n");
+        document.write("<table class=\"naked\" width=\"100%\" cellSpacing=\"0\" onMouseOver=\"ActivateCell(this)\" onMouseOut=\"UnactivateCell(this)\" onMouseDown=\"MarkFirstCell(this)\" onMouseUp=\"MarkLastCell(this)\" onClick=\"GotoLink(this)\">\n<td class=\"naked\">\n");
 	// Note: The &nbsp; below is necessary to fill-up the cell. Empty cells behave badly in some browsers.
         if (!show_plus_link) document.write("&nbsp;<div style=\"display:none\">\n"); // This will hide the (+) link.
         }
-}
+    }
 
 function EndActiveCell()
-{
+    {
     if (useJS)
         {
         if (!show_plus_link) document.write("</div>");
         document.write("</td></table>\n");
         }
-}
+    }
 
 xbDump("Cell content generation routines defined.");
 

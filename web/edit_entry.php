@@ -9,6 +9,9 @@ include "mrbs_auth.inc";
 
 global $twentyfourhour_format;
 
+$edit_series = true;
+$room_order = "room_name";
+
 #If we dont know the right date then make it up
 if(!isset($day) or !isset($month) or !isset($year))
 {
@@ -128,7 +131,7 @@ else
 {
 	# It is a new booking. The data comes from whichever button the user clicked
 	$edit_type   = "series";
-	$name        = "";
+	$name        = getUserName();
 	$create_by   = getUserName();
 	$description = "";
 	$start_day   = $day;
@@ -137,7 +140,32 @@ else
     // Avoid notices for $hour and $minute if periods is enabled
     (isset($hour)) ? $start_hour = $hour : '';
 	(isset($minute)) ? $start_min = $minute : '';
+	if (isset($nperiods))
+		{
+		if ($enable_periods)
+			$duration    = 60 * $nperiods;
+		else
+			$duration    = $nperiods * $resolution;
+		if (isset($shape)) switch ($shape)
+			{
+			case 1: // Rectangle.
+				break;
+			case 2: // Vertical chain.
+				$duration += (24 * ($nrooms-1) * ($enable_periods ? 60 : 60 * 60));
+				$nrooms = 1;
+				break;
+			case 3: // Horizontal chain.
+				$nrooms = 1;
+				break;
+			default:
+				$nrooms = 1;
+				break;
+			}
+		}
+	else
+		{
 	$duration    = ($enable_periods ? 60 : 60 * 60);
+		}
 	$type        = "I";
 	$room_id     = $room;
     unset($id);
@@ -381,7 +409,7 @@ function changeRooms( formObj )
 
                 print "      case \"".$row[0]."\":\n";
         	# get rooms for this area
-		$sql2 = "select id, room_name from $tbl_room where area_id='".$row[0]."' order by room_name";
+		$sql2 = "select id, room_name from $tbl_room where area_id='".$row[0]."' order by $room_order";
         	$res2 = sql_query($sql2);
 		if ($res2) for ($j = 0; ($row2 = sql_row($res2, $j)); $j++)
 		{
@@ -424,15 +452,22 @@ this.document.writeln("</td></tr>");
   <td class=CL valign=top><table><tr><td><select name="rooms[]" multiple="yes">
   <?php
         # select the rooms in the area determined above
-	$sql = "select id, room_name from $tbl_room where area_id=$area_id order by room_name";
+	$sql = "select id, room_name from $tbl_room where area_id=$area_id order by $room_order";
    	$res = sql_query($sql);
 
+	if (!isset($nrooms)) $nrooms = 1;
+	$nroomsleft = 0;
 
    	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
    	{
 		$selected = "";
 		if ($row[0] == $room_id) {
 			$selected = "SELECTED";
+			$nroomsleft = $nrooms;
+		}
+		if ($nroomsleft) {
+			$selected = "SELECTED";
+			$nroomsleft -= 1;
 		}
 		echo "<option $selected value=\"".$row[0]."\">".$row[1];
         // store room names for emails
@@ -451,6 +486,8 @@ for ($c = "A"; $c <= "J"; $c++)
 		echo "<OPTION VALUE=$c" . ($type == $c ? " SELECTED" : "") . ">$typel[$c]\n";
 }
 ?></SELECT></TD></TR>
+
+<?php if ($edit_series) { ?>
 
 <?php if($edit_type == "series") { ?>
 
@@ -535,6 +572,8 @@ if ( ( !isset( $id ) ) Xor ( isset( $rep_type ) && ( $rep_type != 0 ) && ( "seri
  <TD CLASS=CL><INPUT TYPE=TEXT NAME="rep_num_weeks" VALUE="<?php echo $rep_num_weeks?>">
 </TR>
 <?php } ?>
+
+<?php } ?><!-- End if ($edit_series) -->
 
 <TR>
  <TD colspan=2 align=center>
