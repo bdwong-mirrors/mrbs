@@ -63,7 +63,7 @@ if (!in_array("$tbl_users", $nusers))
             ),
    	    'email'		=> array(
        		'type'		=> 'text',
-           	'length'	=> 50
+           	'length'	=> 75
             )
    	);
     $r = $mdb->createTable($tbl_users, $fields);
@@ -288,7 +288,7 @@ if (isset($Action) && ($Action == "Update"))
         {
             if ($field_name[$i]=="id") $Field[$i] = $Id;
             if ($field_name[$i]=="name") $Field[$i] = strtolower($Field[$i]);
-            if (($field_name[$i]=="password") && ($password0!="")) $Field[$i]=$password0;
+            if (($field_name[$i]=="password") && ($password0!="")) $Field[$i]=md5($password0);
             if ((stristr($field_type[$i], "integer")) && ($Field[$i] == "")) $Field[$i] = "0";
 
         	$replaced_fields[$field_name[$i]] = array(
@@ -318,7 +318,7 @@ if (isset($Action) && ($Action == "Update"))
         {
         	if ($field_name[$i]=="id") $Field[$i] = $Id;
         	if ($field_name[$i]=="name") $Field[$i] = strtolower($Field[$i]);
-        	if (($field_name[$i]=="password") && ($password0!="")) $Field[$i]=$password0;
+        	if (($field_name[$i]=="password") && ($password0!="")) $Field[$i]=md5($password0);
         	/* print "$field_name[$i] = $Field[$i]<br>"; */
         	if ($i > 0) $operation = $operation . ", ";
         	//if (stristr($field_type[$i], "char")) $operation .= "'";
