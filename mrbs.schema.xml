@@ -108,7 +108,7 @@
    <field>
     <name>create_by</name>
     <type>text</type>
-    <length>25</length>
+    <length>80</length>
     <notnull>1</notnull>
     <default></default>
    </field>
@@ -234,7 +234,7 @@
    <field>
     <name>create_by</name>
     <type>text</type>
-    <length>25</length>
+    <length>80</length>
     <notnull>1</notnull>
     <default></default>
    </field>
