@@ -12,7 +12,7 @@ require "mrbs_auth.inc";
 global $tbl_area;
 global $tbl_room;
 
-if(!getAuthorised(getUserName(), getUserPassword(), 2))
+if(!getAuthorised(2))
 {
 	showAccessDenied($day, $month, $year, $area);
 	exit();
