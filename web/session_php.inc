@@ -26,7 +26,7 @@ if (isset($Action) && ($Action == "SetName"))
     /* First make sure the password is valid */
     if (($NewUserName != "") && (!authValidateUser($NewUserName, $NewUserPassword)))
     {
-        print_header(0, 0, 0, 0);
+        print_header(0, 0, 0, 0, "ActivateName");
         echo "<P>".get_vocab('unknown_user')."</P>\n";
         printLoginForm($TargetURL);
         exit();
@@ -64,6 +64,16 @@ function printLoginForm($TargetURL)
 {
     global $PHP_SELF;
 ?>
+<script language="JavaScript">
+<!-- Begin
+function ActivateName() { // Activate the name field in the form.
+  if (document.getElementById) {
+    nameField = document.getElementById("NameField");
+    if (nameField) nameField.focus();
+  }
+}
+// End -->
+</script>
 <p>
   <?php echo get_vocab("please_login") ?>
 </p>
@@ -71,16 +81,16 @@ function printLoginForm($TargetURL)
   <table>
     <tr>
       <td align="right"><?php echo get_vocab("user_name") ?></td>
-      <td><input type="text" name="NewUserName" /></td>
+      <td><input type="text" id="NameField" name="NewUserName" tabindex="1" /></td>
     </tr>
     <tr>
       <td align="right"><?php echo get_vocab("user_password") ?></td>
-      <td><input type="password" name="NewUserPassword" /></td>
+      <td><input type="password" name="NewUserPassword" tabindex="2" /></td>
     </tr>
   </table>
   <input type="hidden" name="TargetURL" value="<?php echo $TargetURL ?>" /> <br />
   <input type="hidden" name="Action" value="SetName" /> <br />
-  <input type="submit" value=" <?php echo get_vocab('login') ?> " /> <br />
+  <input type="submit" value=" <?php echo get_vocab('login') ?> " tabindex="3" /> <br />
 </form>
 </body>
 </html>
@@ -93,7 +103,7 @@ function printLoginForm($TargetURL)
 */
 if (isset($Action) && ($Action == "QueryName"))
 {
-    print_header(0, 0, 0, 0);
+    print_header(0, 0, 0, 0, "ActivateName");
     printLoginForm($TargetURL);
     exit();
 }
@@ -108,7 +118,7 @@ function authGet()
 {
     global $PHP_SELF, $QUERY_STRING;
 
-    print_header(0, 0, 0, 0);
+    print_header(0, 0, 0, 0, "ActivateName");
 
     echo "<p>".get_vocab("norights")."</p>\n";
 

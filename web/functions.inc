@@ -11,7 +11,7 @@ if (!isset($pview)) {
 }
 
 function print_header($day, $month, $year, $area)
-{
+{ # Note: A 5th optional argument defines the name of a JavaScript procedure to call on body load.
 	global $mrbs_company, $search_str, $locale_warning;
 
 	# If we dont know the right date then make it up 
@@ -135,7 +135,8 @@ function ChangeOptionDays(formObj, prefix)
   //  End -->
   </SCRIPT>
  </HEAD>
- <BODY BGCOLOR="#ffffed" TEXT=black LINK="#5B69A6" VLINK="#5B69A6" ALINK=red>
+ <BODY BGCOLOR="#ffffed" TEXT=black LINK="#5B69A6" VLINK="#5B69A6" ALINK=red 
+       <?php if (func_num_args() > 4) echo "ONLOAD=\"".func_get_arg(4)."()\""; ?> >
 	   <?php if ( $GLOBALS["pview"] != 1 ) { ?>
 
    <?php # show a warning if this is using a low version of php
