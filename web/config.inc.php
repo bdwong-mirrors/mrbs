@@ -402,6 +402,9 @@ $typel["E"] = get_vocab("external");
 $typel["I"] = get_vocab("internal");
 # $typel["J"] = "J";
 
+# define the number of types per row in the color-key
+#$color_key_types_per_row = 5;
+
 ##########################################
 # PHP System Configuration - internal use, do not change
 ##########################################

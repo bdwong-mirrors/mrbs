@@ -581,9 +581,16 @@ Note: Upgrading mysql database from previous charsets to Unicode :
 
 8. Entry Types:
 
-By default, MRBS defines two "meeting types" - internal and external. There
-are a total of 10 types ready to be used, if you assign names to them in
-your config.inc.php file. Each type has a color, defined in the style sheet.
+By default, MRBS defines two "meeting types" - 'internal' and 'external'. There
+are a total of 10 types ready to be used (A - J), if you assign names to them
+in your config.inc.php file. Each type has a color, defined in the style sheet.
+MRBS will also support types K to Z, however colors have not been defined for
+these in the style sheet nor have mock entries been created in the
+config.inc.php file.
+
+$color_key_types_per_row
+allows you to define the number of columns per row in the color_key that
+appears at the foot of the day and week views.
 
 
 HELP/FAQ File:

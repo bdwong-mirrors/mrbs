@@ -457,15 +457,22 @@ function tdcell($colclass)
 function show_colour_key()
 {
 	global $typel;
+	global $color_key_types_per_row;
+	
+	$types_per_row =
+		(($color_key_types_per_row && $color_key_types_per_row > 0)
+			? $color_key_types_per_row : "5");
+	
 	echo "<table border=0><tr>\n";
 	$nct = 0;
-	for ($ct = "A"; $ct <= "J"; $ct++)
+	for ($letter = ord('A'); $letter <= ord('Z'); $letter++)
 	{
+		$ct = chr($letter);	
 		if (!empty($typel[$ct]))
 		{
-			if (++$nct > 5)
+			if (++$nct > $types_per_row)
 			{
-				$nct = 0;
+				$nct = 1;
 				echo "</tr><tr>";
 			}
 			tdcell($ct);
