@@ -291,20 +291,75 @@ function validate_and_submit ()
 
   return true;
 }
+function findOptionIndex(select, val)
+{
+  for (i=0; i<select.length; i++) {
+    if (select.options[i].value == val) return i;
+  }
+  return -1;
+}
 function OnAllDayClick(allday) // Executed when the user clicks on the all_day checkbox.
 {
   form = document.forms["main"];
-  if (allday.checked) // If checking the box...
-  {
-    <?php if( ! $enable_periods ) { ?>
-      form.hour.value = "00";
+  if (form.ampm && !form.ampm.item) form.ampm.item = function(i) {return form.ampm[i]}; // Make IE6 DOM compatible.
+  if (allday.checked) { // If checking the box...
+    form.duration.oldValue = form.duration.value;
+    form.dur_units.oldSelectedIndex = form.dur_units.selectedIndex;
+    <?php if ($enable_periods ) { ?>
+      form.period.oldValue = form.period.value;
+      form.duration.value = form.period.length;
+      form.dur_units.selectedIndex = findOptionIndex(form.dur_units, "periods");
+      form.period.options[0].selected = true;
+      form.period.disabled = true;
+    <?php } else { ?>
+      form.hour.oldValue = form.hour.value;
+      form.minute.oldValue = form.minute.value;
+    <?php
+      $start = $morningstarts;                  # First reservable time
+      if (!$twentyfourhour_format) {
+        echo("form.hour.oldPm = (form.ampm.item(1).checked) ? 1 : 0;\n");
+        $ix = 0;
+        if ($start >= 12) {
+          $ix = 1;
+          $start -= 12;
+        }
+        if ($start == 0) $start = 12;
+        printf("form.ampm.item(%d).checked = true;\n", $ix);
+        echo("form.ampm.item(0).disabled = true;\n");
+        echo("form.ampm.item(1).disabled = true;\n");
+      }
+      printf("form.hour.value = \"%02d\";\n", $start);
+      $daylength = $eveningends - $morningstarts;
+      if ($daylength <= 0) $daylength += 24;      # Just in case the duration is across midnight.
+      printf("form.duration.value = \"%d\";\n", $daylength);
+    ?> // ~~~~
       form.minute.value = "00";
+      form.dur_units.selectedIndex = findOptionIndex(form.dur_units, "hours");
+
+      form.hour.disabled = true;
+      form.minute.disabled = true
     <?php } ?>
-    if (form.dur_units.value!="days") // Don't change it if the user already did.
-    {
-      form.duration.value = "1";
-      form.dur_units.value = "days";
-    }
+    form.duration.disabled = true;
+    form.dur_units.disabled = true;
+  } else {
+    form.duration.disabled = false;
+    form.dur_units.disabled = false;
+    <?php if ($enable_periods ) { ?>
+      form.period.disabled = false;
+      form.period.options[form.period.oldValue].selected = true;
+    <?php } else { ?>
+      form.hour.disabled = false;
+      form.minute.disabled = false
+      <?php if (!$twentyfourhour_format) { ?>
+        form.ampm.item(0).disabled = false;
+        form.ampm.item(1).disabled = false;
+        form.ampm.item(form.hour.oldPm).checked = true;
+      <?php } ?>
+      form.hour.value = form.hour.oldValue;
+      form.minute.value = form.minute.oldValue;
+    <?php } ?>
+    form.duration.value = form.duration.oldValue;
+    form.dur_units.selectedIndex = form.dur_units.oldSelectedIndex;
   }
 }
 </SCRIPT>
