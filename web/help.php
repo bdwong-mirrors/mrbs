@@ -4,6 +4,7 @@
 
 require_once "grab_globals.inc.php";
 include "config.inc.php";
+require_once("database.inc.php");  
 include "$dbsys.inc";
 include "functions.inc";
 

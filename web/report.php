@@ -4,6 +4,8 @@
 require_once "grab_globals.inc.php";
 include "config.inc.php";
 include "functions.inc";
+require_once("database.inc.php");
+MDB::loadFile("Date");
 include "$dbsys.inc";
 
 
@@ -180,7 +182,7 @@ function reporton(&$row, &$last_area_room, &$last_date, $sortby, $display)
 	# Created by and last update timestamp:
 	echo "<tr><td class=\"BL\" colspan=2><small><b>".get_vocab("createdby")."</b> " .
 		htmlspecialchars($row[6]) . ", <b>".get_vocab("lastupdate")."</b> " .
-		date_time_string($row[7]) . "</small></td></tr>\n";
+		date_time_string(MDB_Date::mdbstamp2Unix($row[7])) . "</small></td></tr>\n";
 
 	echo "</table>\n";
 }
@@ -468,13 +470,13 @@ if (isset($areamatch))
 #   9  [8]   Area name, must be HTML escaped
 #  10  [9]   Room name, must be HTML escaped
 
-	$sql = "SELECT e.id, e.start_time, e.end_time, e.name, e.description, "
-		. "e.type, e.create_by, "
-		.  sql_syntax_timestamp_to_unix("e.timestamp")
-		. ", a.area_name, r.room_name"
-		. " FROM $tbl_entry e, $tbl_area a, $tbl_room r"
-		. " WHERE e.room_id = r.id AND r.area_id = a.id"
-		. " AND e.start_time < $report_end AND e.end_time > $report_start";
+    $sql = "SELECT e.id, e.start_time, e.end_time, e.name, e.description,
+            e.type, e.create_by, e.timestamp, a.area_name, r.room_name
+            FROM $tbl_entry e, $tbl_area a, $tbl_room r
+            WHERE e.room_id = r.id 
+            AND r.area_id = a.id
+            AND e.start_time < $report_end 
+            AND e.end_time > $report_start";
 
 	if (!empty($areamatch))
 		$sql .= " AND" .  sql_syntax_caseless_contains("a.area_name", $areamatch);
@@ -510,15 +512,23 @@ if (isset($areamatch))
 		# Order by Start date/time, Area, Room
 		$sql .= " ORDER BY 2,9,10";
 
-	# echo "<p>DEBUG: SQL: <tt> $sql </tt>\n";
+    if ($debug_flag) 
+    {
+        echo "<p>DEBUG: SQL: <tt> $sql </tt>\n";
+    }
 
-	$res = sql_query($sql);
-	if (! $res) fatal_error(0, sql_error());
-	$nmatch = sql_count($res);
-	if ($nmatch == 0)
-	{
+    $types = array('integer', 'integer', 'integer', 'text', 'text', 'text',
+                   'text', 'timestamp', 'text', 'text');
+    $res = $mdb->query($sql, $types);
+    if (MDB::isError($res))
+    {
+        fatal_error(0, $res->getMessage() . "\n" . $res->getUserInfo() . "\n");
+    }
+    $nmatch = $mdb->numRows($res);
+    if ($nmatch == 0)
+    {
 		echo "<P><B>" . get_vocab("nothing_found") . "</B>\n";
-		sql_free($res);
+        $mdb->freeResult($res);
 	}
 	else
 	{
@@ -528,7 +538,7 @@ if (isset($areamatch))
 		. ($nmatch == 1 ? get_vocab("entry_found") : get_vocab("entries_found"))
 		.  "</B>\n";
 
-		for ($i = 0; ($row = sql_row($res, $i)); $i++)
+        while ($row = $mdb->fetchInto($res))
 		{
 			if ($summarize & 1)
 				reporton($row, $last_area_room, $last_date, $sortby, $display);
@@ -541,9 +551,11 @@ if (isset($areamatch))
 					$room_hash, $name_hash)
                                 );
 		}
+        $mdb->freeResult($res);
 		if ($summarize & 2)
 			do_summary($count, $hours, $room_hash, $name_hash);
 	}
 }
 
 include "trailer.inc";
+?>

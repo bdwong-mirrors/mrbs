@@ -6,6 +6,7 @@
 require_once "grab_globals.inc.php";
 include "config.inc.php";
 include "functions.inc";
+require_once("database.inc.php");
 include "$dbsys.inc";
 include "mrbs_auth.inc";
 include "mincals.inc";
@@ -87,22 +88,32 @@ if ( $pview != 1 ) {
   # show either a select box or the normal html list
   if ($area_list_format == "select") {
     echo make_area_select_html('month.php', $area, $year, $month, $day); # from functions.inc
-    $this_area_name = sql_query1("select area_name from $tbl_area where id=$area");
-    $this_room_name = sql_query1("select room_name from $tbl_room where id=$room");
+    $this_area_name = $mdb->queryOne("SELECT    area_name 
+                                      FROM      $tbl_area
+                                      WHERE     id=$area", 'text');
+    $this_room_name = $mdb->queryOne("SELECT    room_name 
+                                      FROM      $tbl_room
+                                      WHERE     id=$room", 'text');
   } else {
-    $sql = "select id, area_name from $tbl_area order by area_name";
-    $res = sql_query($sql);
-    if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
+    $sql = "SELECT      id, area_name 
+            FROM        $tbl_area 
+            ORDER BY    area_name";
+    $types = array('integer', 'text');
+    $res = $mdb->query($sql, $types);
+    if (!MDB::isError($res))
     {
-        if ( $pview != 1 )
-            echo "<a href=\"month.php?year=$year&month=$month&area=$row[0]\">";
-        if ($row[0] == $area)
+        while ($row = $mdb->fetchInto($res))
         {
-            $this_area_name = htmlspecialchars($row[1]);
             if ( $pview != 1 )
-                echo "<font color=\"red\">$this_area_name</font></a><br>\n";
+                echo "<a href=\"month.php?year=$year&month=$month&area=$row[0]\">";
+            if ($row[0] == $area)
+            {
+                $this_area_name = htmlspecialchars($row[1]);
+                if ( $pview != 1 )
+                    echo "<font color=\"red\">$this_area_name</font></a><br>\n";
+            }
+            else if ( $pview !=1 ) echo htmlspecialchars($row[1]) . "</a><br>\n";
         }
-        else if ( $pview !=1 ) echo htmlspecialchars($row[1]) . "</a><br>\n";
     }
   } # end select if
 
@@ -118,18 +129,26 @@ if ( $pview != 1 ) {
   if ($area_list_format == "select") {
     echo make_room_select_html('month.php', $area, $room, $year, $month, $day); # from functions.inc
   } else {
-    $sql = "select id, room_name from $tbl_room where area_id=$area order by room_name";
-    $res = sql_query($sql);
-    if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
+    $sql = "SELECT      id, room_name 
+            FROM        $tbl_room 
+            WHERE       area_id=$area 
+            ORDER BY    room_name";
+    $types = array('integer', 'text');
+    $res = $mdb->query($sql, $types);
+    if (!MDB::isError($res))
     {
-        echo "<a href=\"month.php?year=$year&month=$month&area=$area&room=$row[0]\">";
-        if ($row[0] == $room)
+        while ($row = $mdb->fetchInto($res))
         {
-            $this_room_name = htmlspecialchars($row[1]);
-            if ( $pview != 1 )
-                echo "<font color=\"red\">$this_room_name</font></a><br>\n";
+            echo "<a href=\"month.php?year=$year&month=$month&area=$area&room=$row[0]\">";
+            if ($row[0] == $room)
+            {
+                $this_room_name = htmlspecialchars($row[1]);
+                if ( $pview != 1 )
+                    echo "<font color=\"red\">$this_room_name</font></a><br>\n";
+            }
+            else if ( $pview != 1 ) echo htmlspecialchars($row[1]) . "</a><br>\n";
         }
-        else if ( $pview != 1 ) echo htmlspecialchars($row[1]) . "</a><br>\n";
+        $mdb->freeResult($res);
     }
   } # end select if
 
@@ -185,23 +204,30 @@ $all_day = ereg_replace(" ", "&nbsp;", get_vocab("all_day"));
 # row[2] = Entry ID
 # This data will be retrieved day-by-day fo the whole month
 for ($day_num = 1; $day_num<=$days_in_month; $day_num++) {
-	$sql = "SELECT start_time, end_time, id, name
-	   FROM $tbl_entry
-	   WHERE room_id=$room
-	   AND start_time <= $midnight_tonight[$day_num] AND end_time > $midnight[$day_num]
-	   ORDER by 1";
+	$sql = "SELECT      start_time, end_time, id, name
+        FROM        $tbl_entry
+        WHERE       room_id=$room
+        AND         start_time <= $midnight_tonight[$day_num]
+        AND         end_time > $midnight[$day_num]
+        ORDER BY    1";
 
 	# Build an array of information about each day in the month.
 	# The information is stored as:
 	#  d[monthday]["id"][] = ID of each entry, for linking.
 	#  d[monthday]["data"][] = "start-stop" times or "name" of each entry.
 
-	$res = sql_query($sql);
-	if (! $res) echo sql_error();
-	else for ($i = 0; ($row = sql_row($res, $i)); $i++)
+	$types = array('integer', 'integer', 'integer', 'text');
+	$res = $mdb->query($sql, $types);
+	if (MDB::isError($res))
 	{
-	    if ($debug_flag)
-        	echo "<br>DEBUG: result $i, id $row[2], starts $row[0], ends $row[1]\n";
+    	echo $res->getMessage() . "<br>" . $res->getUserInfo() . "<br>";
+	}
+	else
+	{
+    	while ($row = $mdb->fetchInto($res))
+    	{
+        	if ($debug_flag)
+            	echo "<br>DEBUG: result $i, id $row[2], starts $row[0], ends $row[1]\n";
 
             if ($debug_flag) echo "<br>DEBUG: Entry $row[2] day $day_num\n";
             $d[$day_num]["id"][] = $row[2];
@@ -277,8 +303,9 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++) {
                     break;
               }
             }
-
+        }
 	}
+    $mdb->freeResult($res);
 }
 if ($debug_flag)
 {

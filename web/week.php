@@ -6,6 +6,7 @@
 require_once "grab_globals.inc.php";
 include "config.inc.php";
 include "functions.inc";
+require_once("database.inc.php");
 include "$dbsys.inc";
 include "mrbs_auth.inc";
 include "mincals.inc";
@@ -86,24 +87,42 @@ if ( $pview != 1 ) {
   # show either a select box or the normal html list
   if ($area_list_format == "select") {
 	echo make_area_select_html('week.php', $area, $year, $month, $day); # from functions.inc
-	$this_area_name = sql_query1("select area_name from $tbl_area where id=$area");
-	$this_room_name = sql_query1("select room_name from $tbl_room where id=$room");
+    $this_area_name = $mdb->queryOne("SELECT    area_name 
+                                      FROM      $tbl_area
+                                      WHERE     id=$area", 'text');
+    $this_room_name = $mdb->queryOne("SELECT    room_name 
+                                      FROM      $tbl_room
+                                      WHERE     id=$room", 'text');
   } else {
-	$sql = "select id, area_name from $tbl_area order by area_name";
-	$res = sql_query($sql);
-	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
-	{
-		if ( $pview != 1 )
-			echo "<a href=\"week.php?year=$year&month=$month&day=$day&area=$row[0]\">";
-		if ($row[0] == $area)
-		{
-			$this_area_name = htmlspecialchars($row[1]);
-			if ( $pview != 1 )
-				echo "<font color=\"red\">$this_area_name</font></a><br>\n";
-		}
-		else if ( $pview != 1 ) echo htmlspecialchars($row[1]) . "</a><br>\n";
-	}
-  } # end area display if
+    $sql = "SELECT      id, area_name 
+            FROM        $tbl_area 
+            ORDER BY    area_name";
+    $types = array('integer', 'text');
+    $res = $mdb->query($sql, $types);
+    if (!MDB::isError($res))
+    {
+        while ($row = $mdb->fetchInto($res))
+        {
+            if ( $pview != 1 )
+            {
+                echo "<a href=\"week.php?year=$year&month=$month&day=$day&area=$row[0]\">";
+            }
+            if ($row[0] == $area)
+            {
+                $this_area_name = htmlspecialchars($row[1]);
+                if ( $pview != 1 )
+                {
+                    echo "<font color=\"red\">$this_area_name</font></a><br>\n";
+                }
+            }
+            else if ( $pview != 1 )
+            {
+                echo htmlspecialchars($row[1]) . "</a><br>\n";
+            }
+        }
+    }
+} // end area display if
+
 if ( $pview != 1) {
 	echo "</td>\n";
 
@@ -115,19 +134,33 @@ echo "<td width=\"30%\"><u>".get_vocab("rooms")."</u><br>";
   if ($area_list_format == "select") {
 	echo make_room_select_html('week.php', $area, $room, $year, $month, $day); # from functions.inc
   } else {
-	$sql = "select id, room_name, description from $tbl_room where area_id=$area order by room_name";
-	$res = sql_query($sql);
-	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
-	{
-		if ( $pview != 1 )
-			echo "<a href=\"week.php?year=$year&month=$month&day=$day&area=$area&room=$row[0]\" title=\"$row[2]\">";
-		if ($row[0] == $room)
-		{
-			$this_room_name = htmlspecialchars($row[1]);
-			if ( $pview != 1 )
-				echo "<font color=\"red\">$this_room_name</font></a><br>\n";
-		}
-		else if ( $pview != 1 ) echo htmlspecialchars($row[1]) . "</a><br>\n";
+    $sql = "SELECT      id, room_name, description
+            FROM        $tbl_room 
+            WHERE       area_id=$area 
+            ORDER BY    room_name";
+    $types = array('integer', 'text');
+    $res = $mdb->query($sql, $types);
+    if (!MDB::isError($res))
+    {
+        while ($row = $mdb->fetchInto($res))
+        {
+            if ( $pview != 1 )
+            {
+                echo "<a href=\"week.php?year=$year&month=$month&day=$day&area=$area&room=$row[0]\" title=\"$row[2]\">";
+            }
+            if ($row[0] == $room)
+            {
+                $this_room_name = htmlspecialchars($row[1]);
+                if ( $pview != 1 )
+                {
+                    echo "<font color=\"red\">$this_room_name</font></a><br>\n";
+                }
+            }
+            else if ( $pview != 1 )
+            {
+                echo htmlspecialchars($row[1]) . "</a><br>\n";
+            }
+        }
 	}
 } # end select if
 
@@ -183,10 +216,11 @@ if ( $pview != 1 ) {
 # This data will be retrieved day-by-day
 for ($j = 0; $j<=($num_of_days-1) ; $j++) {
 
-	$sql = "SELECT start_time, end_time, type, name, id, description
-	        FROM $tbl_entry
-	        WHERE room_id = $room
-	        AND start_time <= $pm7[$j] AND end_time > $am7[$j]";
+$sql = "SELECT  start_time, end_time, type, name, id, description
+        FROM    $tbl_entry
+        WHERE   room_id=$room
+        AND     start_time <= $pm7[$j] 
+        AND     end_time > $am7[$j]";
 
 	# Each row returned from the query is a meeting. Build an array of the
 	# form:  d[weekday][slot][x], where x = id, color, data, long_desc.
@@ -197,54 +231,62 @@ for ($j = 0; $j<=($num_of_days-1) ; $j++) {
 	# Note: weekday here is relative to the $weekstarts configuration variable.
 	# If 0, then weekday=0 means Sunday. If 1, weekday=0 means Monday.
 
+
 	if ($debug_flag) echo "<br>DEBUG: query=$sql\n";
-	$res = sql_query($sql);
-	if (! $res) echo sql_error();
-	else for ($i = 0; ($row = sql_row($res, $i)); $i++)
+	$types = array('integer', 'integer', 'text', 'text', 'integer');
+	$res = $mdb->query($sql, $types);
+	if (MDB::isError($res))
 	{
-		if ($debug_flag)
-			echo "<br>DEBUG: result $i, id $row[4], starts $row[0], ends $row[1]\n";
+    	echo $res->getMessage() . "<br>" . $res->getUserInfo() . "<br>";
+	}
+	else
+	{
+    	while ($row = $mdb->fetchInto($res))
+    	{
+			if ($debug_flag)
+				echo "<br>DEBUG: result $i, id $row[4], starts $row[0], ends $row[1]\n";
 
-	 	# $d is a map of the screen that will be displayed
- 		# It looks like:
- 		#     $d[Day][Time][id]
- 		#                  [color]
- 		#                  [data]
- 		# where Day is in the range 0 to $num_of_days. 
+			# $d is a map of the screen that will be displayed
+ 			# It looks like:
+ 			#     $d[Day][Time][id]
+ 			#                  [color]
+ 			#                  [data]
+ 			# where Day is in the range 0 to $num_of_days. 
  	
- 		# Fill in the map for this meeting. Start at the meeting start time,
- 		# or the day start time, whichever is later. End one slot before the
- 		# meeting end time (since the next slot is for meetings which start then),
- 		# or at the last slot in the day, whichever is earlier.
- 		# Note: int casts on database rows for max may be needed for PHP3.
- 		# Adjust the starting and ending times so that bookings which don't
- 		# start or end at a recognized time still appear.
+	 		# Fill in the map for this meeting. Start at the meeting start time,
+ 			# or the day start time, whichever is later. End one slot before the
+ 			# meeting end time (since the next slot is for meetings which start then),
+ 			# or at the last slot in the day, whichever is earlier.
+ 			# Note: int casts on database rows for max may be needed for PHP3.
+ 			# Adjust the starting and ending times so that bookings which don't
+	 		# start or end at a recognized time still appear.
  
-		$start_t = max(round_t_down($row[0], $resolution, $am7[$j]), $am7[$j]);
- 		$end_t = min(round_t_up($row[1], $resolution, $am7[$j]) - $resolution, $pm7[$j]);
+			$start_t = max(round_t_down($row[0], $resolution, $am7[$j]), $am7[$j]);
+ 			$end_t = min(round_t_up($row[1], $resolution, $am7[$j]) - $resolution, $pm7[$j]);
 
- 		for ($t = $start_t; $t <= $end_t; $t += $resolution)
- 		{
-			$d[$j][date($format,$t)]["id"]    = $row[4];
- 			$d[$j][date($format,$t)]["color"] = $row[2];
- 			$d[$j][date($format,$t)]["data"]  = "";
- 			$d[$j][date($format,$t)]["long_descr"]  = "";
- 		}
+	 		for ($t = $start_t; $t <= $end_t; $t += $resolution)
+ 			{
+				$d[$j][date($format,$t)]["id"]    = $row[4];
+ 				$d[$j][date($format,$t)]["color"] = $row[2];
+ 				$d[$j][date($format,$t)]["data"]  = "";
+ 				$d[$j][date($format,$t)]["long_descr"]  = "";
+ 			}
  
- 		# Show the name of the booker in the first segment that the booking
- 		# happens in, or at the start of the day if it started before today.
- 		if ($row[1] < $am7[$j])
-		{
- 			$d[$j][date($format,$am7[$j])]["data"] = $row[3];
- 			$d[$j][date($format,$am7[$j])]["long_descr"] = $row[5];
-		}
- 		else
-		{
- 			$d[$j][date($format,$start_t)]["data"] = $row[3];
- 			$d[$j][date($format,$start_t)]["long_descr"] = $row[5];
+ 			# Show the name of the booker in the first segment that the booking
+ 			# happens in, or at the start of the day if it started before today.
+ 			if ($row[1] < $am7[$j])
+			{
+ 				$d[$j][date($format,$am7[$j])]["data"] = $row[3];
+ 				$d[$j][date($format,$am7[$j])]["long_descr"] = $row[5];
+			}
+ 			else
+			{
+ 				$d[$j][date($format,$start_t)]["data"] = $row[3];
+ 				$d[$j][date($format,$start_t)]["long_descr"] = $row[5];
+			}
 		}
 	}
-} 
+}
 
 if ($debug_flag) 
 {

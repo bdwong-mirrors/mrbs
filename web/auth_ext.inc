@@ -59,28 +59,28 @@ if (version_check("4.0.3") == false)
  */
 function authValidateUser($user, $pass)
 {
-        global $auth;
-	
-	// Check if we do not have a username/password
-	if(!isset($user) || !isset($pass))
-	{
-		return 0;
-	}
-	
-	// Generate the command line
-	$cmd = $auth["prog"] . ' ' . $auth["params"];
-	$cmd = preg_replace('/#USERNAME#/',escapeshellarg($user),$cmd);
-	$cmd = preg_replace('/#PASSWORD#/',escapeshellarg($pass),$cmd);
-	
-	// Run the program
-	exec($cmd, $output, $ret);
-	
-	// If it succeeded, return success
-	if($ret == 0)
-		return 1;
-	
-	// return failure
-	return 0;
+    global $auth;
+    
+    // Check if we do not have a username/password
+    if (!isset($user) || !isset($pass))
+    {
+        return 0;
+    }
+    
+    // Generate the command line
+    $cmd = $auth["prog"] . ' ' . $auth["params"];
+    $cmd = preg_replace('/#USERNAME#/',escapeshellarg($user),$cmd);
+    $cmd = preg_replace('/#PASSWORD#/',escapeshellarg($pass),$cmd);
+    
+    // Run the program
+    exec($cmd, $output, $ret);
+    
+    // If it succeeded, return success
+    if ($ret == 0)
+        return 1;
+    
+    // return failure
+    return 0;
 }
 
 /* authGetUserLevel($user)

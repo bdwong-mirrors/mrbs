@@ -1,12 +1,13 @@
 <?php
 # $Id$
 
-require_once "grab_globals.inc.php";
-include "config.inc.php";
-include "functions.inc";
-include "$dbsys.inc";
+require_once("grab_globals.inc.php");
+require "config.inc.php";
+require "functions.inc";
+require_once("database.inc.php");
+require "$dbsys.inc";
 include "mrbs_auth.inc";
-include "mincals.inc";
+require "mincals.inc";
 
 if (empty($debug_flag)) $debug_flag = 0;
 
@@ -64,16 +65,23 @@ if ( $pview != 1 ) {
 	echo make_area_select_html('day.php', $area, $year, $month, $day); # from functions.inc
    } else {
 	# show the standard html list
-	$sql = "select id, area_name from $tbl_area order by area_name";
-   	$res = sql_query($sql);
-   	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
-   	{
-		echo "<a href=\"day.php?year=$year&month=$month&day=$day&area=$row[0]\">";
-		if ($row[0] == $area)
-			echo "<font color=\"red\">" . htmlspecialchars($row[1]) . "</font></a><br>\n";
-		else echo htmlspecialchars($row[1]) . "</a><br>\n";
-   	}
-   }
+     $sql = "SELECT      id, area_name 
+             FROM        $tbl_area 
+             ORDER BY    area_name";
+     $types = array('integer', 'text');
+     $res = $mdb->query($sql, $types);
+     if (!MDB::isError($res))
+     {
+         while ($row = $mdb->fetchInto($res))
+         {
+             echo "<a href=\"day.php?year=$year&month=$month&day=$day&area=$row[0]\">";
+             if ($row[0] == $area)
+                 echo "<font color=\"red\">" . htmlspecialchars($row[1]) . "</font></a><br>\n";
+			 else echo htmlspecialchars($row[1]) . "</a><br>\n";
+		 }
+		 $mdb->freeResult($res);
+     }
+    }
    echo "</td>\n";
 
    #Draw the three month calendars
@@ -101,45 +109,56 @@ $td = date("d",$i);
 #Note: The predicate clause 'start_time <= ...' is an equivalent but simpler
 #form of the original which had 3 BETWEEN parts. It selects all entries which
 #occur on or cross the current day.
-$sql = "SELECT $tbl_room.id, start_time, end_time, name, $tbl_entry.id, type,
-        $tbl_entry.description
-   FROM $tbl_entry, $tbl_room
-   WHERE $tbl_entry.room_id = $tbl_room.id
-   AND area_id = $area
-   AND start_time <= $pm7 AND end_time > $am7";
 
-$res = sql_query($sql);
-if (! $res) fatal_error(0, sql_error());
-for ($i = 0; ($row = sql_row($res, $i)); $i++) {
-	# Each row weve got here is an appointment.
-	#Row[0] = Room ID
-	#row[1] = start time
-	#row[2] = end time
-	#row[3] = short description
-	#row[4] = id of this booking
-	#row[5] = type (internal/external)
-	#row[6] = description
+#id aliases only needed for Oracle, otherwise ony one id column is returned 
 
-	# $today is a map of the screen that will be displayed
-	# It looks like:
-	#     $today[Room ID][Time][id]
-	#                          [color]
-	#                          [data]
-	#                          [long_descr]
+$sql = "SELECT  $tbl_room.id AS ID, start_time, end_time, name,
+				$tbl_entry.id AS ID2, type, $tbl_entry.description
+        FROM    $tbl_entry, $tbl_room
+        WHERE   $tbl_entry.room_id = $tbl_room.id
+        AND     area_id = $area
+        AND     start_time <= $pm7 
+        AND     end_time > $am7";
 
-	# Fill in the map for this meeting. Start at the meeting start time,
-	# or the day start time, whichever is later. End one slot before the
-	# meeting end time (since the next slot is for meetings which start then),
-	# or at the last slot in the day, whichever is earlier.
-	# Time is of the format HHMM without leading zeros.
-	#
-	# Note: int casts on database rows for max may be needed for PHP3.
-	# Adjust the starting and ending times so that bookings which don't
-	# start or end at a recognized time still appear.
-	$start_t = max(round_t_down($row[1], $resolution, $am7), $am7);
-	$end_t = min(round_t_up($row[2], $resolution, $am7) - $resolution, $pm7);
-	for ($t = $start_t; $t <= $end_t; $t += $resolution)
-	{
+$types = array('integer', 'integer', 'integer', 'text', 'integer', 'text', 'text');
+$res = $mdb->query($sql, $types);
+if (MDB::isError($res))
+{
+    fatal_error(0, $res->getMessage() . "<br>" . $res->getUserInfo());
+}
+while ($row = $mdb->fetchInto($res))
+{
+    /*
+       Each row weve got here is an appointment.
+       row[0] = Room ID
+       row[1] = start time
+       row[2] = end time
+       row[3] = short description
+       row[4] = id of this booking
+       row[5] = type (internal/external)
+       row[6] = description
+
+       $today is a map of the screen that will be displayed
+       It looks like:
+           $today[Room ID][Time][id]
+                                [color]
+                                [data]
+                                [long_descr]
+
+       Fill in the map for this meeting. Start at the meeting start time,
+       or the day start time, whichever is later. End one slot before the
+       meeting end time (since the next slot is for meetings which start then),
+       or at the last slot in the day, whichever is earlier.
+       Time is of the format HHMM without leading zeros.
+
+       Note: int casts on database rows for max may be needed for PHP3.
+       Adjust the starting and ending times so that bookings which don't
+       start or end at a recognized time still appear.
+    */
+    $start_t = max(round_t_down($row[1], $resolution, $am7), $am7);
+    $end_t = min(round_t_up($row[2], $resolution, $am7) - $resolution, $pm7);
+    for ($t = $start_t; $t <= $end_t; $t += $resolution)
+    {
 		$today[$row[0]][date($format,$t)]["id"]    = $row[4];
 		$today[$row[0]][date($format,$t)]["color"] = $row[5];
 		$today[$row[0]][date($format,$t)]["data"]  = "";
@@ -159,6 +178,7 @@ for ($i = 0; ($row = sql_row($res, $i)); $i++) {
 		$today[$row[0]][date($format,$start_t)]["long_descr"] = $row[6];
 	}
 }
+$mdb->freeResult($res);
 
 if ($debug_flag) 
 {
@@ -179,18 +199,24 @@ if ($debug_flag)
 # pull the data from the db and store it. Convienently we can print the room
 # headings and capacities at the same time
 
-$sql = "select room_name, capacity, id, description from $tbl_room where area_id=$area order by 1";
-
-$res = sql_query($sql);
+$sql = "SELECT      room_name, capacity, id, description
+        FROM        $tbl_room 
+        WHERE       area_id=$area 
+        ORDER BY    1";
+$types = array('text', 'integer', 'integer', 'text');
+$res = $mdb->query($sql, $types);
 
 # It might be that there are no rooms defined for this area.
 # If there are none then show an error and dont bother doing anything
 # else
-if (! $res) fatal_error(0, sql_error());
-if (sql_count($res) == 0)
+if (MDB::isError($res))
 {
-	echo "<h1>".get_vocab("no_rooms_for_area")."</h1>";
-	sql_free($res);
+    fatal_error(0, $res->getMessage() . "<br>" . $res->getUserInfo());
+}
+$counte = $mdb->numRows($res);
+if (0 == $counte)
+{
+    echo "<h1>".get_vocab("no_rooms_for_area")."</h1>";
 }
 else
 {
@@ -224,12 +250,12 @@ else
 	echo "<table cellspacing=0 border=1 width=\"100%\">";
 	echo "<tr><th width=\"1%\">".($enable_periods ? get_vocab("period") : get_vocab("time"))."</th>";
 
-	$room_column_width = (int)(95 / sql_count($res));
-	for ($i = 0; ($row = sql_row($res, $i)); $i++)
-	{
+    $room_column_width = (int)(95 / $counte);
+    while ($row = $mdb->fetchInto($res))
+    {
         echo "<th width=\"$room_column_width%\">
             <a href=\"week.php?year=$year&month=$month&day=$day&area=$area&room=$row[2]\"
-            title=\"" . get_vocab("viewweek") . " &#10;&#10;$row[3]\">"
+            title=\"" . get_vocab("viewweek") . " \n\n$row[3]\">"
             . htmlspecialchars($row[0]) . ($row[1] > 0 ? "($row[1])" : "") . "</a></th>";
 		$rooms[] = $row[2];
 	}
@@ -241,7 +267,7 @@ else
         ."</th>";
     }
     echo "</tr>\n";
-  
+
 	# URL for highlighting a time. Don't use REQUEST_URI or you will get
 	# the timetohighlight parameter duplicated each time you click.
 	$hilite_url="day.php?year=$year&month=$month&day=$day&area=$area&timetohighlight";
@@ -368,6 +394,7 @@ else
     (isset($output)) ? print $output : '';
 	show_colour_key();
 }
+$mdb->freeResult($res);
 
 include "trailer.inc";
 ?>

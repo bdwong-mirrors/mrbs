@@ -4,6 +4,7 @@
 require_once('grab_globals.inc.php');
 include "config.inc.php";
 include "functions.inc";
+require_once("database.inc.php");
 include "$dbsys.inc";
 include "mrbs_auth.inc";
 
@@ -45,15 +46,22 @@ if(!getAuthorised(getUserName(), getUserPassword(), 1))
 # If we had $id passed in then it's a modification.
 if (isset($id))
 {
-	$sql = "select name, create_by, description, start_time, end_time,
-	        type, room_id, entry_type, repeat_id from $tbl_entry where id=$id";
-	
-	$res = sql_query($sql);
-	if (! $res) fatal_error(1, sql_error());
-	if (sql_count($res) != 1) fatal_error(1, get_vocab("entryid") . $id . get_vocab("not_found"));
-	
-	$row = sql_row($res, 0);
-	sql_free($res);
+    $sql = "SELECT  name, create_by, description, start_time, end_time,
+                    type, room_id, entry_type, repeat_id
+            FROM    $tbl_entry
+            WHERE   id=$id";
+
+    $types = array('text', 'text', 'text', 'integer', 'integer', 'text',
+                   'integer', 'integer', 'integer');
+    $row = $mdb->queryRow($sql, $types);
+    if (MDB::isError($row))
+    {
+        fatal_error(1, $row->getMessage() . "<BR>" . $row->getUserInfo() . "<BR>");
+    }
+    if (NULL == $row)
+    {
+        fatal_error(1, get_vocab("entryid") . get_vocab("not_found"));
+    }
 # Note: Removed stripslashes() calls from name and description. Previous
 # versions of MRBS mistakenly had the backslash-escapes in the actual database
 # records because of an extra addslashes going on. Fix your database and
@@ -74,16 +82,21 @@ if (isset($id))
 	
 	if($entry_type >= 1)
 	{
-		$sql = "SELECT rep_type, start_time, end_date, rep_opt, rep_num_weeks
-		        FROM $tbl_repeat WHERE id=$rep_id";
-		
-		$res = sql_query($sql);
-		if (! $res) fatal_error(1, sql_error());
-		if (sql_count($res) != 1) fatal_error(1, get_vocab("repeat_id") . $rep_id . get_vocab("not_found"));
-		
-		$row = sql_row($res, 0);
-		sql_free($res);
-		
+        $sql = "SELECT  rep_type, start_time, end_date, rep_opt, rep_num_weeks
+                FROM    $tbl_repeat 
+                WHERE   id=$rep_id";
+
+        $types = array('integer', 'integer', 'integer', 'text', 'integer');
+        $row = $mdb->queryRow($sql, $types);
+        if (MDB::isError($row))
+        {
+            fatal_error(1, $row->getMessage() . "<BR>" . $row->getUserInfo() . "<BR>");
+        }
+        if (NULL == $row)
+        {
+            fatal_error(1, get_vocab("repeat_id") . $rep_id . get_vocab("not_found"));
+        }
+
 		$rep_type = $row[0];
 
 		if($edit_type == "series")
@@ -184,11 +197,9 @@ else
 # If we have not been provided with a room_id
 if( empty( $room_id ) )
 {
-	$sql = "select id from $tbl_room limit 1";
-	$res = sql_query($sql);
-	$row = sql_row($res, 0);
-	$room_id = $row[0];
-
+	$sql = "SELECT id 
+			FROM $tbl_room";
+	$room_id = $mdb->getOne($sql, 'integer');
 }
 
 # If we have not been provided with starting time
@@ -371,14 +382,16 @@ while (list(,$unit) = each($units))
 
 <?php
       # Determine the area id of the room in question first
-      $sql = "select area_id from $tbl_room where id=$room_id";
-      $res = sql_query($sql);
-      $row = sql_row($res, 0);
-      $area_id = $row[0];
+      $sql = "SELECT  area_id
+              FROM    $tbl_room
+              WHERE   id=$room_id";
+      $area_id = $mdb->getOne($sql, 'integer');
       # determine if there is more than one area
-      $sql = "select id from $tbl_area";
-      $res = sql_query($sql);
-      $num_areas = sql_count($res);
+      $sql = "SELECT id
+      		  FROM   $tbl_area";
+      $res = $mdb->query($sql, 'integer');
+      $num_areas = $mdb->numRows($res);
+      $mdb->freeResult($res);
       # if there is more than one area then give the option
       # to choose areas.
       if( $num_areas > 1 ) {
@@ -402,24 +415,41 @@ function changeRooms( formObj )
     switch (area){
 <?php
         # get the area id for case statement
-	$sql = "select id, area_name from $tbl_area order by area_name";
-        $res = sql_query($sql);
-	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
-	{
+	$sql = "SELECT	 id, area_name
+            FROM	 $tbl_area
+            ORDER BY area_name";
 
+    $types = array('integer', 'text');
+    $res = $mdb->query($sql, $types);
+    if (MDB::isError($res))
+    {
+        fatal_error(1, $res->getMessage() . "<BR>" . $res->getUserInfo() . "<BR>");
+    }
+    while ($row = $mdb->fetchInto($res))
+	{
                 print "      case \"".$row[0]."\":\n";
         	# get rooms for this area
-		$sql2 = "select id, room_name from $tbl_room where area_id='".$row[0]."' order by $room_order";
-        	$res2 = sql_query($sql2);
-		if ($res2) for ($j = 0; ($row2 = sql_row($res2, $j)); $j++)
-		{
-                	print "        roomsObj.options[$j] = new Option(\"".str_replace('"','\\"',$row2[1])."\",".$row2[0] .")\n";
-                }
+		$sql2 = "SELECT   id, room_name
+        		 FROM     $tbl_room
+                 WHERE    area_id='".$row[0]."'
+                 ORDER BY $room_order";
+    	$types = array('integer', 'text');
+        $res2 = $mdb->query($sql2, $types);
+    	if (MDB::isError($res2))
+	    {
+    	    fatal_error(1, $res2->getMessage() . "<BR>" . $res2->getUserInfo() . "<BR>");
+	    }
+        for ($j = 0; ($row2 = $mdb->fetchInto($res2)); $j++)
+        {
+        	print "        roomsObj.options[$j] = new Option(\"".$row2[1]."\",".$row2[0] .")\n";
+        }
+        $mdb->freeResult($res2);
 		# select the first entry by default to ensure
 		# that one room is selected to begin with
 		print "        roomsObj.options[0].selected = true\n";
 		print "        break\n";
 	}
+    $mdb->freeResult($res);
 ?>
     } //switch
 }
@@ -430,9 +460,16 @@ this.document.writeln("<tr><td class=CR><b><?php echo get_vocab("areas") ?>:</b>
 this.document.writeln("          <select name=\"areas\" onChange=\"changeRooms(this.form)\">");
 <?php
 # get list of areas
-$sql = "select id, area_name from $tbl_area order by area_name";
-$res = sql_query($sql);
-if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
+$sql = "SELECT   id, area_name
+		FROM     $tbl_area
+        ORDER BY area_name";
+$types = array('integer', 'text');
+$res = $mdb->query($sql, $types);
+if (MDB::isError($res))
+{
+    fatal_error(1, $res->getMessage() . "<BR>" . $res->getUserInfo() . "<BR>");
+}
+while ($row = $mdb->fetchInto($res))
 {
 	$selected = "";
 	if ($row[0] == $area_id) {
@@ -440,6 +477,7 @@ if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
 	}
 	print "this.document.writeln(\"            <option $selected value=\\\"".$row[0]."\\\">".$row[1]."\")\n";
 }
+$mdb->freeResult($res);
 ?>
 this.document.writeln("          </select>");
 this.document.writeln("</td></tr>");
@@ -452,13 +490,15 @@ this.document.writeln("</td></tr>");
   <td class=CL valign=top><table><tr><td><select name="rooms[]" multiple="yes">
   <?php
         # select the rooms in the area determined above
-	$sql = "select id, room_name from $tbl_room where area_id=$area_id order by $room_order";
-   	$res = sql_query($sql);
+    $sql = "SELECT   id, room_name
+            FROM     $tbl_room
+            WHERE    area_id=$area_id
+            ORDER BY $room_order";
+    $types = array('integer', 'text');
+    $res = $mdb->query($sql, $types);
 
-	if (!isset($nrooms)) $nrooms = 1;
-	$nroomsleft = 0;
 
-   	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
+    while ($row = $mdb->fetchInto($res))
    	{
 		$selected = "";
 		if ($row[0] == $room_id) {
@@ -473,6 +513,7 @@ this.document.writeln("</td></tr>");
         // store room names for emails
         $room_names[$i] = $row[1];
    	}
+    $mdb->freeResult($res);
   ?>
   </select></td><td><?php echo get_vocab("ctrl_click") ?></td></tr></table>
     </td></tr>

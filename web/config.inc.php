@@ -11,11 +11,14 @@
 ###################
 # Database settings
 ###################
-# Which database system: "pgsql"=PostgreSQL, "mysql"=MySQL
+# Choose database system: see INSTALL for the list of supported databases
+# ("mysql"=MySQL,...) and valid strings.
 $dbsys = "mysql";
 # Hostname of database server. For pgsql, can use "" instead of localhost
 # to use Unix Domain Sockets instead of TCP/IP.
 $db_host = "localhost";
+# Port used by database server (leave empty if using the default one)
+$db_port = "";
 # Database name:
 $db_database = "mrbs";
 # Database login user name:
@@ -25,10 +28,23 @@ $db_password = 'mrbs-password';
 # Prefix for table names.  This will allow multiple installations where only
 # one database is available
 $db_tbl_prefix = "mrbs_";
-# Uncomment this to NOT use PHP persistent (pooled) database connections:
-# $db_nopersist = 1;
+# Set this to TRUE to NOT use PHP persistent (pooled) database connections:
+$db_nopersist = FALSE;
+# Communication protocol tu use. For pgsql, you can use 'unix' instead of
+# 'tcp' to use Unix Domain Sockets instead of TCP/IP.
+$db_protocol = "tcp";
 
 ################################
+# DBMS specific options
+################################
+
+# ****ORACLE*****
+
+# Home directory path when Oracle is installed if it is running in the local machine.
+# Default value: value of the environment variable ORACLE_HOME
+$oci8_home = "";
+
+#################################
 # Site identification information
 #################################
 $mrbs_admin = "Your Administrator";
@@ -414,6 +430,9 @@ set_magic_quotes_runtime(0);
 # Make sure notice errors are not reported, they can break mrbs code:
 error_reporting (E_ALL ^ E_NOTICE);
 
+# Debug flag : leave it to FALSE for production site.
+$debug_flag = FALSE;
+
 # These variables specify the names of the tables in the database
 # These should not need to be changed.  Please change $db_tbl_prefix
 # in the database section above.
@@ -424,6 +443,6 @@ $tbl_room   = $db_tbl_prefix . "room";
 $tbl_users  = $db_tbl_prefix . "users";
 
 # MRBS developers, make sure to update this string before each release:
-$mrbs_version = "MRBS 1.2";
+$mrbs_version = "MRBS 1.3-dev";
 
 ?>

@@ -4,6 +4,8 @@
 require_once "grab_globals.inc.php";
 include "config.inc.php";
 include "functions.inc";
+require_once("database.inc.php");
+MDB::loadFile("Date"); 
 include "$dbsys.inc";
 
 #If we dont know the right date then make it up
@@ -27,62 +29,68 @@ else {
 
 if( $series ){
 	$sql = "
-	SELECT $tbl_repeat.name,
-	       $tbl_repeat.description,
-	       $tbl_repeat.create_by,
-	       $tbl_room.room_name,
-	       $tbl_area.area_name,
-	       $tbl_repeat.type,
-	       $tbl_repeat.room_id,
-	       " . sql_syntax_timestamp_to_unix("$tbl_repeat.timestamp") . ",
-	       ($tbl_repeat.end_time - $tbl_repeat.start_time),
-	       $tbl_repeat.start_time,
-	       $tbl_repeat.end_time,
-	       $tbl_repeat.rep_type,
-	       $tbl_repeat.end_date,
-	       $tbl_repeat.rep_opt,
-	       $tbl_repeat.rep_num_weeks
+SELECT $tbl_repeat.name,
+       $tbl_repeat.description,
+       $tbl_repeat.create_by,
+       $tbl_room.room_name,
+       $tbl_area.area_name,
+       $tbl_repeat.type,
+       $tbl_repeat.room_id,
+       $tbl_repeat.timestamp,
+       ($tbl_repeat.end_time - $tbl_repeat.start_time),
+       $tbl_repeat.start_time,
+       $tbl_repeat.end_time,
+       $tbl_repeat.rep_type,
+       $tbl_repeat.end_date,
+       $tbl_repeat.rep_opt,
+       $tbl_repeat.rep_num_weeks
 
-	FROM  $tbl_repeat, $tbl_room, $tbl_area
-	WHERE $tbl_repeat.room_id = $tbl_room.id
-		AND $tbl_room.area_id = $tbl_area.id
-		AND $tbl_repeat.id=$id
-	";
+FROM  $tbl_repeat, $tbl_room, $tbl_area
+WHERE $tbl_repeat.room_id = $tbl_room.id
+  AND $tbl_room.area_id = $tbl_area.id
+  AND $tbl_repeat.id=$id
+";
+	$types = array('text', 'text', 'text', 'text', 'text', 'text', 'integer',
+               'integer', 'timestamp', 'integer', 'integer', 'integer',
+               'integer', 'integer', 'text', 'integer');
+
 }
 else {
 	$sql = "
-	SELECT $tbl_entry.name,
-	       $tbl_entry.description,
-	       $tbl_entry.create_by,
-	       $tbl_room.room_name,
-	       $tbl_area.area_name,
-	       $tbl_entry.type,
-	       $tbl_entry.room_id,
-	       " . sql_syntax_timestamp_to_unix("$tbl_entry.timestamp") . ",
-	       ($tbl_entry.end_time - $tbl_entry.start_time),
-	       $tbl_entry.start_time,
-	       $tbl_entry.end_time,
-	       $tbl_entry.repeat_id
+SELECT $tbl_entry.name,
+       $tbl_entry.description,
+       $tbl_entry.create_by,
+       $tbl_room.room_name,
+       $tbl_area.area_name,
+       $tbl_entry.type,
+       $tbl_entry.room_id,
+       $tbl_entry.timestamp,
+       ($tbl_entry.end_time - $tbl_entry.start_time),
+       $tbl_entry.start_time,
+       $tbl_entry.end_time,
+       $tbl_entry.repeat_id
 
-	FROM  $tbl_entry, $tbl_room, $tbl_area
-	WHERE $tbl_entry.room_id = $tbl_room.id
-		AND $tbl_room.area_id = $tbl_area.id
-		AND $tbl_entry.id=$id
-	";
+FROM  $tbl_entry, $tbl_room, $tbl_area
+WHERE $tbl_entry.room_id = $tbl_room.id
+  AND $tbl_room.area_id = $tbl_area.id
+  AND $tbl_entry.id=$id
+";
+	$types = array('text', 'text', 'text', 'text', 'text', 'text', 'integer',
+               'timestamp', 'integer', 'integer', 'integer',
+               'integer');
+
 }
 
-$res = sql_query($sql);
-if (! $res) fatal_error(0, sql_error());
-
-if(sql_count($res) < 1) {
-	fatal_error(
-		0,
-		($series ? get_vocab("invalid_series_id") : get_vocab("invalid_entry_id"))
-	);
+$row = $mdb->queryRow($sql, $types);
+if (MDB::isError($row))
+{
+    fatal_error(0, $row->getMessage() . "\n" . $row->getUserInfo() . "\n");
 }
 
-$row = sql_row($res, 0);
-sql_free($res);
+if (NULL == $row) 
+{
+    fatal_error(0, ($series ? get_vocab('invalid_series_id') : get_vocab('invalid_entry_id')));
+}
 
 # Note: Removed stripslashes() calls from name and description. Previous
 # versions of MRBS mistakenly had the backslash-escapes in the actual database
@@ -95,7 +103,8 @@ $room_name    = htmlspecialchars($row[3]);
 $area_name    = htmlspecialchars($row[4]);
 $type         = $row[5];
 $room_id      = $row[6];
-$updated      = time_date_string($row[7]);
+
+$updated      = time_date_string(MDB_Date::mdbstamp2Unix($row[7]));
 # need to make DST correct in opposite direction to entry creation
 # so that user see what he expects to see
 $duration     = $row[8] - cross_dst($row[9], $row[10]);
@@ -110,7 +119,6 @@ if( $enable_periods )
 else
         $end_date = time_date_string($row[10]);
 
-
 $rep_type = 0;
 
 if( $series == 1 ){
@@ -124,30 +132,41 @@ if( $series == 1 ){
 	# edit_entry.php
 	# So I will look for the first entry in the series where the entry is
 	# as per the original series settings
-	$sql = "SELECT id
-	        FROM $tbl_entry
-		WHERE repeat_id=\"$id\" AND entry_type=\"1\"
-		ORDER BY start_time
-		LIMIT 1";
-	$res = sql_query($sql);
-	if (! $res) fatal_error(0, sql_error());
-	if(sql_count($res) < 1) {
+
+	$types = array('integer');
+	$sql = "
+SELECT id
+FROM $tbl_entry
+WHERE repeat_id=\"$id\"
+  AND entry_type=\"1\"
+";
+#  ORDER BY start_time";
+
+	$row = $mdb->queryRow($sql, $types);
+
+	if (MDB::isError($row))
+	{
+        	fatal_error(0, $row->getMessage() . "\n" . $row->getUserInfo() . "\n");
+	}
+
+	if (NULL <> $row)
+	{
 		# if all entries in series have been modified then
 		# as a fallback position just select the first entry
 		# in the series
 		# hopefully this code will never be reached as
 		# this page will display the start time of the series
 		# but edit_entry.php will display the start time of the entry
-		sql_free($res);
-		$sql = "SELECT id
-			FROM $tbl_entry
-			WHERE repeat_id=\"$id\"
-			ORDER BY start_time
-			LIMIT 1";
-		$res = sql_query($sql);
-		if (! $res) fatal_error(0, sql_error());
+		$types = array('integer');
+		$row = $mdb->queryRow("SELECT id
+FROM $tbl_entry
+WHERE repeat_id=\"$id\"
+ORDER BY start_time",$types);
+		if (MDB::isError($row))
+		{
+        		fatal_error(0, $row->getMessage() . "\n" . $row->getUserInfo() . "\n");
+		}
 	}
-	$row = sql_row($res, 0);
 	$id = $row[0];
 	sql_free($res);
 }
@@ -157,20 +176,20 @@ else {
 
 	if($repeat_id != 0)
 	{
-		$res = sql_query("SELECT rep_type, end_date, rep_opt, rep_num_weeks
-				FROM $tbl_repeat WHERE id=$repeat_id");
-		if (! $res) fatal_error(0, sql_error());
-
-		if (sql_count($res) == 1)
+		$types = array('integer', 'integer', 'text', 'integer');
+		$row = $mdb->queryRow("SELECT rep_type, end_date, rep_opt, rep_num_weeks
+FROM $tbl_repeat WHERE id=$repeat_id", $types);
+		if (MDB::isError($row))
 		{
-			$row = sql_row($res, 0);
-
+        		fatal_error(0, $row->getMessage() . "\n" . $row->getUserInfo() . "\n");
+		}
+		if (NULL <> $row)
+		{
 			$rep_type     = $row[0];
 			$rep_end_date = utf8_strftime('%A %d %B %Y',$row[1]);
 			$rep_opt      = $row[2];
 			$rep_num_weeks = $row[3];
 		}
-		sql_free($res);
 	}
 }
 

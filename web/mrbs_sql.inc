@@ -20,11 +20,14 @@ function mrbsCheckFree($room_id, $starttime, $endtime, $ignore, $repignore)
 	global $tbl_entry;
 	global $enable_periods;
     global $periods;
+    global $mdb;
 
     # Select any meetings which overlap ($starttime,$endtime) for this room:
-	$sql = "SELECT id, name, start_time FROM $tbl_entry WHERE
-		start_time < $endtime AND end_time > $starttime
-		AND room_id = $room_id";
+    $sql = "SELECT  id, name, start_time
+            FROM    $tbl_entry 
+            WHERE   start_time < $endtime 
+            AND     end_time > $starttime
+            AND     room_id = $room_id";
 
 	if ($ignore > 0)
 		$sql .= " AND id <> $ignore";
@@ -32,20 +35,23 @@ function mrbsCheckFree($room_id, $starttime, $endtime, $ignore, $repignore)
 		$sql .= " AND repeat_id <> $repignore";
 	$sql .= " ORDER BY start_time";
 
-	$res = sql_query($sql);
-	if(! $res)
-		return sql_error();
-	if (sql_count($res) == 0)
-	{
-		sql_free($res);
-		return "";
-	}
+    $types = array('integer', 'text', 'integer');
+    $res = $mdb->query($sql, $types);
+    if (MDB::isError($res))
+    {
+        return $res->getMessage() . "<br>" . $res->getUserInfo();
+    }
+    if (!$row = $mdb->fetchInto($res))
+    {
+        $mdb->freeResult($res);
+        return "";
+    }
 	# Get the room's area ID for linking to day, week, and month views:
 	$area = mrbsGetRoomArea($room_id);
-	
+
 	# Build a string listing all the conflicts:
 	$err = "";
-	for ($i = 0; ($row = sql_row($res, $i)); $i++)
+    do
 	{
 		$starts = getdate($row[2]);
 		$param_ym = "area=$area&year=$starts[year]&month=$starts[mon]";
@@ -65,7 +71,9 @@ function mrbsCheckFree($room_id, $starttime, $endtime, $ignore, $repignore)
 		. " | <A HREF=\"week.php?room=$room_id&$param_ymd\">".get_vocab("viewweek")."</a>"
 		. " | <A HREF=\"month.php?room=$room_id&$param_ym\">".get_vocab("viewmonth")."</a>)";
 	}
-	
+    while ($row = $mdb->fetchInto($res));
+
+    $mdb->freeResult($res);
 	return $err;
 }
 
@@ -86,38 +94,67 @@ function mrbsDelEntry($user, $id, $series, $all)
 {
 	global $tbl_entry, $tbl_repeat;
 
-	$repeat_id = sql_query1("SELECT repeat_id FROM $tbl_entry WHERE id=$id");
-	if ($repeat_id < 0)
-		return 0;
-	
-	$sql = "SELECT create_by, id, entry_type FROM $tbl_entry WHERE ";
-	
+    global $mdb;
+    $repeat_id = $mdb->queryOne("SELECT repeat_id 
+                                 FROM   $tbl_entry 
+                                 WHERE  id=$id", 'integer');
+    if (MDB::isError($repeat_id) or (NULL === $repeat_id))
+    {
+        return 0;
+    }
+
+    $sql = "SELECT  create_by, id, entry_type 
+            FROM    $tbl_entry 
+            WHERE ";
+
 	if($series)
 		$sql .= "repeat_id=$repeat_id";
 	else
 		$sql .= "id=$id";
 	
-	$res = sql_query($sql);
+    $types = array('text', 'integer', 'integer');
+    $res = $mdb->query($sql, $types);
 	
 	$removed = 0;
 	
-	for ($i = 0; ($row = sql_row($res, $i)); $i++)
-	{
-		if(!getWritable($row[0], $user))
-			continue;
-		
-		if($series && $row[2] == 2 && !$all)
-			continue;
-		
-		if (sql_command("DELETE FROM $tbl_entry WHERE id=" . $row[1]) > 0)
-			$removed++;
-	}
-	
-	if ($repeat_id > 0 &&
-            sql_query1("SELECT count(*) FROM $tbl_entry WHERE repeat_id=$repeat_id") == 0)
-		sql_command("DELETE FROM $tbl_repeat WHERE id=$repeat_id");
-	
-	return $removed > 0;
+    $query = "DELETE 
+              FROM      $tbl_entry 
+              WHERE     id=?";
+    $prepared_query = $mdb->prepareQuery($query);
+    if (!MDB::isError($prepared_query))
+    {
+        while ($row = $mdb->fetchInto($res))
+        {
+            if (!getWritable($row[0], $user))
+            {
+                continue;
+            }
+
+            if ($series && $row[2] == 2 && !$all)
+            {
+                continue;
+            }
+
+            $mdb->setParamInteger($prepared_query, 1, $row[1]);
+            if ($mdb->affectedRows($mdb->executeQuery($prepared_query)) > 0)
+            {
+                $removed++;
+            }
+        }
+    }
+    $mdb->freePreparedQuery($prepared_query);
+
+    if ($repeat_id > 0 &&
+        0 == $mdb->queryOne("SELECT count(*) 
+                             FROM   $tbl_entry 
+                             WHERE  repeat_id=$repeat_id", 'integer'))
+    {
+        $mdb->query("DELETE 
+                     FROM   $tbl_repeat 
+                     WHERE  id=$repeat_id");
+    }
+
+    return $removed > 0;
 }
 
 /** mrbsCreateSingleEntry()
@@ -143,21 +180,32 @@ function mrbsCreateSingleEntry($starttime, $endtime, $entry_type, $repeat_id, $r
 {
 	global $tbl_entry;
 
-	$name        = slashes($name);
-	$description = slashes($description);
+    global $mdb;
+    $name        = unslashes($name);
+    $description = unslashes($description);
 	
 	# make sure that any entry is of a positive duration
 	# this is to trap potential negative duration created when DST comes
 	# into effect
 	if( $endtime > $starttime )
-	$sql = "INSERT INTO $tbl_entry (  start_time,   end_time,   entry_type,    repeat_id,   room_id,
-	                                  create_by,    name,       type,          description)
-	                        VALUES ($starttime, $endtime, $entry_type, $repeat_id, $room_id,
-	                                '$owner',     '$name',    '$type',       '$description')";
-	
-	if (sql_command($sql) < 0) return 0;
-	
-	return sql_insert_id("$tbl_entry", "id");
+    $id = $mdb->nextId("${tbl_entry}_id");
+    $sql = "INSERT INTO $tbl_entry ( id, start_time, end_time, entry_type,
+                                    repeat_id, room_id, timestamp, create_by,
+                                    name, type, description)
+            VALUES      ($id, $starttime, $endtime, $entry_type, $repeat_id,
+                        $room_id, " . $mdb->getTimestampValue(MDB_Date::mdbNow())
+                        . ", " . $mdb->getTextValue($owner) . ", " .
+                        $mdb->getTextValue($name) . ", " .
+                        $mdb->getTextValue($type) . ", " .
+                        $mdb->getTextValue($description) . ")";
+
+    $res = $mdb->query($sql);
+    if (MDB::isError($res))
+    {
+        return 0;
+    }
+
+    return $mdb->currId("${tbl_entry}_id");
 }
 
 /** mrbsCreateRepeatEntry()
@@ -182,41 +230,40 @@ function mrbsCreateSingleEntry($starttime, $endtime, $entry_type, $repeat_id, $r
 function mrbsCreateRepeatEntry($starttime, $endtime, $rep_type, $rep_enddate, $rep_opt,
                                $room_id, $owner, $name, $type, $description, $rep_num_weeks)
 {
-	global $tbl_repeat;
+    global $tbl_repeat;
 
-	$name        = slashes($name);
-	$description = slashes($description);
-	
-	// Let's construct the sql statement:
-	$sql_coln = array(); $sql_val = array();
+    global $mdb;
+    $name        = unslashes($name);
+    $description = unslashes($description);
 
-        // Mandatory things:
-	$sql_coln[] = 'start_time'; 	$sql_val[] = $starttime;
-	$sql_coln[] = 'end_time'; 	$sql_val[] = $endtime;
-	$sql_coln[] = 'rep_type'; 	$sql_val[] = $rep_type;
-	$sql_coln[] = 'end_date';	$sql_val[] = $rep_enddate;
-	$sql_coln[] = 'room_id';	$sql_val[] = $room_id;
-	$sql_coln[] = 'create_by';	$sql_val[] = '\''.$owner.'\'';
-	$sql_coln[] = 'type';		$sql_val[] = '\''.$type.'\'';
-	$sql_coln[] = 'name';		$sql_val[] = '\''.$name.'\'';
+    $id = $mdb->nextId("${tbl_repeat}_id");
 
-	// Optional things, pgsql doesn't like empty strings!
-	if (!empty($rep_opt))
-		{$sql_coln[] = 'rep_opt';	$sql_val[] = '\''.$rep_opt.'\'';}
-	else
-		{$sql_coln[] = 'rep_opt';	$sql_val[] = '\'0\'';}
-	if (!empty($description))
-		{$sql_coln[] = 'description';	$sql_val[] = '\''.$description.'\'';}
-	if (!empty($rep_num_weeks))
-		{$sql_coln[] = 'rep_num_weeks';	$sql_val[] = $rep_num_weeks;}
+    if ($rep_num_weeks == "")
+    {
+      $rep_num_weeks = "0";
+    }
 
-	$sql = 'INSERT INTO ' . $tbl_repeat .
-	       ' (' . implode(', ',$sql_coln) . ') '.
-	       'VALUES (' . implode(', ',$sql_val) . ')';
+    /* Strangely with Mysql $rep_num_weeks (int) need to be quoted ONLY if there
+     * is no default value. Hope this will no break with other DBMS. */
+    $sql = "INSERT INTO $tbl_repeat (id, start_time, end_time, rep_type,
+                                    end_date, rep_opt, room_id, timestamp, 
+                                    create_by, type, name, description, 
+                                    rep_num_weeks)
+            VALUES      ($id, $starttime, $endtime, $rep_type, $rep_enddate, " .
+                        $mdb->getTextValue($rep_opt) . ", $room_id, " .
+                        $mdb->getTimestampValue(MDB_Date::mdbNow()) . ", " .
+                        $mdb->getTextValue($owner) . ", " . 
+                        $mdb->getTextValue($type) . ", " . 
+                        $mdb->getTextValue($name) . ", " .
+                        $mdb->getTextValue($description) . ", $rep_num_weeks)";
 
-	if (sql_command($sql) < 0) return 0;
-	
-	return sql_insert_id("$tbl_repeat", "id");
+    $res = $mdb->query($sql);
+    if (MDB::isError($res)) 
+    {
+        fatal_error(0, $res->getMessage() . "<br>" . $res->getUserInfo());
+    }
+
+    return $mdb->currId("${tbl_repeat}_id");
 }
 
 /** same_day_next_month()
@@ -381,7 +428,7 @@ function mrbsCreateRepeatingEntrys($starttime, $endtime, $rep_type, $rep_enddate
 	$reps = mrbsGetRepeatEntryList($starttime, $rep_enddate, $rep_type, $rep_opt, $max_rep_entrys, $rep_num_weeks);
 	if(count($reps) > $max_rep_entrys)
 		return 0;
-	
+
 	if(empty($reps))
 	{
 		$ent = mrbsCreateSingleEntry($starttime, $endtime, 0, 0, $room_id, $owner, $name, $type, $description);
@@ -391,7 +438,6 @@ function mrbsCreateRepeatingEntrys($starttime, $endtime, $rep_type, $rep_enddate
 	$ent = mrbsCreateRepeatEntry($starttime, $endtime, $rep_type, $rep_enddate, $rep_opt, $room_id, $owner, $name, $type, $description, $rep_num_weeks);
 	if($ent)
 	{
-	
 		for($i = 0; $i < count($reps); $i++)
 		{
 			# calculate diff each time and correct where events
@@ -420,41 +466,52 @@ function mrbsGetEntryInfo($id)
 {
 	global $tbl_entry;
 
-	$sql = "SELECT start_time, end_time, entry_type, repeat_id, room_id,
-	               timestamp, create_by, name, type, description
-                FROM $tbl_entry WHERE (ID = $id)";
-	
-	$res = sql_query($sql);
-	if (! $res) return;
-	
-	$ret = "";
-	if(sql_count($res) > 0)
-	{
-		$row = sql_row($res, 0);
-		
-		$ret["start_time"]  = $row[0];
-		$ret["end_time"]    = $row[1];
-		$ret["entry_type"]  = $row[2];
-		$ret["repeat_id"]   = $row[3];
-		$ret["room_id"]     = $row[4];
-		$ret["timestamp"]   = $row[5];
-		$ret["create_by"]   = $row[6];
-		$ret["name"]        = $row[7];
-		$ret["type"]        = $row[8];
-		$ret["description"] = $row[9];
-	}
-	sql_free($res);
-	
-	return $ret;
+    global $mdb;
+    $sql = "SELECT  start_time, end_time, entry_type, repeat_id, room_id,
+                    timestamp, create_by, name, type, description
+            FROM    $tbl_entry 
+            WHERE   (id = $id)";
+
+    $types = array ('integer', 'integer', 'integer', 'integer', 'integer',
+                    'timestamp', 'text', 'text', 'text', 'text');
+    $res = $mdb->query($sql, $types);
+    if (MDB::isError($res)) 
+    {
+        return;
+    }
+
+    $ret = "";
+    while ($row = $mdb->fetchInto($res))
+    {
+        $ret["start_time"]  = $row[0];
+        $ret["end_time"]    = $row[1];
+        $ret["entry_type"]  = $row[2];
+        $ret["repeat_id"]   = $row[3];
+        $ret["room_id"]     = $row[4];
+        $ret["timestamp"]   = $row[5];
+        $ret["create_by"]   = $row[6];
+        $ret["name"]        = $row[7];
+        $ret["type"]        = $row[8];
+        $ret["description"] = $row[9];
+    }
+    $mdb->freeResult($res);
+    
+    return $ret;
 }
 
 function mrbsGetRoomArea($id)
 {
 	global $tbl_room;
 
-	$id = sql_query1("SELECT area_id FROM $tbl_room WHERE (id = $id)");
-	if ($id <= 0) return 0;
-	return $id;
+    global $mdb;
+    $id = $mdb->queryOne("SELECT    area_id 
+                          FROM      $tbl_room 
+                          WHERE     (id = $id)", 'integer');
+    if ((MDB::isError($id)) or (NULL === $id)) 
+    {
+        return 0;
+    }
+    return $id;
 }
 
 ?>

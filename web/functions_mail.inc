@@ -113,6 +113,7 @@ function notifyAdminOnBooking($new_entry , $new_id)
     global $rep_opt, $rep_num_weeks;
     global $tbl_room, $tbl_area, $tbl_entry, $tbl_users, $tbl_repeat;
     global $mail_previous, $auth;
+    global $mdb;
     
     //
     $recipients = '';
@@ -123,12 +124,15 @@ function notifyAdminOnBooking($new_entry , $new_id)
         // Look for list of area admins emails addresses
         if ($new_entry)
         {
+	        $types = array('text');
             $sql = "SELECT a.area_admin_email ";
             $sql .= "FROM $tbl_room r, $tbl_area a, $tbl_entry e, $tbl_repeat rep ";
             $sql .= "WHERE ${id_table}.id=$new_id AND r.id=${id_table}.room_id AND a.id=r.area_id";
-            $res = sql_query($sql);
-            (! $res) ? fatal_error(0, sql_error()) : '';
-            $row = sql_row($res, 0);
+            $row = $mdb->queryRow($sql, $types);
+            if (MDB::isError($row))
+            {
+              fatal_error(0, $row->getMessage() . "<br>" . $row->getUserInfo());
+            }
             if ( !empty($recipients) && (NULL != $row[0]) )
             {
                 $recipients .= ',';
@@ -157,12 +161,15 @@ function notifyAdminOnBooking($new_entry , $new_id)
         // Look for list of room admins emails addresses
         if ($new_entry)
         {
+	        $types = array('text');
             $sql = "SELECT r.room_admin_email ";
             $sql .= "FROM $tbl_room r, $tbl_entry e, $tbl_repeat rep ";
             $sql .= "WHERE ${id_table}.id=$new_id AND r.id=${id_table}.room_id";
-            $res = sql_query($sql);
-            (! $res) ? fatal_error(0, sql_error()) : '';
-            $row = sql_row($res, 0);
+            $row = $mdb->queryRow($sql, $types);
+            if (MDB::isError($row))
+            {
+              fatal_error(0, $row->getMessage() . "<br>" . $row->getUserInfo());
+            }
             if ( !empty($recipients) && (NULL != $row[0]) )
             {
                 $recipients .= ',';
@@ -196,12 +203,15 @@ function notifyAdminOnBooking($new_entry , $new_id)
                user is deleted from your user database, this will prevent all
                mails to admins when this user previously booked entries will
                be changed, as no user name will match the booker name */
+            $types = array('text');
             $sql = "SELECT email FROM $tbl_users WHERE name='";
             $sql .= ($new_entry) ? $create_by : $mail_previous['createdby'];
             $sql .= "'";
-            $res = sql_query($sql);
-            (! $res) ? fatal_error(0, sql_error()) : '';
-            $row = sql_row($res, 0);
+            $row = $mdb->queryRow($sql, $types);
+            if (MDB::isError($row))
+            {
+              fatal_error(0, $row->getMessage() . "<br>" . $row->getUserInfo());
+            }
             if ( !empty($recipients) && (NULL != $row[0]) )
             {
                 $recipients .= ',';
@@ -416,6 +426,7 @@ function notifyAdminOnBooking($new_entry , $new_id)
 function notifyAdminOnDelete($mail_previous)
 {
     global $mail_vocab, $typel, $enable_periods, $auth, $tbl_users;
+    global $mdb;
     //
     $recipients = '';
     (MAIL_ADMIN_ON_BOOKINGS) ? $recipients = MAIL_RECIPIENTS : '';
@@ -451,12 +462,11 @@ function notifyAdminOnDelete($mail_previous)
                user is deleted from your user database, this will prevent all
                mails to admins when this user previously booked entries will
                be changed, as no user name will match the booker name */
+            $types = array('text');
             $sql = "SELECT email
                     FROM $tbl_users
                     WHERE name='" . $mail_previous['createdby'] . "'";
-            $res = sql_query($sql);
-            (! $res) ? fatal_error(0, sql_error()) : '';
-            $row = sql_row($res, 0);
+            $row = $mdb->queryRow($sql, $types);
             if ( !empty($recipients) && (NULL != $row[0]) )
             {
                 $recipients .= ',';
@@ -562,7 +572,12 @@ function notifyAdminOnDelete($mail_previous)
 function getPreviousEntryData($id, $series)
 {
     global $tbl_area, $tbl_entry, $tbl_repeat, $tbl_room, $enable_periods;
+    global $mdb;
+    
     //
+    $types = array('text', 'text', 'text', 'text', 'text', 'text', 'integer',
+                   'integer', 'timestamp', 'integer', 'integer', 'integer',
+                   'text', 'text');
     $sql = "
     SELECT  e.name,
             e.description,
@@ -571,8 +586,8 @@ function getPreviousEntryData($id, $series)
             a.area_name,
             e.type,
             e.room_id,
-            e.repeat_id, " .
-            sql_syntax_timestamp_to_unix("e.timestamp") . ",
+            e.repeat_id,
+            e.timestamp,
             (e.end_time - e.start_time) AS tbl_e_duration,
             e.start_time AS tbl_e_start_time,
             e.end_time AS tbl_e_end_time,
@@ -583,6 +598,9 @@ function getPreviousEntryData($id, $series)
     // but for portability purpose I will not use it.
     if (1 == $series)
     {
+	    // Push extra fields onto types array
+	    array_push($types, 'integer', 'text', 'integer', 'integer', 'integer',
+	               'integer', 'integer');
         $sql .= ", re.rep_type, re.rep_opt, re.rep_num_weeks,
             (re.end_time - re.start_time) AS tbl_r_duration,
             re.start_time AS tbl_r_start_time,
@@ -598,11 +616,8 @@ function getPreviousEntryData($id, $series)
     AND e.id=$id";
     (1 == $series) ? $sql .= " AND e.repeat_id = re.id" : '';
     //
-    $res = sql_query($sql);
-    (! $res) ? fatal_error(0, sql_error()) : '';
-    (sql_count($res) < 1) ? fatal_error(0, get_vocab("invalid_entry_id")) : '';
-    $row = sql_row_keyed($res, 0);
-    sql_free($res);
+    $res = $mdb->query($sql, $types);
+    $row = $mdb->fetchRow($res, MDB_FETCHMODE_ASSOC);
     // Store all needed values in $mail_previous array to pass to
     // notifyAdminOnDelete function (shorter than individual variables -:) )
     $mail_previous['namebooker']    = $row['name'];
@@ -613,7 +628,7 @@ function getPreviousEntryData($id, $series)
     $mail_previous['type']          = $row['type'];
     $mail_previous['room_id']       = $row['room_id'];
     $mail_previous['repeat_id']     = $row['repeat_id'];
-    $mail_previous['updated']       = getMailTimeDateString($row[8]);
+    $mail_previous['updated']       = getMailTimeDateString(MDB_Date::mdbstamp2Unix($row['timestamp']));
     $mail_previous['area_admin_email'] = $row['area_admin_email'];
     $mail_previous['room_admin_email'] = $row['room_admin_email'];
     // If we use periods
@@ -647,7 +662,7 @@ function getPreviousEntryData($id, $series)
             // need to make DST correct in opposite direction to entry creation
             // so that user see what he expects to see
             $mail_previous['duration'] = $row['tbl_r_duration'] -
-                cross_dst($row['tbl_r_start_time'], $row['tbl_r_end_time']);
+                cross_dst($row['tbl_r_start_time'], $row['tbl_r_start_time']);
 	    
 	    $mail_previous['rep_opt'] = "";
 	    switch($row['rep_type'])
@@ -662,7 +677,7 @@ function getPreviousEntryData($id, $series)
 			$rep_day[5] = $row['rep_opt'][5] != "0";
 			$rep_day[6] = $row['rep_opt'][6] != "0";
 
-			if ($row['rep_type'] == 6)
+			if ($row[14] == 6)
 			{
 				$mail_previous['rep_num_weeks'] = $row['rep_num_weeks'];
 			}
@@ -731,7 +746,7 @@ function getPreviousEntryData($id, $series)
 			$rep_day[5] = $row['rep_opt'][5] != "0";
 			$rep_day[6] = $row['rep_opt'][6] != "0";
 
-			if ($row['rep_type'] == 6)
+			if ($row[14] == 6)
 			{
 				$mail_previous['rep_num_weeks'] = $row['rep_num_weeks'];
 			}

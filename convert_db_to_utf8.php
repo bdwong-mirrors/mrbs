@@ -49,6 +49,7 @@ if (!isset($encoding))
 else
 {
   include "config.inc.php";
+  require_once("database.inc.php");
   include "$dbsys.inc";
   include "functions.inc";
 
@@ -58,68 +59,119 @@ else
     Updating areas:
 ';
 
-  $sql = "select id,area_name from mrbs_area";
-  $areas_res = sql_query($sql);
-
-  for ($i = 0; ($row = sql_row($areas_res, $i)); $i++)
+  $sql = "SELECT id,area_name FROM $tbl_area";
+  $types = array('integer', 'text');
+  $areas_res = $mdb->query($sql, $types);
+  if (MDB::isError($areas_res))
+  {
+    fatal_error(1, $areas_res->getMessage() . "<BR>" . $areas_res->getUserInfo() . "<BR>");
+  }
+  while ($row = $mdb->fetchInto($areas_res))
   {
     $id = $row[0];
     $name = slashes(iconv($encoding,"utf-8",$row[1]));
 
-    $upd_sql = "update mrbs_area set area_name='$name' where id=$id";
-    sql_query($upd_sql);
+    $upd_sql = "UPDATE $tbl_area
+                SET    area_name=" . $mdb->getTextValue($name). "
+                WHERE  id=$id";
+    $upd_res = $mdb->query($sql);
+    if (MDB::isError($upd_res))
+    {
+      fatal_error(1, $upd_res->getMessage() . "<BR>" . $upd_res->getUserInfo() . "<BR>");
+    }
+    $mdb->freeResult($upd_res);
 
     echo ".";
   }
+  $mdb->freeResult($areas_res);
   echo " done.<br>Updating rooms: ";
 
-  $sql = "select id,room_name,description,capacity from mrbs_room";
-  $rooms_res = sql_query($sql);
-
-  for ($i = 0; ($row = sql_row($rooms_res, $i)); $i++)
+  $sql = "SELECT id,room_name,description,capacity FROM $tbl_room";
+  $types = array('integer', 'text', 'text', 'integer');
+  $rooms_res = $mdb->query($sql, $types);
+  if (MDB::isError($rooms_res))
+  {
+    fatal_error(1, $rooms_res->getMessage() . "<BR>" . $rooms_res->getUserInfo() . "<BR>");
+  }
+  while ($row = $mdb->fetchInto($rooms_res))
   {
     $id = $row[0];
     $name = slashes(iconv($encoding,"utf-8",$row[1]));
     $desc = slashes(iconv($encoding,"utf-8",$row[2]));
     $capa = slashes(iconv($encoding,"utf-8",$row[3]));
 
-    $upd_sql = "update mrbs_room set room_name='$name',description='$desc',capacity='$capa' where id=$id";
-    sql_command($upd_sql);
-
+    $upd_sql = "UPDATE $tbl_room
+                SET    room_name=" . $mdb->getTextValue($name). ",
+                       description=" . $mdb->getTextValue($desc). ",
+                       capacity=" . $mdb->getTextValue($capa). "
+                WHERE  id=$id";
+    $upd_res = $mdb->query($sql);
+    if (MDB::isError($upd_res))
+    {
+      fatal_error(1, $upd_res->getMessage() . "<BR>" . $upd_res->getUserInfo() . "<BR>");
+    }
+    $mdb->freeResult($upd_res);
     echo ".";
   }
+  $mdb->freeResult($rooms_res);
   echo " done.<br>Updating repeating entries: ";
 
-  $sql = "select id,name,description from mrbs_repeat";
-  $repeats_res = sql_query($sql);
-
-  for ($i = 0; ($row = sql_row($repeats_res, $i)); $i++)
+  $sql = "SELECT id,name,description FROM $tbl_repeat";
+  $types = array('integer', 'text', 'text');
+  $repeats_res = $mdb->query($sql, $types);
+  if (MDB::isError($repeats_res))
+  {
+    fatal_error(1, $repeats_res->getMessage() . "<BR>" . $repeats_res->getUserInfo() . "<BR>");
+  }
+  while ($row = $mdb->fetchInto($repeats_res))
   {
     $id = $row[0];
     $name = slashes(iconv($encoding,"utf-8",$row[1]));
     $desc = slashes(iconv($encoding,"utf-8",$row[2]));
 
-    $upd_sql = "update mrbs_repeat set name='$name',description='$desc' where id=$id";
-    sql_command($upd_sql);
+    $upd_sql = "UPDATE $tbl_repeat
+                SET    name=" . $mdb->getTextValue($name). ",
+                       description=" . $mdb->getTextValue($desc). "
+                WHERE  id=$id";
+    $upd_res = $mdb->query($sql);
+    if (MDB::isError($upd_res))
+    {
+      fatal_error(1, $upd_res->getMessage() . "<BR>" . $upd_res->getUserInfo() . "<BR>");
+    }
+    $mdb->freeResult($upd_res);
 
     echo ".";
   }
+  $mdb->freeResult($repeats_res);
   echo " done.<br>Updating normal entries: ";
 
-  $sql = "select id,name,description from mrbs_entry";
-  $entries_res = sql_query($sql);
-
-  for ($i = 0; ($row = sql_row($entries_res, $i)); $i++)
+  $sql = "SELECT id,name,description FROM $tbl_entry";
+  $types = array('integer', 'text', 'text');
+  $entries_res = $mdb->query($sql, $types);
+  if (MDB::isError($entries_res))
+  {
+    fatal_error(1, $entries_res->getMessage() . "<BR>" . $entries_res->getUserInfo() . "<BR>");
+  }
+  while ($row = $mdb->fetchInto($entries_res))
   {
     $id = $row[0];
     $name = slashes(iconv($encoding,"utf-8",$row[1]));
     $desc = slashes(iconv($encoding,"utf-8",$row[2]));
 
-    $upd_sql = "update mrbs_entry set name='$name',description='$desc' where id=$id";
-    sql_command($upd_sql);
+    $upd_sql = "UPDATE $tbl_entry
+                SET    name=" . $mdb->getTextValue($name). ",
+                       description=" . $mdb->getTextValue($desc). "
+                WHERE  id=$id";
+    $upd_res = $mdb->query($sql);
+    if (MDB::isError($upd_res))
+    {
+      fatal_error(1, $upd_res->getMessage() . "<BR>" . $upd_res->getUserInfo() . "<BR>");
+    }
+    $mdb->freeResult($upd_res);
 
     echo ".";
   }
+  $mdb->freeResult($entries_res);
   echo 'done.<p>
 
     Finished everything, byebye!

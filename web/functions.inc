@@ -362,9 +362,12 @@ function unslashes($s)
 # This could be changed to implement something like per-user defaults.
 function get_default_area()
 {
-	global $tbl_area;
-	$area = sql_query1("SELECT id FROM $tbl_area ORDER BY area_name LIMIT 1");
-	return ($area < 0 ? 0 : $area);
+    global $mdb;
+    global $tbl_area;
+
+    $default_area = $mdb->queryOne("SELECT id FROM $tbl_area ORDER BY area_name"
+    	   	, 'integer');
+    return ((MDB::isError($default_area) or ($default_area == NULL)) ? 0 : $default_area );
 }
 
 # Return a default room given a valid area; used if no room is already known.
@@ -372,9 +375,12 @@ function get_default_area()
 # This could be changed to implement something like per-user defaults.
 function get_default_room($area)
 {
-	global $tbl_room;
-	$room = sql_query1("SELECT id FROM $tbl_room WHERE area_id=$area ORDER BY room_name LIMIT 1");
-	return ($room < 0 ? 0 : $room);
+    global $mdb;
+    global $tbl_room;
+
+    $room = $mdb->queryOne("SELECT id FROM $tbl_room WHERE area_id=$area
+    						ORDER BY room_name", 'integer');
+    return ( ( MDB::isError($room) or ($room == NULL) ) ? 0 : $room );
 }
 
 # Get the local day name based on language. Note 2000-01-02 is a Sunday.
@@ -508,19 +514,26 @@ function round_t_up($t, $resolution, $am7)
 # displayed.
 function make_area_select_html( $link, $current, $year, $month, $day )
 {
-	global $tbl_area;
-	$out_html = "
+    global $mdb;
+    global $tbl_area;
+    $out_html = "
 <form name=\"areaChangeForm\" method=get action=\"$link\">
   <select name=\"area\" onChange=\"document.areaChangeForm.submit()\">";
 
-	$sql = "select id, area_name from $tbl_area order by area_name";
-   	$res = sql_query($sql);
-   	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
-   	{
-		$selected = ($row[0] == $current) ? "selected" : "";
-		$out_html .= "
-    <option $selected value=\"".$row[0]."\">" . htmlspecialchars($row[1]);
-   	}
+    $sql = "SELECT      id, area_name
+            FROM        $tbl_area
+            ORDER BY    area_name";
+    $types = array('integer', 'text');
+    $res = $mdb->query($sql, $types);
+    if (!MDB::isError($res))
+    {
+        while ($row = $mdb->fetchInto($res))
+        {
+			$selected = ($row[0] == $current) ? "selected" : "";
+			$out_html .= "
+    	<option $selected value=\"".$row[0]."\">" . htmlspecialchars($row[1]);
+        }
+    }
 	$out_html .= "
   </select>
 
@@ -530,23 +543,32 @@ function make_area_select_html( $link, $current, $year, $month, $day )
   <input type=submit value=\"".get_vocab("change")."\">
 </form>\n";
 
+	$mdb->freeResult($res);
 	return $out_html;
 } # end make_area_select_html
 
 function make_room_select_html( $link, $area, $current, $year, $month, $day )
 {
-	global $tbl_room;
+    global $mdb;
+    global $tbl_room;
 	$out_html = "
 <form name=\"roomChangeForm\" method=get action=\"$link\">
   <select name=\"room\" onChange=\"document.roomChangeForm.submit()\">";
 
-	$sql = "select id, room_name from $tbl_room where area_id=$area order by room_name";
-   	$res = sql_query($sql);
-   	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
-   	{
-		$selected = ($row[0] == $current) ? "selected" : "";
-		$out_html .= "
-    <option $selected value=\"".$row[0]."\">" . htmlspecialchars($row[1]);
+    $sql = "SELECT      id, room_name
+            FROM        $tbl_room
+            WHERE       area_id=$area
+            ORDER BY    room_name";
+    $types = array('integer', 'text');
+    $res = $mdb->query($sql, $types);
+    if (!MDB::isError($res))
+    {
+        while ($row = $mdb->fetchInto($res))
+        {
+			$selected = ($row[0] == $current) ? "selected" : "";
+			$out_html .= "
+    	<option $selected value=\"".$row[0]."\">" . htmlspecialchars($row[1]);
+        }
    	}
 	$out_html .= "
   </select>
@@ -557,6 +579,7 @@ function make_room_select_html( $link, $area, $current, $year, $month, $day )
   <input type=submit value=\"".get_vocab("change")."\">
 </form>\n";
 
+    $mdb->freeResult($res);
 	return $out_html;
 } # end make_area_select_html
 

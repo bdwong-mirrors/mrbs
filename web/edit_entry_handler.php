@@ -4,6 +4,8 @@
 require_once "grab_globals.inc.php";
 include "config.inc.php";
 include "functions.inc";
+require_once("database.inc.php");
+MDB::loadFile("Date"); 
 include "$dbsys.inc";
 include "mrbs_auth.inc";
 include "mrbs_sql.inc";
@@ -138,9 +140,18 @@ $repeat_id = 0;
 if (isset($id))
 {
     $ignore_id = $id;
-    $repeat_id = sql_query1("SELECT repeat_id FROM $tbl_entry WHERE id=$id");
-    if ($repeat_id < 0)
+    $res = $mdb->query("SELECT  repeat_id 
+                        FROM    $tbl_entry 
+                        WHERE   id=$id", 'integer');
+    if ( (MDB::isError($res)) or (1 <> $mdb->numRows($res)) )
+    {
         $repeat_id = 0;
+        $mdb->freeResult($res);
+    }
+    else
+    {
+        $repeat_id = $mdb->fetchOne($res);
+    }
 }
 else
     $ignore_id = 0;
@@ -205,11 +216,11 @@ if(empty($err))
                     // details
                     if (MAIL_DETAILS)
                     {
+                        $types = array('integer', 'text', 'integer', 'text');
                         $sql = "SELECT r.id, r.room_name, r.area_id, a.area_name ";
                         $sql .= "FROM $tbl_room r, $tbl_area a ";
                         $sql .= "WHERE r.id=$room_id AND r.area_id = a.id";
-                        $res = sql_query($sql);
-                        $row = sql_row($res, 0);
+                        $row = $mdb->queryRow($sql, $types);
                         $room_name = $row[1];
                         $area_name = $row[3];
                     }
@@ -252,11 +263,11 @@ if(empty($err))
                     // details.
                     if (MAIL_DETAILS)
                     {
+                        $types = array('integer', 'text', 'integer', 'text');
                         $sql = "SELECT r.id, r.room_name, r.area_id, a.area_name ";
                         $sql .= "FROM $tbl_room r, $tbl_area a ";
                         $sql .= "WHERE r.id=$room_id AND r.area_id = a.id";
-                        $res = sql_query($sql);
-                        $row = sql_row($res, 0);
+                        $row = $mdb->queryRow($sql, $types);
                         $room_name = $row[1];
                         $area_name = $row[3];
                     }
@@ -310,4 +321,5 @@ if(strlen($err))
 
 echo "<a href=\"$returl\">".get_vocab("returncal")."</a><p>";
 
-include "trailer.inc"; ?>
+include "trailer.inc";
+?>
