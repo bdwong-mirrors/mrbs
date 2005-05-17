@@ -59,7 +59,7 @@ if (!in_array("$tbl_users", $nusers))
    	        ),
        	'password'	=> array(
        		'type'		=> 'text',
-            'length'	=> 30
+            'length'	=> 40
             ),
    	    'email'		=> array(
        		'type'		=> 'text',
@@ -107,9 +107,9 @@ for ($i=0; $i<$nfields; $i++)
 {
     $types = $mdb->getTableFieldDefinition($tbl_users, $field_name[$i]);
     if (MDB::isError($types))
-	{
-    fatal_error(1, $types->getMessage() . "<br>" . $types->getUserInfo());
-	}
+    {
+        fatal_error(1, $types->getMessage() . "<br>" . $types->getUserInfo());
+    }
     $field_type[$i] = $types[0][0]['type'];
 }
 
@@ -129,8 +129,17 @@ function get_loc_field_name($i)
 |                         Authentify the current user                         |
 \*---------------------------------------------------------------------------*/
 
-if ($nusers > 0)
-    {
+$initial_user_creation = 0;
+
+$r = $mdb->queryOne("SELECT count(*)
+                     FROM $tbl_users", 'integer');
+if (MDB::isError($r))
+{
+    echo $r->getMessage() . "<br>" . $r->getUserInfo();
+    exit;
+}
+else if ($r > 0)
+{
     $user = getUserName();
     $level = authGetUserLevel($user, $auth["admin"]);
     // Do not allow unidentified people to browse the list.
@@ -141,10 +150,11 @@ if ($nusers > 0)
         }
     }
 else /* We've just created the table. Assume the person doing this IS the administrator. */
-    {
+{
+    $initial_user_creation = 1;
     $user = "administrator";
     $level = 2;
-    }
+}
 
 /*---------------------------------------------------------------------------*\
 |             Edit a given entry - 1st phase: Get the user input.             |
@@ -343,10 +353,10 @@ if (isset($Action) && ($Action == "Update"))
 
     /* print $operation . "<br>\n"; */
     if (MDB::isError($r))
-        {
-    print_header(0, 0, 0, "");
+    {
+        print_header(0, 0, 0, "");
 
-    // This is unlikely to happen in normal  operation. Do not translate.
+        // This is unlikely to happen in normal  operation. Do not translate.
         print "Error updating the mrbs_users table.<br>\n";
         print $r->getMessage() . "<br>" . $r->getUserInfo() . "<br>\n";
 
@@ -355,10 +365,11 @@ if (isset($Action) && ($Action == "Update"))
         print "</form>\n</body>\n</html>\n";
 
         exit();
-        }
-    /* print "Database updated successfully.<br><br>\n"; */
-    /* Success. Do not display a message. Simply fall through into the list display. */
     }
+
+    /* Success. Redirect to the user list, to remove the form args */
+    Header("Location: edit_users.php");
+}
 
 /*---------------------------------------------------------------------------*\
 |                                Delete a user                                |
@@ -401,14 +412,20 @@ print_header(0, 0, 0, "");
 
 print "<h2>" . get_vocab("user_list") . "</h2>\n";
 
+if ($initial_user_creation == 1)
+{
+    print "<h3>" . get_vocab("no_users_initial") . "</h3>\n";
+    print "<p>" . get_vocab("no_users_create_first_admin") . "</p>\n";
+}
+
 if ($level == 2) /* Administrators get the right to add new users */
-    {
+{
     print "<p><form method=post action=\"" . basename($PHP_SELF) . "\">\n";
     print "\t<input type=hidden name=Action value=Add />\n";
     print "\t<input type=hidden name=Id value=\"-1\" />\n";
     print "\t<input style=\"margin:0\" type=submit value=\"" . get_vocab("add_new_user") . "\" />\n";
     print "</form></p>\n";
-    }
+}
 
 $list = $mdb->query("SELECT * FROM $tbl_users ORDER BY name", $field_type);
 if (MDB::isError($list))
