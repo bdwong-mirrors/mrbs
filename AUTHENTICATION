@@ -105,6 +105,18 @@ PHP authentication modules
 |      |                        |  - easy to        |                        |
 |      |                        |  configure        |                        |
 +------+------------------------+-------------------+------------------------+
+|db_ext|Users validated using   |                   |                        |
+|      |a table in an external  |  - Uses an        |                        |
+|      |MySQL database          |  existing         |  - ?                   |
+|      |                        |  authentication   |                        |
+|      |                        |  database thereby |                        |
+|      |                        |  saving directory |                        |
+|      |                        |  duplication.     |                        |
+|      |                        |                   |                        |
+|      |                        |  - easy to        |                        |
+|      |                        |  configure        |                        |
+|      |                        |                   |                        |
++------+------------------------+-------------------+------------------------+
 |ldap  |Users validated using   |                   |                        |
 |      |LDAP directory services.|                   |                        |
 |      |                        |  - For corporate  |  - Does not work on the|

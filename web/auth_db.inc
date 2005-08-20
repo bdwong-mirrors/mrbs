@@ -1,16 +1,17 @@
 <?php
 /*****************************************************************************\
-*									      *
-*   File name       auth_db.inc						      *
-*									      *
-*   Description	    Authenticate users from a table in the MRBS database.     *
-*									      *
-*   Notes	    To use this authentication scheme, set in config.inc.php: *
-*			$auth["type"]  = "db";				      *
-*									      *
-*   History								      *
-*    2004/01/11 JFL Created this file					      *
-*									      *
+*                                                                             *
+*   File name       auth_db.inc                                               *
+*                                                                             *
+*   Description     Authenticate users from a table in the MRBS database.     *
+*                                                                             *
+*   Notes           To use this authentication scheme, set in config.inc.php: *
+*                       $auth["type"]  = "db";                                *
+*                                                                             *
+*   History                                                                   *
+*    2004/01/11 JFL Created this file                                         *
+*    Remaining history in ChangeLog and CVS logs                              *
+*                                                                             *
 \*****************************************************************************/
 
 // $Id$

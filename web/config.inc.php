@@ -185,7 +185,8 @@ $default_room = 0;
 $auth["session"] = "php"; # How to get and keep the user ID. One of
 			  # "http" "php" "cookie" "ip" "host" "nt" "omni".
 $auth["type"] = "config"; # How to validate the user/password. One of "none"
-                          # "config" "db" "pop3" "imap" "ldap" "nis" "nw" "ext".
+                          # "config" "db" "db_ext" "pop3" "imap" "ldap" "nis"
+                          # "nw" "ext".
 
 # The list of administrators (can modify other peoples settings)
 $auth["admin"][] = "127.0.0.1";	# localhost IP address. Useful with IP sessions.
@@ -207,6 +208,25 @@ $auth["realm"]  = "mrbs";
 # 'auth_ext' configuration settings
 $auth["prog"]   = "";
 $auth["params"] = "";
+
+# 'auth_db_ext' configuration settings
+# Choose database system: see INSTALL for the list of supported databases
+# ("mysql"=MySQL,...) and valid strings.
+$auth['db_ext']['db_sys'] = 'mysql';
+$auth['db_ext']['db_host'] = 'localhost';
+# Port used by database server (leave empty if using the default one)
+$auth['db_ext']['db_port'] = '';
+# Communication protocol to use. For pgsql, you can use 'unix' instead of
+# 'tcp' to use Unix Domain Sockets instead of TCP/IP.
+$auth['db_ext']['db_protocol'] = 'tcp';
+$auth['db_ext']['db_username'] = 'authuser';
+$auth['db_ext']['db_password'] = 'authpass';
+$auth['db_ext']['db_name'] = 'authdb';
+$auth['db_ext']['db_table'] = 'users';
+$auth['db_ext']['column_name_username'] = 'name';
+$auth['db_ext']['column_name_password'] = 'password';
+# Either 'md5', 'sha1', 'crypt' or 'plaintext'
+$auth['db_ext']['password_format'] = 'md5';
 
 # 'auth_ldap' configuration settings
 # Where is the LDAP server
