@@ -6,6 +6,9 @@
 # locale specifier for Windows
 $lang_map_windows = array
 (
+  'cs' => 'csy',
+  'cs-cs' => 'csy',
+  'cs-cz' => 'csy',
   'cz' => 'csy',
   'cz-cz' => 'csy',
   'da' => 'dan',
@@ -136,42 +139,74 @@ if (MAIL_ADMIN_ON_BOOKINGS or MAIL_AREA_ADMIN_ON_BOOKINGS or
 # Get a default set of language tokens, you can change this if you like
 include "lang." . $default_language_tokens;
 
+$locale = "en";
+
 # Define the default locale here. For a list of supported
 # locales on your system do "locale -a"
 setlocale(LC_ALL,'C');
 
 # We attempt to make up a sensible locale from the HTTP_ACCEPT_LANGUAGE
-# environment variable. If this doesn't work for you, comment it out
-# and assign locale directly.
-# If HTTP_ACCEPT_LANGUAGE is a comma-separated list, take the first one.
+# environment variable.
+
+# First we enumerate the user's language preferences...
 if (isset($HTTP_ACCEPT_LANGUAGE)) // Attempt to use $HTTP_ACCEPT_LANGUAGE only when defined.
-   $locale = ereg_replace(",.*", "", $HTTP_ACCEPT_LANGUAGE);
+{
+  $lang_specifiers = explode(',',$HTTP_ACCEPT_LANGUAGE);
+  foreach ($lang_specifiers as $specifier)
+  {
+    if (preg_match('/([a-zA-Z\-]+);q=([0-9\.]+)/', $specifier, $matches))
+    {
+      $langs[$matches[1]] = $matches[2];
+    }
+    else if (preg_match("/([a-zA-Z\-]+)/", $specifier, $matches))
+    {
+      $langs[$matches[1]] = 1.0;
+    }
+  }
+  arsort($langs,SORT_NUMERIC);
+}
 else // Else use the value from config.inc.php.
-   $locale = $default_language_tokens;
+{
+  $langs[$default_language_tokens] = 1.0;
+}
 
 # The following attempts to import a language based on what the client
 # is using.
 
 if (!$disable_automatic_language_changing)
 {
-  $lang_file = "lang." . $locale;
-  if (file_exists($lang_file))
+  $doneit = 0;
+
+  # First try for an exact match, so if the user specified en-gb, look
+  # for lang.en-gb
+
+  foreach ($langs as $lang => $qual)
   {
-    include $lang_file;
-  }
-  else
-  {
-    $lang_file = "lang." . preg_replace("/(\w+)_(\w+)/", "\\1-\\2", $locale);
+    $lang_file = "lang." . strtolower($lang);
+
     if (file_exists($lang_file))
     {
       include $lang_file;
+      $doneit = 1;
+      $locale = $lang;
+      break;
     }
-    else
+  }
+  if ($doneit == 0)
+  {
+    # None of the user's preferred languages was available, so try to
+    # find a lang file for one of the base languages, e.g. look for
+    # lang.en if "en-ca" was specified.
+
+    foreach ($langs as $lang)
     {
-      $lang_file = "lang.". strtolower(substr($locale,0,2));
+      $lang_file = "lang." . strtolower(substr($lang,0,2));
+
       if (file_exists($lang_file))
       {
         include $lang_file;
+        $locale = $lang;
+        break;
       }
     }
   }
@@ -187,22 +222,36 @@ if (($unicode_encoding) && (!function_exists('iconv')))
 {
   exit('
 <P>
-  <B>Error:</B> The iconv module, which provides PHP support for Unicode, is not
-installed on your system.</P>
-<P>Unicode gives MRBS the ability to easily support languages other than
-English. Without Unicode, support for non-English-speaking users will be crippled.</P>
+  <B>Error:</B> The iconv module, which provides PHP support for Unicode,
+  is not installed on your system.
+</P>
+<P>
+  Unicode gives MRBS the ability to easily support languages other than
+  English. Without Unicode, support for non-English-speaking users will be
+  crippled.
+</P>
 <P>To fix this error, do one of the following:</P>
 <UL>
-<LI><P>Install and enable the iconv module.<BR>
-On a Windows server, enable php_iconv.dll in %windir%\php.ini, and make sure both
-%phpdir%\dlls\iconv.dll and %phpdir%\extensions\php_iconv.dll are in the
-path. One way to do this is to copy these two files to %windir%.<BR>
-On a Unix server, recompile your PHP module with the appropriate
-option for enabling the iconv extension. Consult your PHP server
-documentation for more information about enabling iconv support.</P></LI>
-<LI><P>Disable Unicode support by modifying config.inc.php and setting the
-variable $unicode_encoding to 0. If your MRBS installation is on a shared
-host, then this may be your only option.</P></LI>
+  <LI>
+    <P>
+      Install and enable the iconv module.<BR>
+      On a Windows server, enable php_iconv.dll in %windir%\php.ini, and make
+      sure both %phpdir%\dlls\iconv.dll and %phpdir%\extensions\php_iconv.dll
+      are in the path. One way to do this is to copy these two files to
+      %windir%.<BR>
+      On a Unix server, recompile your PHP module with the appropriate
+      option for enabling the iconv extension, or alternatively install the
+      PHP iconv package if one exists for your system. Consult your PHP server
+      documentation for more information about enabling iconv support.
+    </P>
+  </LI>
+  <LI>
+    <P>
+      Disable Unicode support by modifying config.inc.php and setting the
+      variable $unicode_encoding to 0. If your MRBS installation is on a
+      shared host, then this may be your only option.
+    </P>
+  </LI>
 </UL>
 ');
 }
@@ -237,17 +286,23 @@ else
  \"".$locale."\" to a Windows locale specifier";
     }
   }
-  else if ($server_os == "unix")
+  /* All of these Unix OSes work in mostly the same way... */
+  else if (($server_os == "linux") ||
+           ($server_os == "sunos") ||
+           ($server_os == "bsd") ||
+           ($server_os == "macosx"))
   {
     if (strlen($locale) == 2)
     {
-      # Convert locale=xx to xx_XX; this is not correct for some locales???
+      # Convert locale=xx to xx_XX; this is not correct for some locales,
+      # but this is handled by the $lang_map_unix test below
       $locale = strtolower($locale)."_".strtoupper($locale);
     }
     else
     {
-      # Convert locale=xx-xX or xx_Xx or xx_XxXx (etc.) to xx_XX[XX]; this is highly
-      # dependent on the machine's installed locales
+      # Convert locale=xx-xX or xx_Xx or xx_XxXx (etc.) to xx_XX[XX]; this
+      # is highly dependent on the machine's installed locales
+
       $locale = strtolower(substr($locale,0,2))."_".strtoupper(substr($locale,3));
     }
     if (isset($lang_map_unix[$locale]) && ($lang_map_unix[$locale]))
@@ -256,7 +311,14 @@ else
     }
     if ($unicode_encoding)
     {
-      $locale .= ".utf-8";
+      if ($server_os == "sunos")
+      {
+        $locale .= ".UTF-8";
+      }
+      else
+      {
+        $locale .= ".utf-8";
+      }
     }
     if (setlocale(LC_ALL, $locale) == FALSE)
     {
@@ -270,15 +332,23 @@ function get_server_os()
 {
   if (stristr(PHP_OS,"Darwin"))
   {
-    return "unix";
+    return "macosx";
   }
   else if (stristr(PHP_OS, "WIN"))
   {
     return "windows";
   }
-  else if (stristr(PHP_OS, "ux") || stristr(PHP_OS, "BSD"))
+  else if (stristr(PHP_OS, "Linux"))
   {
-    return "unix";
+    return "linux";
+  }
+  else if (stristr(PHP_OS, "BSD"))
+  {
+    return "bsd";
+  }
+  else if (stristr(PHP_OS, "SunOS"))
+  {
+    return "sunos";
   }
   else
   {
