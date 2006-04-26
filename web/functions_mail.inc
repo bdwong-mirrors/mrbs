@@ -126,7 +126,13 @@ function notifyAdminOnBooking($new_entry , $new_id)
         {
 	        $types = array('text');
             $sql = "SELECT a.area_admin_email ";
-            $sql .= "FROM $tbl_room r, $tbl_area a, $tbl_entry e, $tbl_repeat rep ";
+            $sql .= "FROM $tbl_room r, $tbl_area a, $tbl_entry e ";
+            // If this is a repeating entry...
+            if ($id_table == 'rep')
+            {
+                // ...use the repeat table
+                $sql .= ", $tbl_repeat rep ";
+            }
             $sql .= "WHERE ${id_table}.id=$new_id AND r.id=${id_table}.room_id AND a.id=r.area_id";
             $row = $mdb->queryRow($sql, $types);
             if (MDB::isError($row))
@@ -163,7 +169,13 @@ function notifyAdminOnBooking($new_entry , $new_id)
         {
 	        $types = array('text');
             $sql = "SELECT r.room_admin_email ";
-            $sql .= "FROM $tbl_room r, $tbl_entry e, $tbl_repeat rep ";
+            $sql .= "FROM $tbl_room r, $tbl_entry e ";
+            // If this is a repeating entry...
+            if ($id_table == 'rep')
+            {
+                // ...use the repeat table
+                $sql .= ", $tbl_repeat rep ";
+            }
             $sql .= "WHERE ${id_table}.id=$new_id AND r.id=${id_table}.room_id";
             $row = $mdb->queryRow($sql, $types);
             if (MDB::isError($row))
@@ -411,6 +423,11 @@ function notifyAdminOnBooking($new_entry , $new_id)
 	$body .= "\n";
     }
     $result = sendMail($recipients, $subject, $body, $mail_vocab['charset'] ,MAIL_CC);
+
+    if (is_object($result))
+    {
+      error_log("Error sending email: ".$result->getMessage());
+    }
     return $result;
 }
 
