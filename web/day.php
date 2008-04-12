@@ -1,13 +1,12 @@
 <?php
 # $Id$
 
-require_once("grab_globals.inc.php");
-require "config.inc.php";
-require "functions.inc";
-require_once("database.inc.php");
-require "$dbsys.inc";
+require_once "grab_globals.inc.php";
+include "config.inc.php";
+include "functions.inc";
+include "$dbsys.inc";
 include "mrbs_auth.inc";
-require "mincals.inc";
+include "mincals.inc";
 
 if (empty($debug_flag)) $debug_flag = 0;
 
@@ -19,7 +18,7 @@ if (!isset($day) or !isset($month) or !isset($year))
 	$year  = date("Y");
 } else {
 # Make the date valid if day is more then number of days in month
-	while (!checkdate($month, $day, $year))
+	while (!checkdate(intval($month), intval($day), intval($year)))
 		$day--;
 }
 if (empty($area))
@@ -65,23 +64,16 @@ if ( $pview != 1 ) {
 	echo make_area_select_html('day.php', $area, $year, $month, $day); # from functions.inc
    } else {
 	# show the standard html list
-     $sql = "SELECT      id, area_name 
-             FROM        $tbl_area 
-             ORDER BY    area_name";
-     $types = array('integer', 'text');
-     $res = $mdb->query($sql, $types);
-     if (!MDB::isError($res))
-     {
-         while ($row = $mdb->fetchInto($res))
-         {
-             echo "<a href=\"day.php?year=$year&month=$month&day=$day&area=$row[0]\">";
-             if ($row[0] == $area)
-                 echo "<font color=\"red\">" . htmlspecialchars($row[1]) . "</font></a><br>\n";
-			 else echo htmlspecialchars($row[1]) . "</a><br>\n";
-		 }
-		 $mdb->freeResult($res);
-     }
-    }
+	$sql = "select id, area_name from $tbl_area order by area_name";
+   	$res = sql_query($sql);
+   	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
+   	{
+		echo "<a href=\"day.php?year=$year&amp;month=$month&amp;day=$day&amp;area=$row[0]\">";
+		if ($row[0] == $area)
+			echo "<font color=\"red\">" . htmlspecialchars($row[1]) . "</font></a><br>\n";
+		else echo htmlspecialchars($row[1]) . "</a><br>\n";
+   	}
+   }
    echo "</td>\n";
 
    #Draw the three month calendars
@@ -109,56 +101,45 @@ $td = date("d",$i);
 #Note: The predicate clause 'start_time <= ...' is an equivalent but simpler
 #form of the original which had 3 BETWEEN parts. It selects all entries which
 #occur on or cross the current day.
+$sql = "SELECT $tbl_room.id, start_time, end_time, name, $tbl_entry.id, type,
+        $tbl_entry.description
+   FROM $tbl_entry, $tbl_room
+   WHERE $tbl_entry.room_id = $tbl_room.id
+   AND area_id = $area
+   AND start_time <= $pm7 AND end_time > $am7";
 
-#id aliases only needed for Oracle, otherwise ony one id column is returned 
+$res = sql_query($sql);
+if (! $res) fatal_error(0, sql_error());
+for ($i = 0; ($row = sql_row($res, $i)); $i++) {
+	# Each row weve got here is an appointment.
+	#Row[0] = Room ID
+	#row[1] = start time
+	#row[2] = end time
+	#row[3] = short description
+	#row[4] = id of this booking
+	#row[5] = type (internal/external)
+	#row[6] = description
 
-$sql = "SELECT  $tbl_room.id AS ID, start_time, end_time, name,
-				$tbl_entry.id AS ID2, type, $tbl_entry.description
-        FROM    $tbl_entry, $tbl_room
-        WHERE   $tbl_entry.room_id = $tbl_room.id
-        AND     area_id = $area
-        AND     start_time <= $pm7 
-        AND     end_time > $am7";
+	# $today is a map of the screen that will be displayed
+	# It looks like:
+	#     $today[Room ID][Time][id]
+	#                          [color]
+	#                          [data]
+	#                          [long_descr]
 
-$types = array('integer', 'integer', 'integer', 'text', 'integer', 'text', 'text');
-$res = $mdb->query($sql, $types);
-if (MDB::isError($res))
-{
-    fatal_error(0, $res->getMessage() . "<br>" . $res->getUserInfo());
-}
-while ($row = $mdb->fetchInto($res))
-{
-    /*
-       Each row weve got here is an appointment.
-       row[0] = Room ID
-       row[1] = start time
-       row[2] = end time
-       row[3] = short description
-       row[4] = id of this booking
-       row[5] = type (internal/external)
-       row[6] = description
-
-       $today is a map of the screen that will be displayed
-       It looks like:
-           $today[Room ID][Time][id]
-                                [color]
-                                [data]
-                                [long_descr]
-
-       Fill in the map for this meeting. Start at the meeting start time,
-       or the day start time, whichever is later. End one slot before the
-       meeting end time (since the next slot is for meetings which start then),
-       or at the last slot in the day, whichever is earlier.
-       Time is of the format HHMM without leading zeros.
-
-       Note: int casts on database rows for max may be needed for PHP3.
-       Adjust the starting and ending times so that bookings which don't
-       start or end at a recognized time still appear.
-    */
-    $start_t = max(round_t_down($row[1], $resolution, $am7), $am7);
-    $end_t = min(round_t_up($row[2], $resolution, $am7) - $resolution, $pm7);
-    for ($t = $start_t; $t <= $end_t; $t += $resolution)
-    {
+	# Fill in the map for this meeting. Start at the meeting start time,
+	# or the day start time, whichever is later. End one slot before the
+	# meeting end time (since the next slot is for meetings which start then),
+	# or at the last slot in the day, whichever is earlier.
+	# Time is of the format HHMM without leading zeros.
+	#
+	# Note: int casts on database rows for max may be needed for PHP3.
+	# Adjust the starting and ending times so that bookings which don't
+	# start or end at a recognized time still appear.
+	$start_t = max(round_t_down($row[1], $resolution, $am7), $am7);
+	$end_t = min(round_t_up($row[2], $resolution, $am7) - $resolution, $pm7);
+	for ($t = $start_t; $t <= $end_t; $t += $resolution)
+	{
 		$today[$row[0]][date($format,$t)]["id"]    = $row[4];
 		$today[$row[0]][date($format,$t)]["color"] = $row[5];
 		$today[$row[0]][date($format,$t)]["data"]  = "";
@@ -178,7 +159,6 @@ while ($row = $mdb->fetchInto($res))
 		$today[$row[0]][date($format,$start_t)]["long_descr"] = $row[6];
 	}
 }
-$mdb->freeResult($res);
 
 if ($debug_flag) 
 {
@@ -199,24 +179,18 @@ if ($debug_flag)
 # pull the data from the db and store it. Convienently we can print the room
 # headings and capacities at the same time
 
-$sql = "SELECT      room_name, capacity, id, description
-        FROM        $tbl_room 
-        WHERE       area_id=$area 
-        ORDER BY    1";
-$types = array('text', 'integer', 'integer', 'text');
-$res = $mdb->query($sql, $types);
+$sql = "select room_name, capacity, id, description from $tbl_room where area_id=$area order by 1";
+
+$res = sql_query($sql);
 
 # It might be that there are no rooms defined for this area.
 # If there are none then show an error and dont bother doing anything
 # else
-if (MDB::isError($res))
+if (! $res) fatal_error(0, sql_error());
+if (sql_count($res) == 0)
 {
-    fatal_error(0, $res->getMessage() . "<br>" . $res->getUserInfo());
-}
-$counte = $mdb->numRows($res);
-if (0 == $counte)
-{
-    echo "<h1>".get_vocab("no_rooms_for_area")."</h1>";
+	echo "<h1>".get_vocab("no_rooms_for_area")."</h1>";
+	sql_free($res);
 }
 else
 {
@@ -225,9 +199,9 @@ else
 
 	if ( $pview != 1 ) {
 		#Show Go to day before and after links
-        $output = "<table width=\"100%\"><tr><td><a href=\"day.php?year=$yy&month=$ym&day=$yd&area=$area\">&lt;&lt;".get_vocab("daybefore")."</a></td>
+        $output = "<table width=\"100%\"><tr><td><a href=\"day.php?year=$yy&amp;month=$ym&amp;day=$yd&amp;area=$area\">&lt;&lt;".get_vocab("daybefore")."</a></td>
         <td align=center><a href=\"day.php?area=$area\">".get_vocab("gototoday")."</a></td>
-        <td align=right><a href=\"day.php?year=$ty&month=$tm&day=$td&area=$area\">".get_vocab("dayafter")."&gt;&gt;</a></td></tr></table>\n";
+        <td align=right><a href=\"day.php?year=$ty&amp;month=$tm&amp;day=$td&amp;area=$area\">".get_vocab("dayafter")."&gt;&gt;</a></td></tr></table>\n";
         print $output;
 	}
 
@@ -235,27 +209,26 @@ else
 	// Must be included before the beginnning of the main table.
 	if ($javascript_cursor) // If authorized in config.inc.php, include the javascript cursor management.
             {
-	    echo "<SCRIPT language=\"JavaScript\" type=\"text/javascript\" src=\"xbLib.js\"></SCRIPT>\n";
-            echo "<SCRIPT language=\"JavaScript\">InitActiveCell("
-               . ($show_plus_link ? "true" : "false") . ", "			// Show (+)
-               . "true, "							// Highlight left title column
-               . ((FALSE != $times_right_side) ? "true" : "false") . ", "	// Highlight right title column
-               . "\"$highlight_method\", "					// "bgcolor", "class", or "hybrid"
-               . "\"" . get_vocab("click_to_reserve") . "\", "			// Status bar message
-	       . "1"								// Drag effect: 0=None; 1=Rectangle; 2=Columns; 3=Rows
-               . ");</SCRIPT>\n";
+	    echo "<script type=\"text/javascript\" src=\"xbLib.js\"></script>\n";
+            echo "<script type=\"text/javascript\">InitActiveCell("
+               . ($show_plus_link ? "true" : "false") . ", "
+               . "true, "
+               . ((FALSE != $times_right_side) ? "true" : "false") . ", "
+               . "\"$highlight_method\", "
+               . "\"" . get_vocab("click_to_reserve") . "\""
+               . ");</script>\n";
             }
 
 	#This is where we start displaying stuff
 	echo "<table cellspacing=0 border=1 width=\"100%\">";
-	echo "<tr><th width=\"1%\">".($enable_periods ? get_vocab("period") : get_vocab("time"))."</th>";
+	echo "<tr><th width=\"1%\">".($enable_periods ? get_vocab("period") : get_vocab("time")).":</th>";
 
-    $room_column_width = (int)(95 / $counte);
-    while ($row = $mdb->fetchInto($res))
-    {
+	$room_column_width = (int)(95 / sql_count($res));
+	for ($i = 0; ($row = sql_row($res, $i)); $i++)
+	{
         echo "<th width=\"$room_column_width%\">
-            <a href=\"week.php?year=$year&month=$month&day=$day&area=$area&room=$row[2]\"
-            title=\"" . get_vocab("viewweek") . " \n\n$row[3]\">"
+            <a href=\"week.php?year=$year&amp;month=$month&amp;day=$day&amp;area=$area&amp;room=$row[2]\"
+            title=\"" . get_vocab("viewweek") . " &#10;&#10;$row[3]\">"
             . htmlspecialchars($row[0]) . ($row[1] > 0 ? "($row[1])" : "") . "</a></th>";
 		$rooms[] = $row[2];
 	}
@@ -264,13 +237,13 @@ else
     if ( FALSE != $times_right_side )
     {
         echo "<th width=\"1%\">". ( $enable_periods  ? get_vocab("period") : get_vocab("time") )
-        ."</th>";
+        .":</th>";
     }
     echo "</tr>\n";
-
+  
 	# URL for highlighting a time. Don't use REQUEST_URI or you will get
 	# the timetohighlight parameter duplicated each time you click.
-	$hilite_url="day.php?year=$year&month=$month&day=$day&area=$area&timetohighlight";
+	$hilite_url="day.php?year=$year&amp;month=$month&amp;day=$day&amp;area=$area&amp;timetohighlight";
 
 	# This is the main bit of the display
 	# We loop through time and then the rooms we just got
@@ -301,7 +274,7 @@ else
 		} else {
 			echo "<a href=\"$hilite_url=$time_t\" title=\""
             . get_vocab("highlight_line") . "\">"
-            . utf8_date(hour_min_format(),$t) . "</a></td>\n";
+            . utf8_strftime(hour_min_format(),$t) . "</a></td>\n";
 		}
 
 		# Loop through the list of rooms we have for this area
@@ -338,29 +311,29 @@ else
 				if ( $pview != 1 ) {
 					if ($javascript_cursor)
 					{
-						echo "<SCRIPT language=\"JavaScript\">\n<!--\n";
+						echo "<script type=\"text/javascript\">\n<!--\n";
 						echo "BeginActiveCell();\n";
-						echo "// -->\n</SCRIPT>";
+						echo "// -->\n</script>";
 					}
 					echo "<center>";
 					if( $enable_periods ) {
-						echo "<a href=\"edit_entry.php?area=$area&room=$room&period=$time_t_stripped&year=$year&month=$month&day=$day\"><img src=new.gif width=10 height=10 border=0></a>";
+						echo "<a href=\"edit_entry.php?area=$area&amp;room=$room&amp;period=$time_t_stripped&amp;year=$year&amp;month=$month&amp;day=$day\"><img src=\"new.gif\" alt=\"New\" width=\"10\" height=\"10\" border=\"0\"></a>";
 					} else {
-						echo "<a href=\"edit_entry.php?area=$area&room=$room&hour=$hour&minute=$minute&year=$year&month=$month&day=$day\"><img src=new.gif width=10 height=10 border=0></a>";
+						echo "<a href=\"edit_entry.php?area=$area&amp;room=$room&amp;hour=$hour&amp;minute=$minute&amp;year=$year&amp;month=$month&amp;day=$day\"><img src=\"new.gif\" alt=\"New\" width=\"10\" height=\"10\" border=\"0\"></a>";
 					}
 					echo "</center>";
 					if ($javascript_cursor)
 					{
-						echo "<SCRIPT language=\"JavaScript\">\n<!--\n";
+						echo "<script type=\"text/javascript\">\n<!--\n";
 						echo "EndActiveCell();\n";
-						echo "// -->\n</SCRIPT>";
+						echo "// -->\n</script>";
 					}
 				} else echo '&nbsp;';
 			}
 			elseif ($descr != "")
 			{
 				#if it is booked then show
-				echo " <a href=\"view_entry.php?id=$id&area=$area&day=$day&month=$month&year=$year\" title=\"$long_descr\">$descr</a>";
+				echo " <a href=\"view_entry.php?id=$id&amp;area=$area&amp;day=$day&amp;month=$month&amp;year=$year\" title=\"$long_descr\">$descr</a>";
 			}
 			else
 				echo "&nbsp;\"&nbsp;";
@@ -383,7 +356,7 @@ else
                 tdcell("red");
 		        echo "<a href=\"$hilite_url=$time_t\" title=\""
                 . get_vocab("highlight_line") . "\">"
-                . utf8_date(hour_min_format(),$t) . "</a></td>\n";
+                . utf8_strftime(hour_min_format(),$t) . "</a></td>\n";
             }
         }
 
@@ -394,7 +367,6 @@ else
     (isset($output)) ? print $output : '';
 	show_colour_key();
 }
-$mdb->freeResult($res);
 
 include "trailer.inc";
 ?>

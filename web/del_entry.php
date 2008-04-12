@@ -4,8 +4,6 @@
 require_once "grab_globals.inc.php";
 include "config.inc.php";
 include "functions.inc";
-require_once("database.inc.php");
-MDB::loadFile("Date");
 include "$dbsys.inc";
 include "mrbs_auth.inc";
 include "mrbs_sql.inc";
@@ -23,9 +21,9 @@ if(getAuthorised(1) && ($info = mrbsGetEntryInfo($id)))
         // Gather all fields values for use in emails.
         $mail_previous = getPreviousEntryData($id, $series);
     }
-
+    sql_begin();
 	$result = mrbsDelEntry(getUserName(), $id, $series, 1);
-    $mdb->commit();
+	sql_commit();
 	if ($result)
 	{
         // Send a mail to the Administrator

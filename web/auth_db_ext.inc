@@ -1,20 +1,23 @@
 <?php
 /*****************************************************************************\
-*                                                                             *
-*   File name       auth_db_ext.inc                                           *
-*                                                                             *
-*   Description     Authenticate users from a table in another database.      *
-*                                                                             *
-*   Notes           To use this authentication scheme, set in config.inc.php: *
-*                       $auth["type"]  = "db_ext";                            *
-*                                                                             *
-*   History                                                                   *
-*    2005/05/11 JPB Created this file                                         *
-*    Remaining history in ChangeLog and CVS logs                              *
-*                                                                             *
+*									      *
+*   File name       auth_db_ext.inc					      *
+*									      *
+*   Description	    Authenticate users from a table in another database.      *
+*									      *
+*   Notes	    To use this authentication scheme, set in config.inc.php: *
+*			$auth["type"]  = "db_ext";			      *
+*                   Assumes passwords are stored in the other table in        *
+*                   plaintext, authValidateUser() will need to be changed if  *
+*                   the password is stored differently.                       *
+*									      *
+*   History								      *
+*    2005/05/11 JPB Created this file					      *
+*									      *
 \*****************************************************************************/
 
 // $Id$
+
 
 /* authValidateUser($user, $pass)
  * 
@@ -30,80 +33,72 @@
 
 function authValidateUser($user, $pass)
 {
-    global $auth, $oci8_home;
+   global $auth;
 
-    $retval = 0;
+   $retval = 0;
 
-    $user=strtolower($user);
+   $user=strtolower($user);
 
-    require_once("MDB.php");
+   $conn = mysql_connect($auth['db_ext']['db_host'],
+                         $auth['db_ext']['db_username'],
+                         $auth['db_ext']['db_password']);
 
-    $my_mdb=&MDB::connect(array(
-                              "phptype"  => $auth['db_ext']['db_sys'],
-                              "hostspec" => $auth['db_ext']['db_host'],
-                              "port"     => $auth['db_ext']['db_port'],
-                              "protocol" => $auth['db_ext']['db_protocol'],
-                              "username" => $auth['db_ext']['db_username'],
-                              "password" => $auth['db_ext']['db_password'],
-                              "database" => $auth['db_ext']['db_name']
-                              ),
-                          array(
-                              'optimize'   => 'portability',
-                              'HOME'       => $oci8_home 
-                              )
-        );
+   mysql_select_db($auth['db_ext']['db_name'], $conn);
 
-  if (!MDB::isError($my_mdb)) {
+   $user = addslashes($user);
 
-      $r = $my_mdb->queryOne("SELECT " . $auth['db_ext']['column_name_password'] .
-                             " FROM " . $auth['db_ext']['db_table'] .
-                             " WHERE " . $auth['db_ext']['column_name_username'] .
-                             "=" . $my_mdb->getTextValue($user),
-                             'integer');
+   if ($auth['db_ext']['use_md5_passwords'] == 1)
+   {
+     $pass = md5($pass);
+   }
 
-      if (MDB::isError($r)) {
-          echo $r->getMessage() . "<br>" . $r->getUserInfo();
-          exit;
-      } else {
+   $query = "SELECT " . $auth['db_ext']['column_name_password'] .
+            " FROM " . $auth['db_ext']['db_table'] .
+            " WHERE ". $auth['db_ext']['column_name_username'] . "='$user'";
 
-          switch ($auth['db_ext']['password_format'])
-          {
-              case 'md5':
-                  if (md5($pass) == $r)
-                  {
-                      $retval = 1;
-                  }
-                  break;
+   $r = mysql_query($query, $conn);
 
-              case 'sha1':
-                  if (sha1($pass) == $r)
-                  {
-                      $retval = 1;
-                  }
-                  break;
+   if ($r && (mysql_num_rows($r) == 1)) // force a unique match
+   {
+     $row = mysql_fetch_row($r);
 
-              case 'crypt':
-                  $recrypt = crypt($pass,$r);
-                  if ($r == $recrypt)
-                  {
-                      $retval = 1;
-                  }
-                  break;
+     switch ($auth['db_ext']['password_format'])
+     {
+       case 'md5':
+         if (md5($pass) == $row[0])
+         {
+           $retval = 1;
+         }
+         break;
 
-              default:
-                  // Otherwise assume plaintext
-                  if ($pass == $r)
-                  {
-                      $retval = 1;
-                  }
-                  break;
-          }
-      }
-      
-      $my_mdb->disconnect();
+       case 'sha1':
+         if (sha1($pass) == $row[0])
+         {
+           $retval = 1;
+         }
+         break;
 
-  }
-  return $retval;
+       case 'crypt':
+         $recrypt = crypt($pass,$row[0]);
+         if ($row[0] == $recrypt)
+         {
+           $retval = 1;
+         }
+         break;
+
+       default:
+         // Otherwise assume plaintext
+         if ($pass == $row[0])
+         {
+           $retval = 1;
+         }
+         break;
+     }
+   }
+
+   mysql_close($conn);
+
+   return $retval;
 }
 
 /* authGetUserLevel($user)

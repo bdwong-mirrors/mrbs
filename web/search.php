@@ -4,7 +4,6 @@
 require_once "grab_globals.inc.php";
 include "config.inc.php";
 include "functions.inc";
-require_once("database.inc.php");
 include "$dbsys.inc";
 
 #If we dont know the right date then make it up 
@@ -38,9 +37,8 @@ if (!empty($advanced))
 	echo get_vocab("from"). " ";
 	genDateSelector ("", $day, $month, $year);
 	echo "<br><INPUT TYPE=SUBMIT VALUE=\"" . get_vocab("search_button") ."\">";
+	echo "</FORM>";
 	include "trailer.inc";
-	echo "</BODY>";
-	echo "</HTML>";
 	exit;
 }
 
@@ -52,7 +50,7 @@ if (!$search_str)
 }
 
 # now is used so that we only display entries newer than the current time
-echo "<H3>" . get_vocab("search_results") . " \"<font color=\"blue\">$search_str</font>\"</H3>\n";
+echo "<H3>" . get_vocab("search_results") . ": \"<font color=\"blue\">$search_str</font>\"</H3>\n";
 
 $now = mktime(0, 0, 0, $month, $day, $year);
 
@@ -62,22 +60,13 @@ $sql_pred = "( " . sql_syntax_caseless_contains("E.create_by", $search_text)
 		. " OR " . sql_syntax_caseless_contains("E.description", $search_text)
 		. ") AND E.end_time > $now";
 
-if ($debug_flag)
-{
-    echo "<p>DEBUG: SQL: <tt> SELECT count(*) FROM $tbl_entry E WHERE $sql_pred </tt><BR>";
-}
-
 # The first time the search is called, we get the total
 # number of matches.  This is passed along to subsequent
 # searches so that we don't have to run it for each page.
 if(!isset($total))
-{
-    $total = $mdb->queryOne("SELECT count(*) 
-                             FROM $tbl_entry E 
-                             WHERE $sql_pred", 'integer');
-}
+	$total = sql_query1("SELECT count(*) FROM $tbl_entry E WHERE $sql_pred");
 
-if (MDB::isError($total) or (0 == $total))
+if($total <= 0)
 {
 	echo "<B>" . get_vocab("nothing_found") . "</B>\n";
 	include "trailer.inc";
@@ -94,34 +83,27 @@ $sql = "SELECT E.id, E.create_by, E.name, E.description, E.start_time, R.area_id
         FROM $tbl_entry E, $tbl_room R
         WHERE $sql_pred
         AND E.room_id = R.id
-        ORDER BY E.start_time asc";
+        ORDER BY E.start_time asc "
+    . sql_syntax_limit($search["count"], $search_pos);
 
-if ($debug_flag)
-{
-    echo "<p>DEBUG: SQL: <tt> $sql </tt><BR>";
-}
-
-$types = array('integer', 'text', 'text', 'text', 'integer', 'integer');
-$result = $mdb->limitQuery($sql, $types, $search_pos, $search["count"]);
-if (MDB::isError($mdb))
-{
-    fatal_error(0, $result->getMessage() . "\n" . $result->getUserInfo() . "\n");
-}
-$num_records = $mdb->numRows($result);
+# this is a flag to tell us not to display a "Next" link
+$result = sql_query($sql);
+if (! $result) fatal_error(0, sql_error());
+$num_records = sql_count($result);
 
 $has_prev = $search_pos > 0;
 $has_next = $search_pos < ($total-$search["count"]);
 
 if($has_prev || $has_next)
 {
-	echo "<B>" . get_vocab("records") . ($search_pos+1) . get_vocab("through") . ($search_pos+$num_records) . get_vocab("of") . $total . "</B><BR>";
+	echo "<B>" . get_vocab("records") . ($search_pos+1) . get_vocab("through") . ($search_pos+$num_records) . get_vocab("of") . $total . "</B><br>";
 
 	# display a "Previous" button if necessary
 	if($has_prev)
 	{
-		echo "<A HREF=\"search.php?search_str=$search_url&search_pos=";
+		echo "<A HREF=\"search.php?search_str=$search_url&amp;search_pos=";
 		echo max(0, $search_pos-$search["count"]);
-		echo "&total=$total&year=$year&month=$month&day=$day\">";
+		echo "&amp;total=$total&amp;year=$year&amp;month=$month&amp;day=$day\">";
 	}
 
 	echo "<B>" . get_vocab("previous") . "</B>";
@@ -135,9 +117,9 @@ if($has_prev || $has_next)
 	# display a "Previous" button if necessary
 	if($has_next)
 	{
-		echo "<A HREF=\"search.php?search_str=$search_url&search_pos=";
+		echo "<A HREF=\"search.php?search_str=$search_url&amp;search_pos=";
 		echo max(0, $search_pos+$search["count"]);
-		echo "&total=$total&year=$year&month=$month&day=$day\">";
+		echo "&amp;total=$total&amp;year=$year&amp;month=$month&amp;day=$day\">";
 	}
 
 	echo "<B>". get_vocab("next") ."</B>";
@@ -147,7 +129,7 @@ if($has_prev || $has_next)
 }
 ?>
   <P>
-  <TABLE BORDER=2 CELLSPACING=0 CELLPADDING=3>
+  <table BORDER=2 CELLSPACING=0 CELLPADDING=3>
    <TR>
     <TH><?php echo get_vocab("entry") ?></TH>
     <TH><?php echo get_vocab("createdby") ?></TH>
@@ -156,7 +138,7 @@ if($has_prev || $has_next)
     <TH><?php echo get_vocab("start_date") ?></TH>
    </TR>
 <?php
-while ($row = $mdb->fetchInto($result))
+for ($i = 0; ($row = sql_row($result, $i)); $i++)
 {
 	echo "<TR>";
 	echo "<TD><A HREF=\"view_entry.php?id=$row[0]\">".get_vocab("view")."</A></TD>\n";
@@ -165,7 +147,7 @@ while ($row = $mdb->fetchInto($result))
 	echo "<TD>" . htmlspecialchars($row[3]) . "</TD>\n";
 	// generate a link to the day.php
 	$link = getdate($row[4]);
-	echo "<TD><A HREF=\"day.php?day=$link[mday]&month=$link[mon]&year=$link[year]&area=$row[5]\">";
+	echo "<TD><A HREF=\"day.php?day=$link[mday]&amp;month=$link[mon]&amp;year=$link[year]&amp;area=$row[5]\">";
 	if(empty($enable_periods)){
         	$link_str = time_date_string($row[4]);
         }
@@ -175,8 +157,7 @@ while ($row = $mdb->fetchInto($result))
         echo "$link_str</A></TD>";
 	echo "</TR>\n";
 }
-$mdb->freeResult($result);
 
-echo "</TABLE>\n";
+echo "</table>\n";
 include "trailer.inc";
 ?>

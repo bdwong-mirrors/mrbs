@@ -11,14 +11,12 @@
 ###################
 # Database settings
 ###################
-# Choose database system: see INSTALL for the list of supported databases
-# ("mysql"=MySQL,...) and valid strings.
+# Which database system: "pgsql"=PostgreSQL, "mysql"=MySQL,
+# "mysqli"=MySQL via the mysqli PHP extension
 $dbsys = "mysql";
 # Hostname of database server. For pgsql, can use "" instead of localhost
 # to use Unix Domain Sockets instead of TCP/IP.
 $db_host = "localhost";
-# Port used by database server (leave empty if using the default one)
-$db_port = "";
 # Database name:
 $db_database = "mrbs";
 # Database login user name:
@@ -28,23 +26,10 @@ $db_password = 'mrbs-password';
 # Prefix for table names.  This will allow multiple installations where only
 # one database is available
 $db_tbl_prefix = "mrbs_";
-# Set this to TRUE to NOT use PHP persistent (pooled) database connections:
-$db_nopersist = FALSE;
-# Communication protocol tu use. For pgsql, you can use 'unix' instead of
-# 'tcp' to use Unix Domain Sockets instead of TCP/IP.
-$db_protocol = "tcp";
+# Uncomment this to NOT use PHP persistent (pooled) database connections:
+# $db_nopersist = 1;
 
 ################################
-# DBMS specific options
-################################
-
-# ****ORACLE*****
-
-# Home directory path when Oracle is installed if it is running in the local machine.
-# Default value: value of the environment variable ORACLE_HOME
-$oci8_home = "";
-
-#################################
 # Site identification information
 #################################
 $mrbs_admin = "Your Administrator";
@@ -184,10 +169,15 @@ $default_room = 0;
 ###############################################
 $auth["session"] = "php"; # How to get and keep the user ID. One of
 			  # "http" "php" "cookie" "ip" "host" "nt" "omni"
-			  # "remote_user".
+			  # "remote_user"
 $auth["type"] = "config"; # How to validate the user/password. One of "none"
                           # "config" "db" "db_ext" "pop3" "imap" "ldap" "nis"
                           # "nw" "ext".
+
+# Cookie path override. If this value is set it will be used by the
+# 'php' and 'cookie' session schemes to override the default behaviour
+# of automatically determining the cookie path to use
+$cookie_path_override = '';
 
 # The list of administrators (can modify other peoples settings)
 $auth["admin"][] = "127.0.0.1";	# localhost IP address. Useful with IP sessions.
@@ -214,15 +204,7 @@ $auth["prog"]   = "";
 $auth["params"] = "";
 
 # 'auth_db_ext' configuration settings
-# Choose database system: see INSTALL for the list of supported databases
-# ("mysql"=MySQL,...) and valid strings.
-$auth['db_ext']['db_sys'] = 'mysql';
 $auth['db_ext']['db_host'] = 'localhost';
-# Port used by database server (leave empty if using the default one)
-$auth['db_ext']['db_port'] = '';
-# Communication protocol to use. For pgsql, you can use 'unix' instead of
-# 'tcp' to use Unix Domain Sockets instead of TCP/IP.
-$auth['db_ext']['db_protocol'] = 'tcp';
 $auth['db_ext']['db_username'] = 'authuser';
 $auth['db_ext']['db_password'] = 'authpass';
 $auth['db_ext']['db_name'] = 'authdb';
@@ -237,11 +219,23 @@ $auth['db_ext']['password_format'] = 'md5';
 #$ldap_host = "localhost";
 # If you have a non-standard LDAP port, you can define it here
 #$ldap_port = 389;
+# If you do not want to use LDAP v3, change the following to false
+$ldap_v3 = true;
+# If you want to use TLS, change the following to true
+$ldap_tls = false;
 # LDAP base distinguish name
 # See AUTHENTICATION for details of how check against multiple base dn's
 #$ldap_base_dn = "ou=organizationalunit,dc=my-domain,dc=com";
 # Attribute within the base dn that contains the username
 #$ldap_user_attrib = "uid";
+# If you need to search the directory to find the user's DN to bind
+# with, set the following to the attribute that holds the user's
+# "username". In Microsoft AD directories this is "sAMAccountName"
+#$ldap_dn_search_attrib = "sAMAccountName";
+# If you need to bind as a particular user to do the search described
+# above, specify the DN and password in the variables below
+# $ldap_dn_search_dn = "cn=Search User,ou=Users,dc=some,dc=company";
+# $ldap_dn_search_password = "some-password";
 
 # 'auth_ldap' extra configuration for ldap configuration of who can use
 # the system
@@ -250,7 +244,7 @@ $auth['db_ext']['password_format'] = 'md5';
 #   (&($ldap_user_attrib=username)($ldap_filter))
 # After binding to check the password, this check is used to see that
 # they are a valid user of mrbs.
-#$ldap_user_filter = "mrbsuser=y";
+#$ldap_filter = "mrbsuser=y";
 
 # 'auth_imap' configuration settings
 # See AUTHENTICATION for details of how check against multiple servers
@@ -258,6 +252,18 @@ $auth['db_ext']['password_format'] = 'md5';
 $imap_host = "imap-server-name";
 # The IMAP server port
 $imap_port = "143";
+
+# 'auth_imap_php' configuration settings
+$auth["imap_php"]["hostname"] = "localhost";
+# You can also specify any of the following options:
+# Specifies the port number to connect to
+#$auth["imap_php"]["port"] = 993;
+# Use SSL
+#$auth["imap_php"]["ssl"] = TRUE;
+# Use TLS
+#$auth["imap_php"]["tls"] = TRUE;
+# Turn off SSL/TLS certificate validation
+#$auth["imap_php"]["novalidate-cert"] = TRUE;
 
 # 'auth_pop3' configuration settings
 # See AUTHENTICATION for details of how check against multiple servers
@@ -270,6 +276,12 @@ $pop3_port = "110";
 ###############################################
 # Email settings
 ###############################################
+
+# You can override the charset used in emails if $unicode_encoding is 1
+# (utf-8) if you like, but be sure the charset you choose can handle all
+# the characters in the translation and that anyone may use in a
+# booking description
+#$mail_charset = "iso-8859-1";
 
 # Set to TRUE if you want to be notified when entries are booked. Default is
 # FALSE
@@ -365,6 +377,9 @@ define ("MAIL_RECIPIENTS", $mrbs_admin_email);
 # more than one recipient (see MAIL_RECIPIENTS)
 define ("MAIL_CC", '');
 
+# The values below need to be in UTF-8, or if set, $mail_vocab.
+# (Although proper encoding of subjects isn't currently handled)
+
 # Set the content of the Subject field for added/changed entries.
 $mail["subject"] = "Entry added/changed for $mrbs_company MRBS";
 
@@ -444,9 +459,6 @@ $typel["E"] = get_vocab("external");
 $typel["I"] = get_vocab("internal");
 # $typel["J"] = "J";
 
-# define the number of types per row in the color-key
-#$color_key_types_per_row = 5;
-
 ##########################################
 # PHP System Configuration - internal use, do not change
 ##########################################
@@ -456,9 +468,6 @@ set_magic_quotes_runtime(0);
 # Make sure notice errors are not reported, they can break mrbs code:
 error_reporting (E_ALL ^ E_NOTICE);
 
-# Debug flag : leave it to FALSE for production site.
-$debug_flag = FALSE;
-
 # These variables specify the names of the tables in the database
 # These should not need to be changed.  Please change $db_tbl_prefix
 # in the database section above.
@@ -467,8 +476,5 @@ $tbl_entry  = $db_tbl_prefix . "entry";
 $tbl_repeat = $db_tbl_prefix . "repeat";
 $tbl_room   = $db_tbl_prefix . "room";
 $tbl_users  = $db_tbl_prefix . "users";
-
-# MRBS developers, make sure to update this string before each release:
-$mrbs_version = "MRBS 1.3-dev";
 
 ?>

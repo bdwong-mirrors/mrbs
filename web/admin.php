@@ -5,7 +5,6 @@
 require_once "grab_globals.inc.php";
 include "config.inc.php";
 include "functions.inc";
-require_once("database.inc.php");
 include "$dbsys.inc";
 include "mrbs_auth.inc";
 
@@ -33,20 +32,19 @@ print_header($day, $month, $year, isset($area) ? $area : "");
 // If area is set but area name is not known, get the name.
 if (isset($area))
 {
-    if (empty($area_name))
-    {
-        $area_name = $mdb->queryOne("SELECT area_name 
-                                     FROM   $tbl_area 
-                                     WHERE  id=$area", 'text');
-        if (MDB::isError($area_name))
-        {
-            fatal_error(0, $area_name->getMessage() . "<br>" . $area_name->getUserInfo());
-        }
-    }
-    else
-    {
-        $area_name = unslashes($area_name);
-    }
+	if (empty($area_name))
+	{
+		$res = sql_query("select area_name from $tbl_area where id=$area");
+    	if (! $res) fatal_error(0, sql_error());
+		if (sql_count($res) == 1)
+		{
+			$row = sql_row($res, 0);
+			$area_name = $row[0];
+		}
+		sql_free($res);
+	} else {
+		$area_name = unslashes($area_name);
+	}
 }
 ?>
 
@@ -63,69 +61,40 @@ if (isset($area))
 <td>
 <?php 
 # This cell has the areas
-$types = array('integer', 'text');
-$res = $mdb->query("SELECT  id, area_name 
-                    FROM    $tbl_area 
-                    ORDER   by area_name", $types);
-if (MDB::isError($res))
-{
-    fatal_error(0, $res->getMessage() . "<br>" . $res->getUserInfo());
-}
-$row = $mdb->fetchInto($res);
-if (!$row)
-{
-    echo get_vocab("noareas");
-}
-else
-{
-    echo "<ul>";
-    do
-    {
-        $area_name_q = urlencode($row[1]);
-        echo "<li><a href=\"admin.php?area=$row[0]&area_name=$area_name_q\">"
-			. htmlspecialchars($row[1]) . "</a> (<a href=\"edit_area_room.php?area=$row[0]\">" . get_vocab("edit") . "</a>) (<a href=\"del.php?type=area&area=$row[0]\">" .  get_vocab("delete") . "</a>)\n";
+$res = sql_query("select id, area_name from $tbl_area order by area_name");
+if (! $res) fatal_error(0, sql_error());
+
+if (sql_count($res) == 0) {
+	echo get_vocab("noareas");
+} else {
+	echo "<ul>";
+	for ($i = 0; ($row = sql_row($res, $i)); $i++) {
+		$area_name_q = urlencode($row[1]);
+		echo "<li><a href=\"admin.php?area=$row[0]&amp;area_name=$area_name_q\">"
+			. htmlspecialchars($row[1]) . "</a> (<a href=\"edit_area_room.php?area=$row[0]\">" . get_vocab("edit") . "</a>) (<a href=\"del.php?type=area&amp;area=$row[0]\">" .  get_vocab("delete") . "</a>)\n";
 	}
-    while ($row = $mdb->fetchInto($res));
 	echo "</ul>";
 }
-$mdb->freeResult($res);
 ?>
 </td>
 <td>
 <?php
 # This one has the rooms
-if (isset($area))
-{
-    $types = array('integer', 'text', 'text', 'integer');
-    $res = $mdb->query("SELECT  id, room_name, description, capacity
-                        FROM    $tbl_room 
-                        WHERE   area_id=$area 
-                        ORDER   by room_name", $types);
-    if (MDB::isError($res))
-    {
-        fatal_error(0, $res->getMessage() . "<br>" . $res->getUserInfo());
-    }
-    $row = $mdb->fetchInto($res);
-    if (!$row)
-    {
-        echo get_vocab("norooms");
-    }
-    else
-    {
-        echo "<ul>";
-        do
-        {
-            echo "<li>" . htmlspecialchars($row[1]) . "(" . htmlspecialchars($row[2])
-			. ", $row[3]) (<a href=\"edit_area_room.php?room=$row[0]\">" . get_vocab("edit") . "</a>) (<a href=\"del.php?type=room&room=$row[0]\">" . get_vocab("delete") . "</a>)\n";
+if(isset($area)) {
+	$res = sql_query("select id, room_name, description, capacity from $tbl_room where area_id=$area order by room_name");
+	if (! $res) fatal_error(0, sql_error());
+	if (sql_count($res) == 0) {
+		echo get_vocab("norooms");
+	} else {
+		echo "<ul>";
+		for ($i = 0; ($row = sql_row($res, $i)); $i++) {
+			echo "<li>" . htmlspecialchars($row[1]) . "(" . htmlspecialchars($row[2])
+			. ", $row[3]) (<a href=\"edit_area_room.php?room=$row[0]\">" . get_vocab("edit") . "</a>) (<a href=\"del.php?type=room&amp;room=$row[0]\">" . get_vocab("delete") . "</a>)\n";
 		}
-		while ($row = $mdb->fetchInto($res));
-        echo "</ul>";
+		echo "</ul>";
 	}
-    $mdb->freeResult($res);
-}
-else
-{
-    echo get_vocab("noarea");
+} else {
+	echo get_vocab("noarea");
 }
 
 ?>
@@ -133,29 +102,29 @@ else
 </tr>
 <tr>
 <td>
-<h3 ALIGN=CENTER><?php echo get_vocab("addarea") ?></h3>
+<h3 style="text-align:center;"><?php echo get_vocab("addarea") ?></h3>
 <form action=add.php method=post>
 <input type=hidden name=type value=area>
 
-<TABLE>
+<table>
 <TR><TD><?php echo get_vocab("name") ?>:       </TD><TD><input type=text name=name></TD></TR>
-</TABLE>
+</table>
 <input type=submit value="<?php echo get_vocab("addarea") ?>">
 </form>
 </td>
 
 <td>
 <?php if (0 != $area) { ?>
-<h3 ALIGN=CENTER><?php echo get_vocab("addroom") ?></h3>
+<h3 style="text-align:center;"><?php echo get_vocab("addroom") ?></h3>
 <form action=add.php method=post>
 <input type=hidden name=type value=room>
 <input type=hidden name=area value=<?php echo $area; ?>>
 
-<TABLE>
+<table>
 <TR><TD><?php echo get_vocab("name") ?>:       </TD><TD><input type=text name=name></TD></TR>
-<TR><TD><?php echo get_vocab("description") ?></TD><TD><input type=text name=description></TD></TR>
+<TR><TD><?php echo get_vocab("description") ?>:</TD><TD><input type=text name=description></TD></TR>
 <TR><TD><?php echo get_vocab("capacity") ?>:   </TD><TD><input type=text name=capacity></TD></TR>
-</TABLE>
+</table>
 <input type=submit value="<?php echo get_vocab("addroom") ?>">
 </form>
 <?php } else { echo "&nbsp;"; }?>

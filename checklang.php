@@ -11,12 +11,20 @@ If you do not supply a lang=xx parameter, all languages will be checked.
 
 <?php
 
+# NOTE: You need to change this if you run checklang.php from anywhere but
+# the MRBS 'web' directory
+$path_to_mrbs = ".";
+
+include "$path_to_mrbs/config.inc.php";
+
 # Checklang 2001-01-28 ljb - Check MRBS language files for completeness.
 # This is a rather straightforward job. For each language file, report
 # on any missing or untranslated strings with respect to the reference
 # file.
 # Parameter lang=xx can be supplied, to just check that language; by
 # default all languages are checked.
+
+unset($lang);
 
 if (!empty($_GET))
 {
@@ -26,8 +34,8 @@ else if (!empty($HTTP_GET_VARS))
 {
 	$lang = $HTTP_GET_VARS['lang'];
 }
-        
-# Language file prefix. This can include a path, e.g. "../mrbs/lang."
+
+# Language file prefix
 $langs = "lang.";
 
 # Reference language:
@@ -41,21 +49,32 @@ if (isset($lang))
 else {
   # Make a list of language files to check. This is similar to glob() in
   # PEAR File/Find.
-  $dh = opendir(".");
-  while ($filename = readdir($dh))
-	  if (ereg("^lang\\.(.*)", $filename, $name) && $name[1] != $ref_lang)
-	  $check[] = $name[1];
+  $dh = opendir($path_to_mrbs);
+  while (($filename = readdir($dh)) !== false)
+  {
+    $files[] = $filename;
+  }
   closedir($dh);
+  
+  sort($files);
+  
+  foreach ($files as $filename)
+  {
+    if (ereg("^lang\\.(.*)", $filename, $name) && $name[1] != $ref_lang)
+    {
+      $check[] = $name[1];
+    }
+  }
 }
 
-include "$langs$ref_lang";
+include "$path_to_mrbs/$langs$ref_lang";
 $ref = $vocab;
 
 reset($check);
 while (list(,$l) = each($check))
 {
-	unset($lang);
-	include "$langs$l";
+	unset($vocab);
+	include "$path_to_mrbs/$langs$l";
 ?>
 <h2>Language: <?php echo $l ?></h2>
 <table border=1>
@@ -80,7 +99,8 @@ while (list(,$l) = each($check))
 
 		} elseif (($key != "charset") &&
 		          ($vocab[$key] == $ref[$key]) &&
-		          ($ref[$key] != ""))
+		          ($ref[$key] != "") &&
+		          (!preg_match('/^mail_/', $key)))
 		{
 			$status = "Untranslated";
 			$nunxlate++;

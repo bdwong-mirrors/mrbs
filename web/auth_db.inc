@@ -1,17 +1,16 @@
 <?php
 /*****************************************************************************\
-*                                                                             *
-*   File name       auth_db.inc                                               *
-*                                                                             *
-*   Description     Authenticate users from a table in the MRBS database.     *
-*                                                                             *
-*   Notes           To use this authentication scheme, set in config.inc.php: *
-*                       $auth["type"]  = "db";                                *
-*                                                                             *
-*   History                                                                   *
-*    2004/01/11 JFL Created this file                                         *
-*    Remaining history in ChangeLog and CVS logs                              *
-*                                                                             *
+*									      *
+*   File name       auth_db.inc						      *
+*									      *
+*   Description	    Authenticate users from a table in the MRBS database.     *
+*									      *
+*   Notes	    To use this authentication scheme, set in config.inc.php: *
+*			$auth["type"]  = "db";				      *
+*									      *
+*   History								      *
+*    2004/01/11 JFL Created this file					      *
+*									      *
 \*****************************************************************************/
 
 // $Id$
@@ -35,15 +34,11 @@ $user_list_link = "edit_users.php";
 function authValidateUser($user, $pass)
 {
    global $tbl_users;
-   global $mdb;
 
+   $user=slashes($user);
    $user=strtolower($user);
    $pass = md5($pass);
-
-   return $mdb->queryOne("SELECT count(*)
-   						  FROM   $tbl_users
-                          WHERE  name=" . $mdb->getTextValue("$user") . "
-                          AND    password=" . $mdb->getTextValue("$pass"), 'integer');
+   return sql_query1("select count(*) from $tbl_users where name='$user' and password='$pass';");
 }
 
 /* authGetUserLevel($user)

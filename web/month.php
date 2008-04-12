@@ -6,7 +6,6 @@
 require_once "grab_globals.inc.php";
 include "config.inc.php";
 include "functions.inc";
-require_once("database.inc.php");
 include "$dbsys.inc";
 include "mrbs_auth.inc";
 include "mincals.inc";
@@ -21,7 +20,7 @@ function cmp3($a, $b)
 
 # Default parameters:
 if (empty($debug_flag)) $debug_flag = 0;
-if (empty($month) || empty($year) || !checkdate($month, 1, $year))
+if (empty($month) || empty($year) || !checkdate(intval($month), 1, intval($year)))
 {
     $month = date("m");
     $year  = date("Y");
@@ -88,32 +87,22 @@ if ( $pview != 1 ) {
   # show either a select box or the normal html list
   if ($area_list_format == "select") {
     echo make_area_select_html('month.php', $area, $year, $month, $day); # from functions.inc
-    $this_area_name = $mdb->queryOne("SELECT    area_name 
-                                      FROM      $tbl_area
-                                      WHERE     id=$area", 'text');
-    $this_room_name = $mdb->queryOne("SELECT    room_name 
-                                      FROM      $tbl_room
-                                      WHERE     id=$room", 'text');
+    $this_area_name = sql_query1("select area_name from $tbl_area where id=$area");
+    $this_room_name = sql_query1("select room_name from $tbl_room where id=$room");
   } else {
-    $sql = "SELECT      id, area_name 
-            FROM        $tbl_area 
-            ORDER BY    area_name";
-    $types = array('integer', 'text');
-    $res = $mdb->query($sql, $types);
-    if (!MDB::isError($res))
+    $sql = "select id, area_name from $tbl_area order by area_name";
+    $res = sql_query($sql);
+    if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
     {
-        while ($row = $mdb->fetchInto($res))
+        if ( $pview != 1 )
+            echo "<a href=\"month.php?year=$year&amp;month=$month&amp;area=$row[0]\">";
+        if ($row[0] == $area)
         {
+            $this_area_name = htmlspecialchars($row[1]);
             if ( $pview != 1 )
-                echo "<a href=\"month.php?year=$year&month=$month&area=$row[0]\">";
-            if ($row[0] == $area)
-            {
-                $this_area_name = htmlspecialchars($row[1]);
-                if ( $pview != 1 )
-                    echo "<font color=\"red\">$this_area_name</font></a><br>\n";
-            }
-            else if ( $pview !=1 ) echo htmlspecialchars($row[1]) . "</a><br>\n";
+                echo "<font color=\"red\">$this_area_name</font></a><br>\n";
         }
+        else if ( $pview !=1 ) echo htmlspecialchars($row[1]) . "</a><br>\n";
     }
   } # end select if
 
@@ -129,26 +118,18 @@ if ( $pview != 1 ) {
   if ($area_list_format == "select") {
     echo make_room_select_html('month.php', $area, $room, $year, $month, $day); # from functions.inc
   } else {
-    $sql = "SELECT      id, room_name 
-            FROM        $tbl_room 
-            WHERE       area_id=$area 
-            ORDER BY    room_name";
-    $types = array('integer', 'text');
-    $res = $mdb->query($sql, $types);
-    if (!MDB::isError($res))
+    $sql = "select id, room_name from $tbl_room where area_id=$area order by room_name";
+    $res = sql_query($sql);
+    if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
     {
-        while ($row = $mdb->fetchInto($res))
+        echo "<a href=\"month.php?year=$year&amp;month=$month&amp;area=$area&amp;room=$row[0]\">";
+        if ($row[0] == $room)
         {
-            echo "<a href=\"month.php?year=$year&month=$month&area=$area&room=$row[0]\">";
-            if ($row[0] == $room)
-            {
-                $this_room_name = htmlspecialchars($row[1]);
-                if ( $pview != 1 )
-                    echo "<font color=\"red\">$this_room_name</font></a><br>\n";
-            }
-            else if ( $pview != 1 ) echo htmlspecialchars($row[1]) . "</a><br>\n";
+            $this_room_name = htmlspecialchars($row[1]);
+            if ( $pview != 1 )
+                echo "<font color=\"red\">$this_room_name</font></a><br>\n";
         }
-        $mdb->freeResult($res);
+        else if ( $pview != 1 ) echo htmlspecialchars($row[1]) . "</a><br>\n";
     }
   } # end select if
 
@@ -185,10 +166,10 @@ $ty = date("Y",$i);
 $tm = date("n",$i);
 if ( $pview != 1 ) {
     echo "<table width=\"100%\"><tr><td>
-      <a href=\"month.php?year=$yy&month=$ym&area=$area&room=$room\">
+      <a href=\"month.php?year=$yy&amp;month=$ym&amp;area=$area&amp;room=$room\">
       &lt;&lt; ".get_vocab("monthbefore")."</a></td>
-      <td align=center><a href=\"month.php?area=$area&room=$room\">".get_vocab("gotothismonth")."</a></td>
-      <td align=right><a href=\"month.php?year=$ty&month=$tm&area=$area&room=$room\">
+      <td align=center><a href=\"month.php?area=$area&amp;room=$room\">".get_vocab("gotothismonth")."</a></td>
+      <td align=right><a href=\"month.php?year=$ty&amp;month=$tm&amp;area=$area&amp;room=$room\">
       ".get_vocab("monthafter")."&gt;&gt;</a></td></tr></table>";
 }
 
@@ -204,34 +185,27 @@ $all_day = ereg_replace(" ", "&nbsp;", get_vocab("all_day"));
 # row[2] = Entry ID
 # This data will be retrieved day-by-day fo the whole month
 for ($day_num = 1; $day_num<=$days_in_month; $day_num++) {
-	$sql = "SELECT      start_time, end_time, id, name
-        FROM        $tbl_entry
-        WHERE       room_id=$room
-        AND         start_time <= $midnight_tonight[$day_num]
-        AND         end_time > $midnight[$day_num]
-        ORDER BY    1";
+	$sql = "SELECT start_time, end_time, id, name
+	   FROM $tbl_entry
+	   WHERE room_id=$room
+	   AND start_time <= $midnight_tonight[$day_num] AND end_time > $midnight[$day_num]
+	   ORDER by 1";
 
 	# Build an array of information about each day in the month.
 	# The information is stored as:
 	#  d[monthday]["id"][] = ID of each entry, for linking.
 	#  d[monthday]["data"][] = "start-stop" times or "name" of each entry.
 
-	$types = array('integer', 'integer', 'integer', 'text');
-	$res = $mdb->query($sql, $types);
-	if (MDB::isError($res))
+	$res = sql_query($sql);
+	if (! $res) echo sql_error();
+	else for ($i = 0; ($row = sql_row($res, $i)); $i++)
 	{
-    	echo $res->getMessage() . "<br>" . $res->getUserInfo() . "<br>";
-	}
-	else
-	{
-    	while ($row = $mdb->fetchInto($res))
-    	{
-        	if ($debug_flag)
-            	echo "<br>DEBUG: result $i, id $row[2], starts $row[0], ends $row[1]\n";
+	    if ($debug_flag)
+        	echo "<br>DEBUG: result $i, id $row[2], starts $row[0], ends $row[1]\n";
 
             if ($debug_flag) echo "<br>DEBUG: Entry $row[2] day $day_num\n";
             $d[$day_num]["id"][] = $row[2];
-            $d[$day_num]["shortdescrip"][] = $row[3];
+            $d[$day_num]["shortdescrip"][] = htmlspecialchars($row[3]);
 
             # Describe the start and end time, accounting for "all day"
             # and for entries starting before/ending after today.
@@ -245,13 +219,13 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++) {
               {
         	case "> < ":         # Starts after midnight, ends before midnight
         	case "= < ":         # Starts at midnight, ends before midnight
-                    $d[$day_num]["data"][] = date(hour_min_format(), $row[0]) . "~" . date(hour_min_format(), $row[1]);
+                    $d[$day_num]["data"][] = htmlspecialchars(utf8_strftime(hour_min_format(), $row[0])) . "~" . htmlspecialchars(utf8_strftime(hour_min_format(), $row[1]));
                     break;
         	case "> = ":         # Starts after midnight, ends at midnight
-                    $d[$day_num]["data"][] = date(hour_min_format(), $row[0]) . "~24:00";
+                    $d[$day_num]["data"][] = htmlspecialchars(utf8_strftime(hour_min_format(), $row[0])) . "~24:00";
                     break;
         	case "> > ":         # Starts after midnight, continues tomorrow
-                    $d[$day_num]["data"][] = date(hour_min_format(), $row[0]) . "~====&gt;";
+                    $d[$day_num]["data"][] = htmlspecialchars(utf8_strftime(hour_min_format(), $row[0])) . "~====&gt;";
                     break;
         	case "= = ":         # Starts at midnight, ends at midnight
                     $d[$day_num]["data"][] = $all_day;
@@ -260,7 +234,7 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++) {
                     $d[$day_num]["data"][] = $all_day . "====&gt;";
                     break;
         	case "< < ":         # Starts before today, ends before midnight
-                    $d[$day_num]["data"][] = "&lt;====~" . date(hour_min_format(), $row[1]);
+                    $d[$day_num]["data"][] = "&lt;====~" . htmlspecialchars(utf8_strftime(hour_min_format(), $row[1]));
                     break;
         	case "< = ":         # Starts before today, ends at midnight
                     $d[$day_num]["data"][] = "&lt;====" . $all_day;
@@ -272,8 +246,8 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++) {
 	    }
             else
             {
-              $start_str = ereg_replace(" ", "&nbsp;", period_time_string($row[0]));
-              $end_str   = ereg_replace(" ", "&nbsp;", period_time_string($row[1], -1));
+              $start_str = ereg_replace(" ", "&nbsp;", htmlspecialchars(period_time_string($row[0])));
+              $end_str   = ereg_replace(" ", "&nbsp;", htmlspecialchars(period_time_string($row[1], -1)));
               switch (cmp3($row[0], $midnight[$day_num]) . cmp3($row[1], $midnight_tonight[$day_num] + 1))
               {
         	case "> < ":         # Starts after midnight, ends before midnight
@@ -303,9 +277,8 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++) {
                     break;
               }
             }
-        }
+
 	}
-    $mdb->freeResult($res);
 }
 if ($debug_flag)
 {
@@ -328,15 +301,14 @@ if ($debug_flag)
 // Must be included before the beginnning of the main table.
 if ($javascript_cursor) // If authorized in config.inc.php, include the javascript cursor management.
     {
-    echo "<SCRIPT language=\"JavaScript\" type=\"text/javascript\" src=\"xbLib.js\"></SCRIPT>\n";
-    echo "<SCRIPT language=\"JavaScript\">InitActiveCell("
-       . ($show_plus_link ? "true" : "false") . ", "			// Show (+)
-       . "false, "							// Highlight left title column
-       . "false, "							// Highlight right title column
-       . "\"$highlight_method\", "					// "bgcolor", "class", or "hybrid"
-       . "\"" . get_vocab("click_to_reserve") . "\", "			// Status bar message
-       . "3"								// Drag effect: 0=None; 1=Rectangle; 2=Columns; 3=Rows
-       . ");</SCRIPT>\n";
+    echo "<script type=\"text/javascript\" src=\"xbLib.js\"></script>\n";
+    echo "<script type=\"text/javascript\">InitActiveCell("
+       . ($show_plus_link ? "true" : "false") . ", "
+       . "false, "
+       . "false, "
+       . "\"$highlight_method\", "
+       . "\"" . get_vocab("click_to_reserve") . "\""
+       . ");</script>\n";
     }
 
 echo "<table border=\"1\" cellspacing=\"0\" width=\"100%\">\n<tr>";
@@ -357,7 +329,7 @@ for ($weekcol = 0; $weekcol < $weekday_start; $weekcol++)
 for ($cday = 1; $cday <= $days_in_month; $cday++)
 {
     if ($weekcol == 0) echo "</tr><tr>\n";
-    echo "<td valign=top height=100 class=\"month\"><div class=\"monthday\"><a href=\"day.php?year=$year&month=$month&day=$cday&area=$area\">$cday</a>&nbsp;\n";
+    echo "<td valign=top height=100 class=\"month\"><div class=\"monthday\"><a href=\"day.php?year=$year&amp;month=$month&amp;day=$cday&amp;area=$area\">$cday</a>&nbsp;\n";
     echo "</div>";
 
     # Anything to display for this day?
@@ -389,26 +361,26 @@ for ($cday = 1; $cday <= $days_in_month; $cday++)
                 case "description":
                 {
                     echo "<a href=\"view_entry.php?id=" . $d[$cday]["id"][$i]
-                        . "&day=$cday&month=$month&year=$year\" title=\""
-                        . htmlspecialchars($d[$cday]["data"][$i]) . "\">"
-                        . htmlspecialchars(substr($d[$cday]["shortdescrip"][$i], 0, 17))
+                        . "&amp;day=$cday&amp;month=$month&amp;year=$year\" title=\""
+                        . $d[$cday]["data"][$i] . "\">"
+                        . utf8_substr($d[$cday]["shortdescrip"][$i], 0, 17)
                         . "</a>";
                     break;
                 }
                 case "slot":
                 {
                     echo "<a href=\"view_entry.php?id=" . $d[$cday]["id"][$i]
-                        . "&day=$cday&month=$month&year=$year\" title=\""
-                        . htmlspecialchars(substr($d[$cday]["shortdescrip"][$i], 0, 17)) . "\">"
-                        . htmlspecialchars($d[$cday]["data"][$i]) . "</a>";
+                        . "&amp;day=$cday&amp;month=$month&amp;year=$year\" title=\""
+                        . utf8_substr($d[$cday]["shortdescrip"][$i], 0, 17) . "\">"
+                        . $d[$cday]["data"][$i] . "</a>";
                     break;
                 }
                 case "both":
                 {
                     echo "<a href=\"view_entry.php?id=" . $d[$cday]["id"][$i]
-                        . "&day=$cday&month=$month&year=$year\">"
-                        . htmlspecialchars($d[$cday]["data"][$i]) . " "
-                        . htmlspecialchars(substr($d[$cday]["shortdescrip"][$i], 0, 6)) . "</a>";
+                        . "&amp;day=$cday&amp;month=$month&amp;year=$year\">"
+                        . $d[$cday]["data"][$i] . " "
+                        . utf8_substr($d[$cday]["shortdescrip"][$i], 0, 6) . "</a>";
                     break;
                 }
                 default:
@@ -424,24 +396,24 @@ for ($cday = 1; $cday <= $days_in_month; $cday++)
     if ( $pview != 1 ) {
         if ($javascript_cursor)
 	    {
-            echo "<SCRIPT language=\"JavaScript\">\n<!--\n";
+            echo "<script type=\"text/javascript\">\n<!--\n";
             echo "BeginActiveCell();\n";
-            echo "// -->\n</SCRIPT>";
+            echo "// -->\n</script>";
             }
         if( $enable_periods ) {
-            echo "<a href=\"edit_entry.php?room=$room&area=$area"
-            . "&period=0&year=$year&month=$month"
-            . "&day=$cday\"><img src=new.gif width=10 height=10 border=0></a>";
+            echo "<a href=\"edit_entry.php?room=$room&amp;area=$area"
+            . "&amp;period=0&amp;year=$year&amp;month=$month"
+            . "&amp;day=$cday\"><img src=\"new.gif\" alt=\"New\" width=\"10\" height=\"10\" border=\"0\"></a>";
         } else {
-            echo "<a href=\"edit_entry.php?room=$room&area=$area"
-            . "&hour=$morningstarts&minute=0&year=$year&month=$month"
-            . "&day=$cday\"><img src=new.gif width=10 height=10 border=0></a>";
+            echo "<a href=\"edit_entry.php?room=$room&amp;area=$area"
+            . "&amp;hour=$morningstarts&amp;minute=0&amp;year=$year&amp;month=$month"
+            . "&amp;day=$cday\"><img src=\"new.gif\" alt=\"New\" width=\"10\" height=\"10\" border=\"0\"></a>";
         }
         if ($javascript_cursor)
             {
-            echo "<SCRIPT language=\"JavaScript\">\n<!--\n";
+            echo "<script type=\"text/javascript\">\n<!--\n";
             echo "EndActiveCell();\n";
-            echo "// -->\n</SCRIPT>";
+            echo "// -->\n</script>";
             }
     }
     else

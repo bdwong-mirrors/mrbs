@@ -11,7 +11,7 @@ if (!isset($pview)) {
 }
 
 function print_header($day, $month, $year, $area)
-{ # Note: A 5th optional argument defines the name of a JavaScript procedure to call on body load.
+{
 	global $mrbs_company, $search_str, $locale_warning;
 
 	# If we dont know the right date then make it up 
@@ -43,12 +43,12 @@ function print_header($day, $month, $year, $area)
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
                       "http://www.w3.org/TR/html4/loose.dtd">
 <HTML>
- <HEAD>
+  <HEAD>
 <?php
    include "style.inc";
 ?>
- <TITLE><?php echo get_vocab("mrbs") ?></TITLE>
- <SCRIPT LANGUAGE="JavaScript">
+    <TITLE><?php echo get_vocab("mrbs") ?></TITLE>
+    <script type="text/javascript">
 
 <!-- Begin
 
@@ -133,10 +133,9 @@ function ChangeOptionDays(formObj, prefix)
 }
 
   //  End -->
-  </SCRIPT>
- </HEAD>
- <BODY BGCOLOR="#ffffed" TEXT=black LINK="#5B69A6" VLINK="#5B69A6" ALINK=red 
-       <?php if (func_num_args() > 4) echo "ONLOAD=\"".func_get_arg(4)."()\""; ?> >
+    </script>
+  </HEAD>
+  <BODY BGCOLOR="#ffffed" TEXT=black LINK="#5B69A6" VLINK="#5B69A6" ALINK=red>
 	   <?php if ( $GLOBALS["pview"] != 1 ) { ?>
 
    <?php # show a warning if this is using a low version of php
@@ -146,57 +145,62 @@ function ChangeOptionDays(formObj, prefix)
                echo "[Warning: ".$locale_warning."]";
    ?>
 
-   <TABLE WIDTH="100%">
-    <TR>
-      <TD BGCOLOR="#5B69A6">
-       <TABLE WIDTH="100%" BORDER=0>
-        <TR>
-         <TD CLASS="banner" BGCOLOR="#C0E0FF">
-          <FONT SIZE=4><B><?php echo $mrbs_company ?></B><BR>
-           <A HREF="index.php"><?php echo get_vocab("mrbs") ?></A>
-          </FONT>
-         </TD>
-         <TD CLASS="banner" BGCOLOR="#C0E0FF">
-          <FORM ACTION="day.php" METHOD=GET name="Form1">
-           <FONT SIZE=2>
+    <table WIDTH="100%">
+      <TR>
+        <TD BGCOLOR="#5B69A6">
+          <table WIDTH="100%" BORDER=0>
+            <TR>
+              <TD CLASS="banner" BGCOLOR="#C0E0FF">
+                <FONT SIZE=4>
+                  <B><?php echo $mrbs_company ?></B><br>
+                  <a href="index.php"><?php echo get_vocab("mrbs") ?></a>
+                </FONT>
+              </TD>
+              <TD CLASS="banner" BGCOLOR="#C0E0FF">
+                <FORM ACTION="day.php" METHOD=GET name="Form1">
+                  <FONT SIZE=2>
 <?php
    genDateSelector("", $day, $month, $year); // Note: The 1st arg must match the last arg in the call to ChangeOptionDays below.
    if (!empty($area))
-        echo "<INPUT TYPE=HIDDEN NAME=area VALUE=$area>"
+        echo "
+                    <INPUT TYPE=HIDDEN NAME=area VALUE=$area>\n"
  
 ?>
-	    <SCRIPT LANGUAGE="JavaScript">
-	    <!--
-	    // fix number of days for the $month/$year that you start with
-	    ChangeOptionDays(document.Form1, ''); // Note: The 2nd arg must match the first in the call to genDateSelector above.
-	    // -->
-	    </SCRIPT>
-	    <INPUT TYPE=SUBMIT VALUE="<?php echo get_vocab("goto") ?>">
-           </FONT>
-          </FORM>
-         </TD>
-         <TD CLASS="banner" BGCOLOR="#C0E0FF" ALIGN=CENTER>
-          <A HREF="help.php?day=<?php echo $day ?>&month=<?php echo $month ?>&year=<?php echo $year ?>"><?php echo get_vocab("help") ?></A>
-         </TD>
-         <TD CLASS="banner" BGCOLOR="#C0E0FF" ALIGN=CENTER>
-          <A HREF="admin.php?day=<?php echo $day ?>&month=<?php echo $month ?>&year=<?php echo $year ?>"><?php echo get_vocab("admin") ?></A>
-         </TD>
-         <TD CLASS="banner" BGCOLOR="#C0E0FF" ALIGN=CENTER>
-          <A HREF="report.php"><?php echo get_vocab("report") ?></A>
-         </TD>
-         <TD CLASS="banner" BGCOLOR="#C0E0FF" ALIGN=CENTER>
-          <FORM METHOD=GET ACTION="search.php">
-           <FONT SIZE=2><A HREF="search.php?advanced=1"><?php echo get_vocab("search") ?></A> </FONT>
-           <INPUT TYPE=TEXT   NAME="search_str" VALUE="<?php echo $search_str ?>" SIZE=10>
-           <INPUT TYPE=HIDDEN NAME=day        VALUE="<?php echo $day        ?>"        >
-           <INPUT TYPE=HIDDEN NAME=month      VALUE="<?php echo $month      ?>"        >
-           <INPUT TYPE=HIDDEN NAME=year       VALUE="<?php echo $year       ?>"        >
+	            <script type="text/javascript">
+                    <!--
+                    // fix number of days for the $month/$year that you start with
+                    ChangeOptionDays(document.Form1, ''); // Note: The 2nd arg must match the first in the call to genDateSelector above.
+                    // -->
+                    </script>
+                    <INPUT TYPE=SUBMIT VALUE="<?php echo get_vocab("goto") ?>">
+                  </FONT>
+                </FORM>
+              </TD>
+              <TD CLASS="banner">
+                <A HREF="help.php?day=<?php echo $day ?>&amp;month=<?php echo $month ?>&amp;year=<?php echo $year ?>"><?php echo get_vocab("help") ?></A>
+              </TD>
+              <TD CLASS="banner">
+                <A HREF="admin.php?day=<?php echo $day ?>&amp;month=<?php echo $month ?>&amp;year=<?php echo $year ?>"><?php echo get_vocab("admin") ?></A>
+              </TD>
+              <TD CLASS="banner">
+                <A HREF="report.php"><?php echo get_vocab("report") ?></A>
+              </TD>
+              <TD CLASS="banner">
+                <FORM METHOD=GET ACTION="search.php">
+                  <FONT SIZE=2>
+                    <A HREF="search.php?advanced=1"><?php echo get_vocab("search") ?>:</A>
+                  </FONT>
+                  <INPUT TYPE=TEXT   NAME="search_str" VALUE="<?php echo $search_str ?>" SIZE=10>
+                  <INPUT TYPE=HIDDEN NAME=day        VALUE="<?php echo $day        ?>"        >
+                  <INPUT TYPE=HIDDEN NAME=month      VALUE="<?php echo $month      ?>"        >
+                  <INPUT TYPE=HIDDEN NAME=year       VALUE="<?php echo $year       ?>"        >
 <?php
    if (!empty($area))
-        echo "<INPUT TYPE=HIDDEN NAME=area VALUE=$area>"
+        echo "
+                  <INPUT TYPE=HIDDEN NAME=area VALUE=$area>\n"
 ?>
-          </FORM>
-         </TD>
+                </FORM>
+              </TD>
 <?php
     # For session protocols that define their own logon box...
     if (function_exists('PrintLogonBox'))
@@ -204,11 +208,11 @@ function ChangeOptionDays(formObj, prefix)
    	PrintLogonBox();
    	}
 ?>
-        </TR>
-       </TABLE>
-      </TD>
-     </TR>
-    </TABLE>
+            </TR>
+          </table>
+        </TD>
+      </TR>
+    </table>
 <?php } ?>
 <?php
 }
@@ -298,31 +302,39 @@ function genDateSelector($prefix, $day, $month, $year)
 	if($month == 0) $month = date("m");
 	if($year  == 0) $year = date("Y");
 	
-	echo "<SELECT NAME=\"${prefix}day\">\n";
+	echo "
+                  <SELECT NAME=\"${prefix}day\">";
 	
 	for($i = 1; $i <= 31; $i++)
-		echo "<OPTION" . ($i == $day ? " SELECTED" : "") . ">$i\n";
+		echo "
+                    <OPTION" . ($i == $day ? " SELECTED" : "") . ">$i";
 
-	echo "</SELECT>";
-	echo "<SELECT NAME=\"${prefix}month\" onchange=\"ChangeOptionDays(this.form,'$prefix')\">\n";
+	echo "
+                  </SELECT>
+
+                  <SELECT NAME=\"${prefix}month\" onchange=\"ChangeOptionDays(this.form,'$prefix')\">";
 
 	for($i = 1; $i <= 12; $i++)
 	{
 		$m = utf8_strftime("%b", mktime(0, 0, 0, $i, 1, $year));
 		
-		print "<OPTION VALUE=\"$i\"" . ($i == $month ? " SELECTED" : "") . ">$m\n";
+		print "
+                    <OPTION VALUE=\"$i\"" . ($i == $month ? " SELECTED" : "") . ">$m";
 	}
 
-	echo "</SELECT>";
-	echo "<SELECT NAME=\"${prefix}year\" onchange=\"ChangeOptionDays(this.form,'$prefix')\">\n";
+	echo "
+                  </SELECT>
+	          <SELECT NAME=\"${prefix}year\" onchange=\"ChangeOptionDays(this.form,'$prefix')\">";
 
 	$min = min($year, date("Y")) - 5;
 	$max = max($year, date("Y")) + 5;
 
 	for($i = $min; $i <= $max; $i++)
-		print "<OPTION VALUE=\"$i\"" . ($i == $year ? " SELECTED" : "") . ">$i\n";
+		print "
+                    <OPTION VALUE=\"$i\"" . ($i == $year ? " SELECTED" : "") . ">$i";
 
-	echo "</SELECT>";
+	echo "
+                  </SELECT>";
 }
 
 # Error handler - this is used to display serious errors such as database
@@ -362,12 +374,9 @@ function unslashes($s)
 # This could be changed to implement something like per-user defaults.
 function get_default_area()
 {
-    global $mdb;
-    global $tbl_area;
-
-    $default_area = $mdb->queryOne("SELECT id FROM $tbl_area ORDER BY area_name"
-    	   	, 'integer');
-    return ((MDB::isError($default_area) or ($default_area == NULL)) ? 0 : $default_area );
+	global $tbl_area;
+	$area = sql_query1("SELECT id FROM $tbl_area ORDER BY area_name LIMIT 1");
+	return ($area < 0 ? 0 : $area);
 }
 
 # Return a default room given a valid area; used if no room is already known.
@@ -375,12 +384,9 @@ function get_default_area()
 # This could be changed to implement something like per-user defaults.
 function get_default_room($area)
 {
-    global $mdb;
-    global $tbl_room;
-
-    $room = $mdb->queryOne("SELECT id FROM $tbl_room WHERE area_id=$area
-    						ORDER BY room_name", 'integer');
-    return ( ( MDB::isError($room) or ($room == NULL) ) ? 0 : $room );
+	global $tbl_room;
+	$room = sql_query1("SELECT id FROM $tbl_room WHERE area_id=$area ORDER BY room_name LIMIT 1");
+	return ($room < 0 ? 0 : $room);
 }
 
 # Get the local day name based on language. Note 2000-01-02 is a Sunday.
@@ -394,11 +400,11 @@ function hour_min_format()
         global $twentyfourhour_format;
         if ($twentyfourhour_format)
 	{
-  	        return "H:i";
+  	        return "%H:%M";
 	}
 	else
 	{
-		return "h:ia";
+		return "%I:%M%p";
 	}
 }
 
@@ -429,16 +435,14 @@ function period_time_string($t, $mod_time=0)
 function time_date_string($t)
 {
         global $twentyfourhour_format;
-        # This bit's necessary, because it seems %p in strftime format
-        # strings doesn't work
-        $ampm = utf8_date("a",$t);
+
         if ($twentyfourhour_format)
 	{
   	        return utf8_strftime("%H:%M:%S - %A %d %B %Y",$t);
 	}
 	else
 	{
-	        return utf8_strftime("%I:%M:%S$ampm - %A %d %B %Y",$t);
+	        return utf8_strftime("%I:%M:%S%p - %A %d %B %Y",$t);
 	}
 }
 
@@ -464,22 +468,15 @@ function tdcell($colclass)
 function show_colour_key()
 {
 	global $typel;
-	global $color_key_types_per_row;
-	
-	$types_per_row =
-		(($color_key_types_per_row && $color_key_types_per_row > 0)
-			? $color_key_types_per_row : "5");
-	
 	echo "<table border=0><tr>\n";
 	$nct = 0;
-	for ($letter = ord('A'); $letter <= ord('Z'); $letter++)
+	for ($ct = "A"; $ct <= "Z"; $ct++)
 	{
-		$ct = chr($letter);	
 		if (!empty($typel[$ct]))
 		{
-			if (++$nct > $types_per_row)
+			if (++$nct > 5)
 			{
-				$nct = 1;
+				$nct = 0;
 				echo "</tr><tr>";
 			}
 			tdcell($ct);
@@ -514,26 +511,19 @@ function round_t_up($t, $resolution, $am7)
 # displayed.
 function make_area_select_html( $link, $current, $year, $month, $day )
 {
-    global $mdb;
-    global $tbl_area;
-    $out_html = "
+	global $tbl_area;
+	$out_html = "
 <form name=\"areaChangeForm\" method=get action=\"$link\">
   <select name=\"area\" onChange=\"document.areaChangeForm.submit()\">";
 
-    $sql = "SELECT      id, area_name
-            FROM        $tbl_area
-            ORDER BY    area_name";
-    $types = array('integer', 'text');
-    $res = $mdb->query($sql, $types);
-    if (!MDB::isError($res))
-    {
-        while ($row = $mdb->fetchInto($res))
-        {
-			$selected = ($row[0] == $current) ? "selected" : "";
-			$out_html .= "
-    	<option $selected value=\"".$row[0]."\">" . htmlspecialchars($row[1]);
-        }
-    }
+	$sql = "select id, area_name from $tbl_area order by area_name";
+   	$res = sql_query($sql);
+   	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
+   	{
+		$selected = ($row[0] == $current) ? "selected" : "";
+		$out_html .= "
+    <option $selected value=\"".$row[0]."\">" . htmlspecialchars($row[1]);
+   	}
 	$out_html .= "
   </select>
 
@@ -543,32 +533,23 @@ function make_area_select_html( $link, $current, $year, $month, $day )
   <input type=submit value=\"".get_vocab("change")."\">
 </form>\n";
 
-	$mdb->freeResult($res);
 	return $out_html;
 } # end make_area_select_html
 
 function make_room_select_html( $link, $area, $current, $year, $month, $day )
 {
-    global $mdb;
-    global $tbl_room;
+	global $tbl_room;
 	$out_html = "
 <form name=\"roomChangeForm\" method=get action=\"$link\">
   <select name=\"room\" onChange=\"document.roomChangeForm.submit()\">";
 
-    $sql = "SELECT      id, room_name
-            FROM        $tbl_room
-            WHERE       area_id=$area
-            ORDER BY    room_name";
-    $types = array('integer', 'text');
-    $res = $mdb->query($sql, $types);
-    if (!MDB::isError($res))
-    {
-        while ($row = $mdb->fetchInto($res))
-        {
-			$selected = ($row[0] == $current) ? "selected" : "";
-			$out_html .= "
-    	<option $selected value=\"".$row[0]."\">" . htmlspecialchars($row[1]);
-        }
+	$sql = "select id, room_name from $tbl_room where area_id=$area order by room_name";
+   	$res = sql_query($sql);
+   	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
+   	{
+		$selected = ($row[0] == $current) ? "selected" : "";
+		$out_html .= "
+    <option $selected value=\"".$row[0]."\">" . htmlspecialchars($row[1]);
    	}
 	$out_html .= "
   </select>
@@ -579,7 +560,6 @@ function make_room_select_html( $link, $area, $current, $year, $month, $day )
   <input type=submit value=\"".get_vocab("change")."\">
 </form>\n";
 
-    $mdb->freeResult($res);
 	return $out_html;
 } # end make_area_select_html
 

@@ -7,6 +7,189 @@
 [============================]
 
 -------------------------------------------------------------------------------
+Version 1.2.6.1 (Wed Jan 30 11:00:00 GMT 2008):
+
+[-] Fixed major bug in the new LDAP authentication functionality. If
+ $ldap_dn_search_attrib was set, any username/password combination
+ was allowed in.
+[*] Changed configuration default so that LDAP v3 is enabled by
+ default in the LDAP authentication scheme.
+
+-------------------------------------------------------------------------------
+Version 1.2.6 (Mon Jan 28 15:00:00 GMT 2008):
+
+[*] Added options to LDAP authentication, so that the DN to be used for
+ authentication checking can be obtained by first doing a search in
+ the directory. This allows MRBS to authenticate against a Microsoft AD
+ server, along with any other LDAP server that behaves in this manner.
+[+] Added support for Slovenian language and added translation provided
+ by Martin Terbuc.
+[*] Added updated Italian translation, and new Italian FAQ.
+[-] Removed invalid HTML in edit area/room page. Fixes SF tracker #1696383,
+ as reported by 'mikedip'.
+[-] Fixed SQL escaping in the edit users page.
+[*] Improved i18n/l10n code.
+[+] Added Catalan support and Catalan translation as provided by Jordi
+ Prats.
+[-] Fixed bug in language preference code, as reported by many users.
+ Fix supplied by 'mikedip' in SF tracker #1696382
+[-] Fixed HTML escaping problem in the edit booking screen.
+[-] Update of the room list as you change area in the edit entry screen
+ is now correct. This is a fix for SF tracker #1666299, as supplied by the
+ reporter, 'northtommy'.
+[*] Translations now do not include terminating colons in many places
+ as they used to, these have now been moved to the code.
+[*] Added JavaScript and server-side checking for various things in the
+ new/edit booking page, which stops odd conditions ocurring, and gives
+ better feedback.
+[*] Emails sent by MRBS are now UTF-8, unless configured to use a
+ different charset.
+[-] Removed possible infinite loop in n-weekly booking creation.
+[-] Fixed invalid truncation of text in month view, it could
+ truncate  descriptions mid-UTF8 sequence before.
+[+] Added new authentication method, imap_php, which authenticates via IMAP,
+ but  using the PHP 'imap' extension, which allows for SSL/TLS connections.
+[*] Updated French translation, as provided by 'dionysos-sf'.
+[+] Added Turkish language support and Turkish translation, as provided
+ by Ahmet YILDIZ.
+[*] Added copy booking/series feature, as provided by Julian Eglestaff.
+
+-------------------------------------------------------------------------------
+Version 1.2.5 (Sat Feb 24 20:00:00 GMT 2007):
+
+[*] Added options to LDAP authentication so that LDAP v3 and TLS connections
+ can be used. Implements SF tracker #1644311.
+[*] You can now configure the cookie path used by the cookie and php session
+ schemes. Fixes SF tracker #1515118.
+[*] Improved localisation of date/time strings.
+[-] Fixed a short PHP start tag, to fix SF tracker #1652396.
+[-] Updated code to add/edit bookings so that times using ',' as the
+ decimal point work. Fixes SF tracker  #1647430.
+[*] Updated Swedish translation, as provided by bwiberg.
+[+] Added AIX support. You can now run  MRBS on an AIX server, in Unicode
+ mode too. AIX support  provided (and tested) by bwiberg.
+[*] Improved language preference code so that the user's language
+ preference order is followed.
+[-] Corrected some bracketing in the month view, as reported by lots
+ of people, including 't-matsuu' in SF tracker #1644042 who provided a fix.
+[-] Fixed various display bugs in month view, including a fix for
+ SF tracker  #1663905.
+
+
+-------------------------------------------------------------------------------
+Version 1.2.4 (Wed Jan 24 12:00:00 GMT 2007):
+
+[*] Added ability to specify the LDAP port in config.inc.php.
+[-] Database table creation for Postgresql 8 fixed.
+[-] Improved HTML escaping in the calendar views.
+[-] Fixed emailing of area/room admin in some cases. SF tracker #1474386,
+ fix provided by 'karcher'.
+[*] Added some error logging into the email code
+[-] Fixed encoding specification for zh_tw translation.
+[-] Fixed problem in report output.
+[+] Added 'remote user' session scheme, provided by 'bwiberg'.
+[+] Added 'mysqli' database abstraction layer.
+[-] Added robots instructions to stop search bots trawling MRBS. Fixes
+ SF tracker #1557192.
+[*] Improved documentation on LDAP authentication, fixes SF tracker
+ #1554351.
+[-] Fixed example of LDAP filter configuration in config.inc.php. Fixes
+ SF tracker #1550827.
+[-] Fixed warnings output by some pages. Fixes SF tracker #1557192.
+[*] Added check for empty booking description when creating/modifying
+ a booking - is only necessary if the user has JavaScript off.
+[*] Added updated Finnish translation provided by Tom Ingberg - it now
+ uses UTF-8.
+[-] Fixed password checking for PHP session scheme. Fixes SF tracker
+ #1563470.
+[*] Current day/week/month are now highlighted in the page footer.
+ Implements SF feature request #875744.
+[*] Moved MRBS version number out of config.inc.php so it doesn't get
+ left behind when people upgrade.
+[*] Updated Spanish translation, provided by SoTMaR.
+[*] More entry types are now allowed (now A-Z).
+[-] Fix in emailing of administrators. Fixes SF tracker #1315854, fix
+ supplied by Neville Gilbert.
+[*] SunOS is now supported as a server OS, including UTF-8 locale support.
+[-] Fixed n-weekly repeating bookings, days for booking are now
+ calculated more correctly. Fixes SF tracker #1300974.
+[*] Updated Swedish translation, provided by Bjorn Wiberg.
+[-] Fixed problem in report page if you were using HTTP session scheme.
+ Fix provided by Bjorn Wiberg in SF tracker #1396685.
+[-] Fix for using the 'db' authentication scheme on a MySQL >= 4.1
+ server.
+[+] Added German translation of site FAQ.
+
+
+-------------------------------------------------------------------------------
+Version 1.2.3 (Sat Aug 20 20:30:00 BST 2005):
+
+[+] Added new authentication scheme, db_ext. This allows authentication
+ to come from a table in an external database (MySQL only until MRBS 1.3).
+ All the parameters are configurable in config.inc.php and documented
+ in AUTHENTICATION.
+[-] Cookie and PHP session schemes will now handle usernames/passwords
+ with certain quote characters in properly.
+[*] HTTP session scheme now shows a login button, and who is currently
+ logged in.
+[+] Added Spanish translation of site FAQ, contributed by Carlos Insunza.
+[*] Password column in users table (db auth scheme) is now 40 characters
+ wide.
+[*] When setting up an installation using the db auth scheme, the
+ 'User list' screen allows the admin user to be added without you
+ being logged in. Once the first user is added you must log in.
+[*] Updated Norwegian translation supplied by Emil Stoa.
+[+] Added Korean translation, as contributed by YoungJoon Kim.
+
+
+-------------------------------------------------------------------------------
+Version 1.2.2 (Fri Apr 22 12:00:00 BST 2005):
+
+[*] Bug 1090172 addressed. Length of booking creator field increased to
+      80 characters.
+[*] Updated Taiwanese and Japanese translations, now both in UTF-8
+      encoding. Thanks to bruck and MATSUURA Takanori, respectively.
+[*] auth_config username matching is now case insensitive.
+[-] If using cookie authentication cookie is now deleted on logout, and
+      user's password isn't stored in cookie any more.
+[-] If using session authentication, cookie is stored based on the web
+      path MRBS is installed on, allowing more than one MRBS installation
+      per (virtual) host. Additionally session data is deleted on log out,
+      and the user's password isn't stored in the session data any more.
+
+
+-------------------------------------------------------------------------------
+Version 1.2.1 (Fri Dec 10 10:00:00 GMT 2004):
+
+[-] MySQL tables fixed for MySQL 4.0, namely to remove DEFAULT from
+      auto_increment columns.
+[-] Bug 1027328 fixed, sendMail function now provides the correct parameters
+      and headers for each type of backend (mail, sendmail or smtp). (Thekk)
+[*] RFE 1000967 - enhanced email notifications. (Neil Hawes, Stuart
+      Chalmers)
+[-] Bug 1068522 fixed, changed "" around $db_password value in
+      config.inc.php to '' so that special characters are not interpeted.
+      (Matt Schuler)
+[-] Bug 1035790 fixed, can now book series with pgsql. (Thekk)
+[-] Bug 994056 fixed, emails are sent when they should be now to who they
+      should be sent to.
+[-] Bug 1040185 fixed, AM and PM generation no longer causes
+      "Negative timestamps are not supported under any known
+      version of Windows" PHP error on Windows MRBS installations in far
+      eastern time zones.
+[-] Fixed lang/locale selection for Czech language. Czech country code is
+      "cs", not "cz".
+[-] Fix added for the ChangeOptionDays JavaScript function in some older
+      browser.
+[-] Fix for page refresh functionality. If a refresh time is configured,
+      only do it for day.php, week.php and month.php
+[*] Updated Netherlands translation (Marc ter Horst)
+[-] MRBS now sends content-type and charset in an HTTP header, which can
+      fix some Apache installations where a charset if forced in the
+      config. 
+
+
+-------------------------------------------------------------------------------
 Version 1.2 (Thu Sep 9 14:00:00 BST 2004):
 
 [-] Notification emails are now RFC2045 compliant. Mail body can contain non

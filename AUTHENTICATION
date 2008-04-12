@@ -57,7 +57,7 @@ module. There are two general categories:
 Internal PHP modules support the following kinds of authentication servers:
 LDAP servers; POP3 email servers; IMAP email servers; NIS servers ; NW servers.
 In addition, three special internal modules support a local list of users for 
-one; a local list of users stored in databse for tthe second; and 
+one; a local list of users stored in databse for the second; and 
 authenticating anybody for the other.
 
 External programs support: NT Domain controllers; Netware servers; PAM servers.
@@ -107,8 +107,8 @@ PHP authentication modules
 +------+------------------------+-------------------+------------------------+
 |db_ext|Users validated using   |                   |                        |
 |      |a table in an external  |  - Uses an        |                        |
-|      |database                |  existing         |  - ?                   |
-|      |                        |  authentication   |                        |
+|      |MySQL database          |  existing         |  - MySQL only at the   |
+|      |                        |  authentication   |  moment.               |
 |      |                        |  database thereby |                        |
 |      |                        |  saving directory |                        |
 |      |                        |  duplication.     |                        |
@@ -145,16 +145,12 @@ PHP authentication modules
 |      |                        |                   |  same mail server.     |
 |      |                        |                   |                        |
 +------+------------------------+-------------------+------------------------+
-|nis   |Users validated by NIS  | - Uses an         |  - This extension is   |
-|      |server (user contrib.)  |  existing NIS     |  not available on      |
-|      |                        |  password         |  Windows platforms.    |
-|      |                        |  database         |                        |
-|      |                        |                   |  - Requires the NIS    |
-|      |                        |                   |  passwd.byname map to  |
-|      |                        |                   |  contain crypted       |
-|      |                        |                   |  passwords.
+|nis   |Users validated by NIS  |                   |  - This extension is   |
+|      |server (user contrib.)  |                   |  not available on      |
+|      |                        |  - ?              |  Windows platforms.    |
+|      |                        |                   |                        |
 +------+------------------------+-------------------+------------------------+
-|nw    |Users validated by      |                   |  - This is only going  |
+|nw    |Users validated by      |                   |  - TThis is only going |
 |      |Netware server          |                   |   to work on Linux.    |
 |      |(user contrib.)         |  - ?              |                        |
 |      |                        |                   |                        |
@@ -465,7 +461,6 @@ Authentication method, usable on the Internet.
 
  The authentication is done by the new module auth_db.inc.
  Enable it by setting $auth["type"]="db" in config.inc.php.
- This works only with session_php.inc or session_cookie.inc.
 
  Note: The names of administrators are still defined as usual by the
  $auth["admin"][] list in config.inc.php.
@@ -522,35 +517,22 @@ External DB (db_ext) Authentication
 
 Authentication method, usable on the Internet.
 
-It works by using one of the installer's own databases. You can
-configure what type of database server it is, how to connect to the database
-server, what database/table to use and the names of the "user" and
-"password" columns.
+ Works only with Mysql currently.
+
+It works by using one of the installer's own MySQL databases. You can
+configure how to connect to the database server, what database/table to
+use and the names of the "user" and "password" columns.
 
 The configuration items are held in config.inc.php and are as follows:
 
-$auth['db_ext']['db_sys'] = 'mysql';
-
-The database system, see INSTALL for the list of supported databases
-("mysql"=MySQL,...) and valid strings.
-
 $auth['db_ext']['db_host'] = 'localhost';
 
-The hostname of the server to connect to.
-
-$auth['db_ext']['db_port'] = '';
-
-Port used by database server (leave empty if using the default one)
-
-$auth['db_ext']['db_protocol'] = 'tcp';
-
-Communication protocol to use. For pgsql, you can use 'unix' instead of
-'tcp' to use Unix Domain Sockets instead of TCP/IP.
+The MySQL server to connect to.
 
 $auth['db_ext']['db_username'] = 'authuser';
 $auth['db_ext']['db_password'] = 'authpass';
 
-The database username and password to connect with.
+The MySQL username and password to connect with.
 
 $auth['db_ext']['db_name'] = 'authdb';
 
@@ -569,7 +551,6 @@ $auth['db_ext']['password_format'] = 'md5';
 
 This is the format of the password entries in the table. You can specify
 'md5', 'sha1', 'crypt' or 'plaintext'.
-
 
 POP3 Authentication
 -------------------
@@ -666,9 +647,10 @@ LDAP Authentication
 
 There are currently three methods for doing LDAP authentication, auth_ldap,
 auth_ldap.pl, auth_ldapsearch.pl.  The preferred method, auth_ldap, uses
-the LDAP functionality built into PHP and is described here.  The other
-methods use the 'ext' authentication method and described further on in
-this file.
+PHP's LDAP extension which must be compiled into PHP or installed and loaded
+as a plugin extension in your php.ini. This method is described here.
+The other methods use the 'ext' authentication method and are described
+further on in this file.
 
 This method can be used by setting config.inc.php as follows:
 
@@ -681,6 +663,10 @@ Also you will need to change the section:
 $ldap_host = "localhost";
 # If you have a non-standard LDAP port, you can define it here
 #$ldap_port = 389;
+# If you want to use LDAP v3, change the following to true
+$ldap_v3 = false;
+# If you want to use TLS, change following to true
+$ldap_tls = false;
 # LDAP base distinguish name
 # See AUTHENTICATION for details of how check against multiple base dn's
 $ldap_base_dn = "ou=organizationalunit,dc=my-domain,dc=com";
@@ -689,6 +675,9 @@ $ldap_user_attrib = "uid";
 
 You only need to set $ldap_port if your LDAP server uses a non-standard
 port.
+
+If you want to use LDAP v3, or TLS over LDAP set $ldap_v3 or $ldap_tls
+to true, respectively.
 
 This method will attempt an authenticated bind to the ldap server using
 the supplied password and a distinguished name, which is formed from the
@@ -825,7 +814,6 @@ If you want to display a logout link, set in config.inc.php:
 
   $auth['remote_user']['logout_link'] = '/logout/link.html'
 
-
 External Authentication Programs Configuration
 ==============================================
 
@@ -861,7 +849,6 @@ says:
 
 $auth["admin"][] = "....";
 
-
 Crypted password authentication
 -------------------------------
 
@@ -885,7 +872,6 @@ for an example password file.
 
 NOTE: Under Unix, make sure crypt_passwd.pl has execution rights: 'chmod +x
 crypt_passwd.pl'
-
 
 SMB Authentication
 ------------------
@@ -969,7 +955,6 @@ The [params] are:
 * Secondary server used for password validation
 * NT domain under which the user is registered
 
-
 Netware Authentication
 ----------------------
 
@@ -984,7 +969,6 @@ You can get it from ftp://platan.vc.cvut.cz/pub/linux/ncpfs/
 I've only tested this with ncpfs-2.2.0.18
 
 Please see README.nwauth for more information on Netware authentication.
-
 
 LDAP Authentication
 -------------------
@@ -1034,7 +1018,6 @@ $auth["params"] = "YourServer \"Your search root\" \"#USERNAME#\"
 NOTE: Under Unix, make sure auth_ldapsearch.pl has execution rights: 'chmod +x
 auth_ldapsearch.pl'
 
-
 PAM Authentification
 --------------------
 
@@ -1073,7 +1056,6 @@ That's it.
 Note that this has been only tested with Red Hat 7.x. Feedback on whether this
 works on other systems ( eg. Solaris) is appreciated.
 
-
 Creating a new authentication scheme
 ====================================
 
@@ -1082,7 +1064,6 @@ They must not attempt to communicate with the user.
 
 Adding support for a new authentication service not yet supported by MRBS can
 be done using one of the two following techniques:
-
 
 Using a PHP module
 ------------------
@@ -1113,7 +1094,6 @@ section in config.inc.php.
 
 Finally update this document with a description of your module.
 
-
 Using an external program
 -------------------------
 
@@ -1139,7 +1119,6 @@ $cmd = preg_replace('/#USERNAME#/',$user,$cmd);
 $cmd = preg_replace('/#PASSWORD#/',$pass,$cmd);
 
 This should allow a lot of flexibility with different authenticators.
-
 
 Creating a new session scheme
 ==============================
@@ -1167,11 +1146,6 @@ The "session_xxx.inc" file needs to define certain functions:
 |                 |                                             |or null if  |
 |                 |                                             |not known.  |
 +-----------------+---------------------------------------------+------------+
-|getUserPassword()|Returns the current password.                |His         |
-|                 |                                             |password,   |
-|                 |                                             |or null if  |
-|                 |                                             |not known.  |
-+-----------------+---------------------------------------------+------------+
 |PrintLogonBox()  |Optional. If defined, it will be used to draw|Nothing     |
 |                 |the contents of the logon/logoff box in MRBS |            |
 |                 |top banner.                                  |            |
@@ -1181,7 +1155,6 @@ its own session and authentication management. See the session_nt.inc and
 session session_omni.inc files as examples. In this case, use in combination
 with authentication "none", as the real authentication is already done during
 the session initiation, and needs not be done again inside MRBS.
-
 
 A little bit of history
 =======================
@@ -1255,4 +1228,3 @@ simple list of users in config.inc.php. Eventually there will also be another
 authentication module, using a table of users in the MRBS database.
 
 $Id$
- 

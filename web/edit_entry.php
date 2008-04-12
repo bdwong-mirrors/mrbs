@@ -4,14 +4,10 @@
 require_once('grab_globals.inc.php');
 include "config.inc.php";
 include "functions.inc";
-require_once("database.inc.php");
 include "$dbsys.inc";
 include "mrbs_auth.inc";
 
 global $twentyfourhour_format;
-
-$edit_series = true;
-$room_order = "room_name";
 
 #If we dont know the right date then make it up
 if(!isset($day) or !isset($month) or !isset($year))
@@ -46,22 +42,15 @@ if(!getAuthorised(1))
 # If we had $id passed in then it's a modification.
 if (isset($id))
 {
-    $sql = "SELECT  name, create_by, description, start_time, end_time,
-                    type, room_id, entry_type, repeat_id
-            FROM    $tbl_entry
-            WHERE   id=$id";
-
-    $types = array('text', 'text', 'text', 'integer', 'integer', 'text',
-                   'integer', 'integer', 'integer');
-    $row = $mdb->queryRow($sql, $types);
-    if (MDB::isError($row))
-    {
-        fatal_error(1, $row->getMessage() . "<BR>" . $row->getUserInfo() . "<BR>");
-    }
-    if (NULL == $row)
-    {
-        fatal_error(1, get_vocab("entryid") . get_vocab("not_found"));
-    }
+	$sql = "select name, create_by, description, start_time, end_time,
+	        type, room_id, entry_type, repeat_id from $tbl_entry where id=$id";
+	
+	$res = sql_query($sql);
+	if (! $res) fatal_error(1, sql_error());
+	if (sql_count($res) != 1) fatal_error(1, get_vocab("entryid") . $id . get_vocab("not_found"));
+	
+	$row = sql_row($res, 0);
+	sql_free($res);
 # Note: Removed stripslashes() calls from name and description. Previous
 # versions of MRBS mistakenly had the backslash-escapes in the actual database
 # records because of an extra addslashes going on. Fix your database and
@@ -82,21 +71,16 @@ if (isset($id))
 	
 	if($entry_type >= 1)
 	{
-        $sql = "SELECT  rep_type, start_time, end_date, rep_opt, rep_num_weeks
-                FROM    $tbl_repeat 
-                WHERE   id=$rep_id";
-
-        $types = array('integer', 'integer', 'integer', 'text', 'integer');
-        $row = $mdb->queryRow($sql, $types);
-        if (MDB::isError($row))
-        {
-            fatal_error(1, $row->getMessage() . "<BR>" . $row->getUserInfo() . "<BR>");
-        }
-        if (NULL == $row)
-        {
-            fatal_error(1, get_vocab("repeat_id") . $rep_id . get_vocab("not_found"));
-        }
-
+		$sql = "SELECT rep_type, start_time, end_date, rep_opt, rep_num_weeks
+		        FROM $tbl_repeat WHERE id=$rep_id";
+		
+		$res = sql_query($sql);
+		if (! $res) fatal_error(1, sql_error());
+		if (sql_count($res) != 1) fatal_error(1, get_vocab("repeat_id") . $rep_id . get_vocab("not_found"));
+		
+		$row = sql_row($res, 0);
+		sql_free($res);
+		
 		$rep_type = $row[0];
 
 		if($edit_type == "series")
@@ -144,7 +128,7 @@ else
 {
 	# It is a new booking. The data comes from whichever button the user clicked
 	$edit_type   = "series";
-	$name        = getUserName();
+	$name        = "";
 	$create_by   = getUserName();
 	$description = "";
 	$start_day   = $day;
@@ -153,32 +137,7 @@ else
     // Avoid notices for $hour and $minute if periods is enabled
     (isset($hour)) ? $start_hour = $hour : '';
 	(isset($minute)) ? $start_min = $minute : '';
-	if (isset($nperiods))
-		{
-		if ($enable_periods)
-			$duration    = 60 * $nperiods;
-		else
-			$duration    = $nperiods * $resolution;
-		if (isset($shape)) switch ($shape)
-			{
-			case 1: // Rectangle.
-				break;
-			case 2: // Vertical chain.
-				$duration += (24 * ($nrooms-1) * ($enable_periods ? 60 : 60 * 60));
-				$nrooms = 1;
-				break;
-			case 3: // Horizontal chain.
-				$nrooms = 1;
-				break;
-			default:
-				$nrooms = 1;
-				break;
-			}
-		}
-	else
-		{
 	$duration    = ($enable_periods ? 60 : 60 * 60);
-		}
 	$type        = "I";
 	$room_id     = $room;
     unset($id);
@@ -197,9 +156,11 @@ else
 # If we have not been provided with a room_id
 if( empty( $room_id ) )
 {
-	$sql = "SELECT id 
-			FROM $tbl_room";
-	$room_id = $mdb->getOne($sql, 'integer');
+	$sql = "select id from $tbl_room limit 1";
+	$res = sql_query($sql);
+	$row = sql_row($res, 0);
+	$room_id = $row[0];
+
 }
 
 # If we have not been provided with starting time
@@ -232,7 +193,9 @@ print_header($day, $month, $year, $area);
 
 ?>
 
-<SCRIPT LANGUAGE="JavaScript">
+<script type="text/javascript">
+<!-- Hide this from non-Javascript aware UAs
+
 // do a little form verifying
 function validate_and_submit ()
 {
@@ -265,10 +228,31 @@ function validate_and_submit ()
   {
   	n = parseInt(document.forms["main"].rep_num_weeks.value);
   }
-  if ((!i1 || (i1 && i2)) && document.forms["main"].rep_type && document.forms["main"].rep_type[6].checked && (!n || n < 2))
+  if ((!i1 || (i1 && i2)) && (document.forms["main"].rep_type.value != 0) && document.forms["main"].rep_type[6].checked && (!n || n < 2))
   {
     alert("<?php echo get_vocab("you_have_not_entered") . '\n' . get_vocab("useful_n-weekly_value") ?>");
     return false;
+  }
+  
+  if ((document.forms["main"].rep_type.value != 0) &&
+      (document.forms["main"].rep_type[2].checked ||
+      document.forms["main"].rep_type[6].checked))
+  {
+    ok = false;
+    for (j=0; j < 7; j++)
+    {
+      if (document.forms["main"]["rep_day["+j+"]"].checked)
+      {
+        ok = true;
+        break;
+      }
+    }
+    
+    if (ok == false)
+    {
+      alert("<?php echo get_vocab("you_have_not_entered") . '\n' . get_vocab("rep_rep_day") ?>");
+      return false;
+    }
   }
 
   // check that a room(s) has been selected
@@ -291,113 +275,94 @@ function validate_and_submit ()
 
   return true;
 }
-function findOptionIndex(select, val)
-{
-  for (i=0; i<select.length; i++) {
-    if (select.options[i].value == val) return i;
-  }
-  return -1;
-}
 function OnAllDayClick(allday) // Executed when the user clicks on the all_day checkbox.
 {
   form = document.forms["main"];
-  if (form.ampm && !form.ampm.item) form.ampm.item = function(i) {return form.ampm[i]}; // Make IE6 DOM compatible.
-  if (allday.checked) { // If checking the box...
-    form.duration.oldValue = form.duration.value;
-    form.dur_units.oldSelectedIndex = form.dur_units.selectedIndex;
-    <?php if ($enable_periods ) { ?>
-      form.period.oldValue = form.period.value;
-      form.duration.value = form.period.length;
-      form.dur_units.selectedIndex = findOptionIndex(form.dur_units, "periods");
-      form.period.options[0].selected = true;
-      form.period.disabled = true;
-    <?php } else { ?>
-      form.hour.oldValue = form.hour.value;
-      form.minute.oldValue = form.minute.value;
-    <?php
-      $start = $morningstarts;                  # First reservable time
-      if (!$twentyfourhour_format) {
-        echo("form.hour.oldPm = (form.ampm.item(1).checked) ? 1 : 0;\n");
-        $ix = 0;
-        if ($start >= 12) {
-          $ix = 1;
-          $start -= 12;
-        }
-        if ($start == 0) $start = 12;
-        printf("form.ampm.item(%d).checked = true;\n", $ix);
-        echo("form.ampm.item(0).disabled = true;\n");
-        echo("form.ampm.item(1).disabled = true;\n");
-      }
-      printf("form.hour.value = \"%02d\";\n", $start);
-      $daylength = $eveningends - $morningstarts;
-      if ($daylength <= 0) $daylength += 24;      # Just in case the duration is across midnight.
-      printf("form.duration.value = \"%d\";\n", $daylength);
-    ?> // ~~~~
+  if (allday.checked) // If checking the box...
+  {
+    <?php if( ! $enable_periods ) { ?>
+      form.hour.value = "00";
       form.minute.value = "00";
-      form.dur_units.selectedIndex = findOptionIndex(form.dur_units, "hours");
-
-      form.hour.disabled = true;
-      form.minute.disabled = true
     <?php } ?>
-    form.duration.disabled = true;
-    form.dur_units.disabled = true;
-  } else {
-    form.duration.disabled = false;
-    form.dur_units.disabled = false;
-    <?php if ($enable_periods ) { ?>
-      form.period.disabled = false;
-      form.period.options[form.period.oldValue].selected = true;
-    <?php } else { ?>
-      form.hour.disabled = false;
-      form.minute.disabled = false
-      <?php if (!$twentyfourhour_format) { ?>
-        form.ampm.item(0).disabled = false;
-        form.ampm.item(1).disabled = false;
-        form.ampm.item(form.hour.oldPm).checked = true;
-      <?php } ?>
-      form.hour.value = form.hour.oldValue;
-      form.minute.value = form.minute.oldValue;
-    <?php } ?>
-    form.duration.value = form.duration.oldValue;
-    form.dur_units.selectedIndex = form.dur_units.oldSelectedIndex;
+    if (form.dur_units.value!="days") // Don't change it if the user already did.
+    {
+      form.duration.value = "1";
+      form.dur_units.value = "days";
+    }
   }
 }
-</SCRIPT>
+// End of Javascript -->
+</script>
 
-<h2><?php echo isset($id) ? ($edit_type == "series" ? get_vocab("editseries") : get_vocab("editentry")) : get_vocab("addentry"); ?></H2>
+<h2>
+<?php
+
+if (isset($id) && !isset($copy))
+{
+  if ($edit_type == "series")
+  {
+    $token = "editseries";
+  }
+  else
+  {
+    $token = "editentry";
+  }
+}
+else
+{
+  if (isset($copy))
+  {
+    if ($edit_type == "series")
+    {
+      $token = "copyseries";
+    }
+    else
+    {
+      $token = "copyentry";
+    }
+  }
+  else
+  {
+    $token = "addentry";
+  }
+}
+echo get_vocab($token);
+?>
+</h2>
+
 
 <FORM NAME="main" ACTION="edit_entry_handler.php" METHOD="GET">
 
-<TABLE BORDER=0>
+<table BORDER=0>
 
 <TR><TD CLASS=CR><B><?php echo get_vocab("namebooker")?></B></TD>
-  <TD CLASS=CL><INPUT NAME="name" SIZE=40 VALUE="<?php echo htmlspecialchars($name,ENT_NOQUOTES) ?>"></TD></TR>
+  <TD CLASS=CL><INPUT NAME="name" SIZE=40 VALUE="<?php echo htmlspecialchars($name) ?>"></TD></TR>
 
 <TR><TD CLASS=TR><B><?php echo get_vocab("fulldescription")?></B></TD>
-  <TD CLASS=TL><TEXTAREA NAME="description" ROWS=8 COLS=40 WRAP="virtual"><?php echo
+  <TD CLASS=TL><TEXTAREA NAME="description" ROWS=8 COLS=40><?php echo
 htmlspecialchars ( $description ); ?></TEXTAREA></TD></TR>
 
-<TR><TD CLASS=CR><B><?php echo get_vocab("date")?></B></TD>
+<TR><TD CLASS=CR><B><?php echo get_vocab("date")?>:</B></TD>
  <TD CLASS=CL>
   <?php genDateSelector("", $start_day, $start_month, $start_year) ?>
  </TD>
 </TR>
 
 <?php if(! $enable_periods ) { ?>
-<TR><TD CLASS=CR><B><?php echo get_vocab("time")?></B></TD>
+<TR><TD CLASS=CR><B><?php echo get_vocab("time")?>:</B></TD>
   <TD CLASS=CL><INPUT NAME="hour" SIZE=2 VALUE="<?php if (!$twentyfourhour_format && ($start_hour > 12)){ echo ($start_hour - 12);} else { echo $start_hour;} ?>" MAXLENGTH=2>:<INPUT NAME="minute" SIZE=2 VALUE="<?php echo $start_min;?>" MAXLENGTH=2>
 <?php
 if (!$twentyfourhour_format)
 {
   $checked = ($start_hour < 12) ? "checked" : "";
-  echo "<INPUT NAME=\"ampm\" type=\"radio\" value=\"am\" $checked>".utf8_date("a",mktime(1,0,0,1,1,2000));
+  echo "<INPUT NAME=\"ampm\" type=\"radio\" value=\"am\" $checked>".utf8_strftime("%p",mktime(1,0,0,1,1,2000));
   $checked = ($start_hour >= 12) ? "checked" : "";
-  echo "<INPUT NAME=\"ampm\" type=\"radio\" value=\"pm\" $checked>".utf8_date("a",mktime(13,0,0,1,1,2000));
+  echo "<INPUT NAME=\"ampm\" type=\"radio\" value=\"pm\" $checked>".utf8_strftime("%p",mktime(13,0,0,1,1,2000));
 }
 ?>
 </TD></TR>
 <?php } else { ?>
-<TR><TD CLASS=CR><B><?php echo get_vocab("period")?></B></TD>
+<TR><TD CLASS=CR><B><?php echo get_vocab("period")?>:</B></TD>
   <TD CLASS=CL>
     <SELECT NAME="period">
 <?php
@@ -414,7 +379,7 @@ foreach ($periods as $p_num => $p_val)
 </TD></TR>
 
 <?php } ?>
-<TR><TD CLASS=CR><B><?php echo get_vocab("duration");?></B></TD>
+<TR><TD CLASS=CR><B><?php echo get_vocab("duration");?>:</B></TD>
   <TD CLASS=CL><INPUT NAME="duration" SIZE=7 VALUE="<?php echo $duration;?>">
     <SELECT NAME="dur_units">
 <?php
@@ -437,23 +402,23 @@ while (list(,$unit) = each($units))
 
 <?php
       # Determine the area id of the room in question first
-      $sql = "SELECT  area_id
-              FROM    $tbl_room
-              WHERE   id=$room_id";
-      $area_id = $mdb->getOne($sql, 'integer');
+      $sql = "select area_id from $tbl_room where id=$room_id";
+      $res = sql_query($sql);
+      $row = sql_row($res, 0);
+      $area_id = $row[0];
       # determine if there is more than one area
-      $sql = "SELECT id
-      		  FROM   $tbl_area";
-      $res = $mdb->query($sql, 'integer');
-      $num_areas = $mdb->numRows($res);
-      $mdb->freeResult($res);
+      $sql = "select id from $tbl_area";
+      $res = sql_query($sql);
+      $num_areas = sql_count($res);
       # if there is more than one area then give the option
       # to choose areas.
       if( $num_areas > 1 ) {
 
 ?>
-<script language="JavaScript">
-<!--
+<tr><td>
+<script type="text/javascript">
+<!-- Hide the Javascript from non-Javascript UAs
+
 function changeRooms( formObj )
 {
     areasObj = eval( "formObj.areas" );
@@ -462,7 +427,8 @@ function changeRooms( formObj )
     roomsObj = eval( "formObj.elements['rooms[]']" )
 
     // remove all entries
-    for (i=0; i < (roomsObj.length); i++)
+    roomsNum = roomsObj.length;
+    for (i=(roomsNum-1); i >= 0; i--)
     {
       roomsObj.options[i] = null
     }
@@ -470,61 +436,38 @@ function changeRooms( formObj )
     switch (area){
 <?php
         # get the area id for case statement
-	$sql = "SELECT	 id, area_name
-            FROM	 $tbl_area
-            ORDER BY area_name";
-
-    $types = array('integer', 'text');
-    $res = $mdb->query($sql, $types);
-    if (MDB::isError($res))
-    {
-        fatal_error(1, $res->getMessage() . "<BR>" . $res->getUserInfo() . "<BR>");
-    }
-    while ($row = $mdb->fetchInto($res))
+	$sql = "select id, area_name from $tbl_area order by area_name";
+        $res = sql_query($sql);
+	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
 	{
+
                 print "      case \"".$row[0]."\":\n";
         	# get rooms for this area
-		$sql2 = "SELECT   id, room_name
-        		 FROM     $tbl_room
-                 WHERE    area_id='".$row[0]."'
-                 ORDER BY $room_order";
-    	$types = array('integer', 'text');
-        $res2 = $mdb->query($sql2, $types);
-    	if (MDB::isError($res2))
-	    {
-    	    fatal_error(1, $res2->getMessage() . "<BR>" . $res2->getUserInfo() . "<BR>");
-	    }
-        for ($j = 0; ($row2 = $mdb->fetchInto($res2)); $j++)
-        {
-        	print "        roomsObj.options[$j] = new Option(\"".$row2[1]."\",".$row2[0] .")\n";
-        }
-        $mdb->freeResult($res2);
+		$sql2 = "select id, room_name from $tbl_room where area_id='".$row[0]."' order by room_name";
+        	$res2 = sql_query($sql2);
+		if ($res2) for ($j = 0; ($row2 = sql_row($res2, $j)); $j++)
+		{
+                	print "        roomsObj.options[$j] = new Option(\"".str_replace('"','\\"',$row2[1])."\",".$row2[0] .")\n";
+                }
 		# select the first entry by default to ensure
 		# that one room is selected to begin with
 		print "        roomsObj.options[0].selected = true\n";
 		print "        break\n";
 	}
-    $mdb->freeResult($res);
 ?>
     } //switch
 }
 
-// create area selector if javascript is enabled as this is required
-// if the room selector is to be updated.
-this.document.writeln("<tr><td class=CR><b><?php echo get_vocab("areas") ?>:</b></td><td class=CL valign=top>");
+// Create area selector, only if we have Javascript
+
+this.document.writeln("<b><?php echo get_vocab("areas") ?>:<\/b><\/td><td class=CL valign=top>");
 this.document.writeln("          <select name=\"areas\" onChange=\"changeRooms(this.form)\">");
+
 <?php
 # get list of areas
-$sql = "SELECT   id, area_name
-		FROM     $tbl_area
-        ORDER BY area_name";
-$types = array('integer', 'text');
-$res = $mdb->query($sql, $types);
-if (MDB::isError($res))
-{
-    fatal_error(1, $res->getMessage() . "<BR>" . $res->getUserInfo() . "<BR>");
-}
-while ($row = $mdb->fetchInto($res))
+$sql = "select id, area_name from $tbl_area order by area_name";
+$res = sql_query($sql);
+if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
 {
 	$selected = "";
 	if ($row[0] == $area_id) {
@@ -532,43 +475,33 @@ while ($row = $mdb->fetchInto($res))
 	}
 	print "this.document.writeln(\"            <option $selected value=\\\"".$row[0]."\\\">".$row[1]."\")\n";
 }
-$mdb->freeResult($res);
 ?>
-this.document.writeln("          </select>");
-this.document.writeln("</td></tr>");
-// -->
+this.document.writeln("          <\/select>");
+
+// End of Javascipt -->
 </script>
+</td></tr>
 <?php
 } # if $num_areas
 ?>
 <tr><td class=CR><b><?php echo get_vocab("rooms") ?>:</b></td>
-  <td class=CL valign=top><table><tr><td><select name="rooms[]" multiple="yes">
+  <td class=CL valign=top><table><tr><td><select name="rooms[]" multiple="multiple">
   <?php
         # select the rooms in the area determined above
-    $sql = "SELECT   id, room_name
-            FROM     $tbl_room
-            WHERE    area_id=$area_id
-            ORDER BY $room_order";
-    $types = array('integer', 'text');
-    $res = $mdb->query($sql, $types);
+	$sql = "select id, room_name from $tbl_room where area_id=$area_id order by room_name";
+   	$res = sql_query($sql);
 
 
-    while ($row = $mdb->fetchInto($res))
+   	if ($res) for ($i = 0; ($row = sql_row($res, $i)); $i++)
    	{
 		$selected = "";
 		if ($row[0] == $room_id) {
 			$selected = "SELECTED";
-			$nroomsleft = $nrooms;
-		}
-		if ($nroomsleft) {
-			$selected = "SELECTED";
-			$nroomsleft -= 1;
 		}
 		echo "<option $selected value=\"".$row[0]."\">".$row[1];
         // store room names for emails
         $room_names[$i] = $row[1];
    	}
-    $mdb->freeResult($res);
   ?>
   </select></td><td><?php echo get_vocab("ctrl_click") ?></td></tr></table>
     </td></tr>
@@ -576,20 +509,17 @@ this.document.writeln("</td></tr>");
 <TR><TD CLASS=CR><B><?php echo get_vocab("type")?></B></TD>
   <TD CLASS=CL><SELECT NAME="type">
 <?php
-for ($letter = ord('A'); $letter <= ord('Z'); $letter++)
+for ($c = "A"; $c <= "Z"; $c++)
 {
-	$c = chr($letter);
 	if (!empty($typel[$c]))
 		echo "<OPTION VALUE=$c" . ($type == $c ? " SELECTED" : "") . ">$typel[$c]\n";
 }
 ?></SELECT></TD></TR>
 
-<?php if ($edit_series) { ?>
-
 <?php if($edit_type == "series") { ?>
 
 <TR>
- <TD CLASS=CR><B><?php echo get_vocab("rep_type")?></B></TD>
+ <TD CLASS=CR><B><?php echo get_vocab("rep_type")?>:</B></TD>
  <TD CLASS=CL>
 <?php
 
@@ -608,12 +538,12 @@ for($i = 0; isset($vocab["rep_type_$i"]); $i++)
 </TR>
 
 <TR>
- <TD CLASS=CR><B><?php echo get_vocab("rep_end_date")?></B></TD>
+ <TD CLASS=CR><B><?php echo get_vocab("rep_end_date")?>:</B></TD>
  <TD CLASS=CL><?php genDateSelector("rep_end_", $rep_end_day, $rep_end_month, $rep_end_year) ?></TD>
 </TR>
 
 <TR>
- <TD CLASS=CR><B><?php echo get_vocab("rep_rep_day")?></B> <?php echo get_vocab("rep_for_weekly")?></TD>
+ <TD CLASS=CR><B><?php echo get_vocab("rep_rep_day")?>:</B> <?php echo get_vocab("rep_for_weekly")?></TD>
  <TD CLASS=CL>
 <?php
 # Display day name checkboxes according to language and preferred weekday start.
@@ -634,7 +564,8 @@ else
 {
 	$key = "rep_type_" . (isset($rep_type) ? $rep_type : "0");
 
-	echo "<tr><td class=\"CR\"><b>".get_vocab("rep_type")."</b></td><td class=\"CL\">".get_vocab($key)."</td></tr>\n";
+        echo "<input type=hidden name=rep_type value=0>\n";
+	echo "<tr><td class=\"CR\"><b>".get_vocab("rep_type").":</b></td><td class=\"CL\">".get_vocab($key)."</td></tr>\n";
 
 	if(isset($rep_type) && ($rep_type != 0))
 	{
@@ -649,9 +580,9 @@ else
 			}
 		}
 		if($opt)
-			echo "<tr><td class=\"CR\"><b>".get_vocab("rep_rep_day")."</b></td><td class=\"CL\">$opt</td></tr>\n";
+			echo "<tr><td class=\"CR\"><b>".get_vocab("rep_rep_day").":</b></td><td class=\"CL\">$opt</td></tr>\n";
 
-		echo "<tr><td class=\"CR\"><b>".get_vocab("rep_end_date")."</b></td><td class=\"CL\">$rep_end_date</td></tr>\n";
+		echo "<tr><td class=\"CR\"><b>".get_vocab("rep_end_date").":</b></td><td class=\"CL\">$rep_end_date</td></tr>\n";
 	}
 }
 /* We display the rep_num_weeks box only if:
@@ -665,30 +596,28 @@ if ( ( !isset( $id ) ) Xor ( isset( $rep_type ) && ( $rep_type != 0 ) && ( "seri
 ?>
 
 <TR>
- <TD CLASS=CR><B><?php echo get_vocab("rep_num_weeks")?></B> <?php echo get_vocab("rep_for_nweekly")?></TD>
+ <TD CLASS=CR><B><?php echo get_vocab("rep_num_weeks")?>:</B> <?php echo get_vocab("rep_for_nweekly")?></TD>
  <TD CLASS=CL><INPUT TYPE=TEXT NAME="rep_num_weeks" VALUE="<?php echo $rep_num_weeks?>">
 </TR>
 <?php } ?>
 
-<?php } ?><!-- End if ($edit_series) -->
-
 <TR>
  <TD colspan=2 align=center>
-  <SCRIPT LANGUAGE="JavaScript">
+  <script type="text/javascript">
    document.writeln ( '<INPUT TYPE="button" NAME="save_button" VALUE="<?php echo get_vocab("save")?>" ONCLICK="validate_and_submit()">' );
-  </SCRIPT>
-  <NOSCRIPT>
+  </script>
+  <noscript>
    <INPUT TYPE="submit" VALUE="<?php echo get_vocab("save")?>">
-  </NOSCRIPT>
+  </noscript>
  </TD></TR>
-</TABLE>
+</table>
 
-<INPUT TYPE=HIDDEN NAME="returl"    VALUE="<?php echo $HTTP_REFERER?>">
+<INPUT TYPE=HIDDEN NAME="returl"    VALUE="<?php echo htmlspecialchars($HTTP_REFERER) ?>">
 <!--INPUT TYPE=HIDDEN NAME="room_id"   VALUE="<?php echo $room_id?>"-->
 <INPUT TYPE=HIDDEN NAME="create_by" VALUE="<?php echo $create_by?>">
 <INPUT TYPE=HIDDEN NAME="rep_id"    VALUE="<?php echo $rep_id?>">
 <INPUT TYPE=HIDDEN NAME="edit_type" VALUE="<?php echo $edit_type?>">
-<?php if(isset($id)) echo "<INPUT TYPE=HIDDEN NAME=\"id\"        VALUE=\"$id\">\n";
+  <?php if(isset($id) && !isset($copy)) echo "<INPUT TYPE=HIDDEN NAME=\"id\"        VALUE=\"$id\">\n";
 ?>
 
 </FORM>

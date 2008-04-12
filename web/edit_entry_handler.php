@@ -4,8 +4,6 @@
 require_once "grab_globals.inc.php";
 include "config.inc.php";
 include "functions.inc";
-require_once("database.inc.php");
-MDB::loadFile("Date"); 
 include "$dbsys.inc";
 include "mrbs_auth.inc";
 include "mrbs_sql.inc";
@@ -32,6 +30,57 @@ if(!getWritable($create_by, getUserName()))
     showAccessDenied($day, $month, $year, $area);
     exit;
 }
+
+if ($name == '')
+{
+     print_header($day, $month, $year, $area);
+     ?>
+       <H1><?php echo get_vocab('invalid_booking'); ?></H1>
+       <?php echo get_vocab('must_set_description'); ?>
+   </BODY>
+</HTML>
+<?php
+     exit;
+}       
+
+if ($rep_type  == 2 || $rep_type == 6)
+{
+    $got_rep_day = 0;
+    for ($i = 0; $i < 7; $i++)
+    {
+        if ($rep_day[$i])
+        {
+          $got_rep_day =1;
+          break;
+        }
+    }
+    if ($got_rep_day == 0)
+    {
+        print_header($day, $month, $year, $area);
+     ?>
+       <H1><?php echo get_vocab('invalid_booking'); ?></H1>
+       <?php echo get_vocab('you_have_not_entered')." ".get_vocab("rep_rep_day"); ?>
+   </BODY>
+</HTML>
+<?php
+        exit;
+    }
+}       
+
+if (($rep_type == 6) && ($rep_num_weeks < 2))
+{
+    print_header($day, $month, $year, $area);
+     ?>
+       <H1><?php echo get_vocab('invalid_booking'); ?></H1>
+       <?php echo get_vocab('you_have_not_entered')." ".get_vocab("useful_n-weekly_value"); ?>
+   </BODY>
+</HTML>
+<?php
+    exit;
+}
+
+# Support locales where ',' is used as the decimal point
+$duration = preg_replace('/,/', '.', $duration);
 
 if( $enable_periods ) {
 	$resolution = 60;
@@ -113,7 +162,7 @@ else
     $endtime += cross_dst( $starttime, $endtime );
 }
 
-if(isset($rep_type) && isset($rep_end_month) && isset($rep_end_day) && isset($rep_end_year))
+if(isset($rep_type) && ($rep_type > 0) && isset($rep_end_month) && isset($rep_end_day) && isset($rep_end_year))
 {
     // Get the repeat entry settings
     $rep_enddate = mktime($hour, $minute, 0, $rep_end_month, $rep_end_day, $rep_end_year);
@@ -140,18 +189,9 @@ $repeat_id = 0;
 if (isset($id))
 {
     $ignore_id = $id;
-    $res = $mdb->query("SELECT  repeat_id 
-                        FROM    $tbl_entry 
-                        WHERE   id=$id", 'integer');
-    if ( (MDB::isError($res)) or (1 <> $mdb->numRows($res)) )
-    {
+    $repeat_id = sql_query1("SELECT repeat_id FROM $tbl_entry WHERE id=$id");
+    if ($repeat_id < 0)
         $repeat_id = 0;
-        $mdb->freeResult($res);
-    }
-    else
-    {
-        $repeat_id = $mdb->fetchOne($res);
-    }
 }
 else
     $ignore_id = 0;
@@ -216,11 +256,11 @@ if(empty($err))
                     // details
                     if (MAIL_DETAILS)
                     {
-                        $types = array('integer', 'text', 'integer', 'text');
                         $sql = "SELECT r.id, r.room_name, r.area_id, a.area_name ";
                         $sql .= "FROM $tbl_room r, $tbl_area a ";
                         $sql .= "WHERE r.id=$room_id AND r.area_id = a.id";
-                        $row = $mdb->queryRow($sql, $types);
+                        $res = sql_query($sql);
+                        $row = sql_row($res, 0);
                         $room_name = $row[1];
                         $area_name = $row[3];
                     }
@@ -260,17 +300,17 @@ if(empty($err))
                     // details.
                     if (MAIL_DETAILS)
                     {
-                        $types = array('integer', 'text', 'integer', 'text');
                         $sql = "SELECT r.id, r.room_name, r.area_id, a.area_name ";
                         $sql .= "FROM $tbl_room r, $tbl_area a ";
                         $sql .= "WHERE r.id=$room_id AND r.area_id = a.id";
-                        $row = $mdb->queryRow($sql, $types);
+                        $res = sql_query($sql);
+                        $row = sql_row($res, 0);
                         $room_name = $row[1];
                         $area_name = $row[3];
                     }
                     // If this is a modified entry then call
                     // getPreviousEntryData to prepare entry comparison.
-                    if ( isset($id) )
+                   if ( isset($id) )
                     {
                         $mail_previous = getPreviousEntryData($id, 0);
                     }
@@ -303,7 +343,7 @@ if(strlen($err))
     echo "<H2>" . get_vocab("sched_conflict") . "</H2>";
     if(!isset($hide_title))
     {
-        echo get_vocab("conflict");
+        echo get_vocab("conflict").":";
         echo "<UL>";
     }
     
@@ -315,5 +355,4 @@ if(strlen($err))
 
 echo "<a href=\"$returl\">".get_vocab("returncal")."</a><p>";
 
-include "trailer.inc";
-?>
+include "trailer.inc"; ?>
