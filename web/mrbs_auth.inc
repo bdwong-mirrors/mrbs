@@ -1,13 +1,25 @@
 <?php
 // $Id$
 
-// include the authentification wrappers
+// include the authentication wrappers
 require_once "auth_$auth[type].inc";
 
 if (isset($auth['session']))
 {
   require_once "session_$auth[session].inc";
 }
+
+// Permissions system
+require_once("phpgacl/gacl.class.php");
+$gacl_options = array(	'db_type' => 'mysql',
+			'db_host' => 'localhost',
+			'db_user' => 'mrbs',
+			'db_password' => 'mrbs',
+			'db_name' => 'mrbs-dev',
+			'db_table_prefix' => 'gacl_',
+			'debug' => FALSE,
+			);
+$gacl = new gacl($gacl_options);
 
 
 /* getAuthorised($level)
@@ -20,7 +32,7 @@ if (isset($auth['session']))
  *   0        - The user does not have the required access
  *   non-zero - The user has the required access
  */
-function getAuthorised($level)
+/*function getAuthorised($level)
 {
   global $auth;
 
@@ -32,6 +44,34 @@ function getAuthorised($level)
   }
 
   return authGetUserLevel($user) >= $level;
+}
+*/
+/* getAuthorised($permission,$object)
+ * 
+ * Check to see if the current user has a certain permission
+ * OR if the permission allowed by default
+ * 
+ * $user - The user name
+ * $asection - The section for the requested action
+ * $action - The requested action
+ * $osection - The section for the thing being accessed
+ * $object - The thing being accessed
+ * 
+ * Returns:
+ *   FALSE	- The user does not have the required access
+ *   TRUE	- The user has the required access
+ */
+function getAuthorised($asection, $action, $osection, $object)
+{
+  global $auth;
+
+  $user = getUserName();
+  if(isset($user) == FALSE)
+  {
+    authGet();
+    return FALSE;
+  }
+  return authCheckPermission($user, $asection, $action, $osection, $object);
 }
 
 /* getWritable($creator, $user)

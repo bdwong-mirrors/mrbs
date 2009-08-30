@@ -14,12 +14,6 @@ $description = get_form_var('description', 'string');
 $capacity = get_form_var('capacity', 'int');
 $type = get_form_var('type', 'string');
 
-$required_level = (isset($max_level) ? $max_level : 2);
-if (!getAuthorised($required_level))
-{
-  showAccessDenied($day, $month, $year, $area, "");
-  exit();
-}
 
 // This file is for adding new areas/rooms
 
@@ -28,6 +22,11 @@ if (!getAuthorised($required_level))
 
 if ($type == "area")
 {
+  if (!getAuthorised('generic','add','area','new'))
+  {
+    showAccessDenied($day, $month, $year, $area, "");
+    exit();
+  }
   // Truncate the name field to the maximum length as a precaution.
   $name = substr($name, 0, $maxlength['area.area_name']);
   $area_name_q = addslashes($name);
@@ -57,6 +56,11 @@ if ($type == "area")
 
 if ($type == "room")
 {
+  if (!getAuthorised('generic','add','room','new'))
+  {
+    showAccessDenied($day, $month, $year, $area, "");
+    exit();
+  }
   // Truncate the name and description fields to the maximum length as a precaution.
   $name = substr($name, 0, $maxlength['room.room_name']);
   $description = substr($description, 0, $maxlength['room.description']);

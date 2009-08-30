@@ -71,4 +71,24 @@ function authGetUserLevel($user)
   // to return 0 (ie the user has no rights)
 }
 
+/* authCheckPermission($user, $psection, $action, $osection, $object)
+ *
+ * Checks whether a user has permission to carry out a certain action on a certain object.
+ *
+ * $user - The user name (ARO)
+ * $asection - The section for the requested action
+ * $action - The requested action (ACO)
+ * $osection - The section for the thing being accessed
+ * $object - The thing being accessed (AXO)
+ *
+ * Returns:
+ *   FALSE	- The user does not have the required access
+ *   TRUE	- The user has the required access
+ */
+function authCheckPermission($user, $asection, $action, $osection, $object) {
+  global $gacl;
+
+  return $gacl->acl_check($asection, $action, 'users', $user, $osection, $object);
+}
+
 ?>

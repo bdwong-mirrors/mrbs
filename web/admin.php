@@ -26,8 +26,7 @@ if (empty($area))
   $area = get_default_area();
 }
 
-$required_level = (isset($max_level) ? $max_level : 2);
-if (!getAuthorised($required_level))
+if (!getAuthorised('generic','view','applications','mrbs-admin'))
 {
   showAccessDenied($day, $month, $year, $area, "");
   exit();
