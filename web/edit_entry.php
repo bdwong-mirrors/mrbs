@@ -45,10 +45,10 @@ if (!isset($edit_type))
   $edit_type = "";
 }
 
-if (!getAuthorised(1))
+if (!getAuthorised('generic','add','entries','new') && !getAuthorised('generic','edit','entries',$id))
 {
-  showAccessDenied($day, $month, $year, $area, isset($room) ? $room : "");
-  exit;
+  showAccessDenied($day, $month, $year, $area, "");
+  exit();
 }
 
 // This page will either add or modify a booking

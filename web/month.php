@@ -68,6 +68,11 @@ else
   }
 }
 
+if (!getAuthorised('generic','view','applications','mrbs'))
+{
+  showAccessDenied($day, $month, $year, $area, "");
+  exit();
+}
 
 // print the page header
 print_header($day, $month, $year, $area, isset($room) ? $room : "");

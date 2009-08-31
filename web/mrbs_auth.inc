@@ -63,14 +63,19 @@ $gacl = new gacl($gacl_options);
  */
 function getAuthorised($asection, $action, $osection, $object)
 {
+  // First check if this permission is allowed by default for all users.
+  if (authCheckPermission('default', $asection, $action, $osection, $object))
+    return TRUE;
+
   global $auth;
 
   $user = getUserName();
-  if(isset($user) == FALSE)
+  if(isset($user))
   {
     authGet();
     return FALSE;
   }
+
   return authCheckPermission($user, $asection, $action, $osection, $object);
 }
 

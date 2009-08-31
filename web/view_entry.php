@@ -26,6 +26,12 @@ if (empty($area))
   $area = get_default_area();
 }
 
+if (!getAuthorised('generic','view','entries',$id))
+{
+  showAccessDenied($day, $month, $year, $area, "");
+  exit();
+}
+
 print_header($day, $month, $year, $area, isset($room) ? $room : "");
 
 if (empty($series))

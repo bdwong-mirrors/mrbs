@@ -52,6 +52,12 @@ else
   }
 }
 
+if (!getAuthorised('generic','view','applications','mrbs'))
+{
+  showAccessDenied($day, $month, $year, $area, "");
+  exit();
+}
+
 // form the room parameter for use in query strings.    We want to preserve room information
 // if possible when switching between views
 if (empty($room))
