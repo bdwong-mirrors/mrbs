@@ -15,6 +15,9 @@
  *   nothing   - The area is free
  *   something - An error occured, the return value is human readable
  */
+
+require_once str_replace('//','/',dirname(__FILE__).'/') . 'include/mrbs_acl_api.php';
+
 function mrbsCheckFree($room_id, $starttime, $endtime, $ignore, $repignore)
 {
   global $tbl_entry;
@@ -89,7 +92,7 @@ function mrbsCheckFree($room_id, $starttime, $endtime, $ignore, $repignore)
 
 /** mrbsDelEntry()
  * 
- * Delete an entry, or optionally all entrys.
+ * Delete an entry, or optionally all entries.
  * 
  * $user   - Who's making the request
  * $id     - The entry to delete
@@ -102,7 +105,7 @@ function mrbsCheckFree($room_id, $starttime, $endtime, $ignore, $repignore)
  */
 function mrbsDelEntry($user, $id, $series, $all)
 {
-  global $tbl_entry, $tbl_repeat;
+  global $tbl_entry, $tbl_repeat, $mrbs_acl_api;
 
   $repeat_id = sql_query1("SELECT repeat_id FROM $tbl_entry WHERE id=$id");
   if ($repeat_id < 0)
@@ -140,6 +143,8 @@ function mrbsDelEntry($user, $id, $series, $all)
     if (sql_command("DELETE FROM $tbl_entry WHERE id=" . $row['id']) > 0)
     {
       $removed++;
+      // Delete from phpGACL
+      $mrbs_acl_api->delObject('bookings',$row['id'],'AXO');
     }
   }
 
@@ -175,7 +180,7 @@ function mrbsCreateSingleEntry($starttime, $endtime, $entry_type, $repeat_id,
                                $room_id, $owner, $name, $type, $description,
                                $private)
 {
-  global $tbl_entry;
+  global $tbl_entry, $mrbs_acl_api;
  
   $private = $private ? 1 : 0;
   $name        = addslashes($name);
@@ -197,8 +202,11 @@ function mrbsCreateSingleEntry($starttime, $endtime, $entry_type, $repeat_id,
     {
       fatal_error(TRUE, "Fatal error: " . sql_error());  // probably because the table hasn't been created properly
     }
+    $id = sql_insert_id("$tbl_entry", "id");
+    // Insert succeeded so add to phpGACL
+    $mrbs_acl_api->addObject('bookings',$id,$name,'AXO');
 
-    return sql_insert_id("$tbl_entry", "id");
+    return $id;
   }
   else
   {

@@ -3,6 +3,7 @@
 // $Id$
 
 require_once "defaultincludes.inc";
+require_once "include/mrbs_acl_api.php";
 
 // Get form variables
 $day = get_form_var('day', 'int');
@@ -22,7 +23,7 @@ $type = get_form_var('type', 'string');
 
 if ($type == "area")
 {
-  if (!getAuthorised('generic','add','area','new'))
+  if (!getAuthorised('generic','create','areas','new'))
   {
     showAccessDenied($day, $month, $year, $area, "");
     exit();
@@ -49,14 +50,20 @@ if ($type == "area")
       fatal_error(1, sql_error());
     }
     $area = sql_insert_id("$tbl_area", "id");
+
+    // Add data to phpGACL
+    $group_id = $mrbs_acl_api->get_group_id('all-areas','','AXO');
+    if ($obj_id = $mrbs_acl_api->add_object('areas',$area_name_q,$area,0,0,'AXO'))
+      $mrbs_acl_api->add_group_object($group_id,'areas',$area,'AXO');
   }
   // Release the mutex
   sql_mutex_unlock("$tbl_area");
+
 }
 
 if ($type == "room")
 {
-  if (!getAuthorised('generic','add','room','new'))
+  if (!getAuthorised('generic','create','rooms','new'))
   {
     showAccessDenied($day, $month, $year, $area, "");
     exit();
@@ -90,9 +97,16 @@ if ($type == "room")
     {
       fatal_error(1, sql_error());
     }
+    $room = sql_insert_id("$tbl_room", "id");
+
+    // Add data to phpGACL
+    $group_id = $mrbs_acl_api->get_group_id('all-rooms','','AXO');
+    if ($obj_id = $mrbs_acl_api->add_object('rooms',$room_name_q,$room,0,0,'AXO'))
+      $mrbs_acl_api->add_group_object($group_id,'rooms',$room,'AXO');
   }
   // Release the mutex
   sql_mutex_unlock("$tbl_room");
+
 }
 
 $returl = "admin.php?area=$area" . (!empty($error) ? "&error=$error" : "");

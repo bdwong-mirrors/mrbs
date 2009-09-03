@@ -26,7 +26,7 @@ if (empty($area))
   $area = get_default_area();
 }
 
-if (!getAuthorised('generic','view','entries',$id))
+if (!getAuthorised('generic','view','bookings',$id))
 {
   showAccessDenied($day, $month, $year, $area, "");
   exit();

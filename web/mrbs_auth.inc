@@ -10,12 +10,12 @@ if (isset($auth['session']))
 }
 
 // Permissions system
-require_once("phpgacl/gacl.class.php");
-$gacl_options = array(	'db_type' => 'mysql',
-			'db_host' => 'localhost',
-			'db_user' => 'mrbs',
-			'db_password' => 'mrbs',
-			'db_name' => 'mrbs-dev',
+require_once "phpgacl/gacl.class.php";
+$gacl_options = array(	'db_type' => $dbsys,
+			'db_host' => $db_host,
+			'db_user' => $db_login,
+			'db_password' => $db_password,
+			'db_name' => $db_database,
 			'db_table_prefix' => 'gacl_',
 			'debug' => FALSE,
 			);
@@ -72,11 +72,13 @@ function getAuthorised($asection, $action, $osection, $object)
   $user = getUserName();
   if(isset($user))
   {
-    authGet();
-    return FALSE;
+    if (authCheckPermission($user, $asection, $action, $osection, $object))
+      return TRUE;
+    else
+      return FALSE;
   }
-
-  return authCheckPermission($user, $asection, $action, $osection, $object);
+  authGet();
+  return FALSE;
 }
 
 /* getWritable($creator, $user)

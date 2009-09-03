@@ -2,7 +2,7 @@
 // $Id$
 
 require_once "defaultincludes.inc";
-
+require_once "phpgacl/gacl_api.class.php";
 require_once "mrbs_sql.inc";
 
 // Get form variables
@@ -80,12 +80,6 @@ if (!empty($area_evening_ampm))
 $area_private_enabled = (!empty($area_private_enabled)) ? 1 : 0;
 $area_private_mandatory = (!empty($area_private_mandatory)) ? 1 : 0;
 
-$required_level = (isset($max_level) ? $max_level : 2);
-if (!getAuthorised($required_level))
-{
-  showAccessDenied($day, $month, $year, $area, "");
-  exit();
-}
 
 // Done changing area or room information?
 if (isset($change_done))
@@ -99,6 +93,24 @@ if (isset($change_done))
 }
 
 print_header($day, $month, $year, isset($area) ? $area : "", isset($room) ? $room : "");
+
+
+if (!empty($area))
+{
+  if (!getAuthorised('generic','edit','areas',$area))
+  {
+    showAccessDenied($day, $month, $year, $area, "");
+    exit();
+  }
+}
+else
+{
+  if (!getAuthorised('generic','edit','rooms',$room))
+  {
+    showAccessDenied($day, $month, $year, $area, "");
+    exit();
+  }
+}
 
 ?>
 

@@ -15,7 +15,6 @@ $total = get_form_var('total', 'int');
 $advanced = get_form_var('advanced', 'int');
 
 $user = getUserName();
-$is_admin =  (isset($user) && authGetUserLevel($user)>=2) ;
 
 // If we dont know the right date then make it up 
 if (!isset($day) or !isset($month) or !isset($year))
@@ -95,7 +94,7 @@ $sql_pred = "( " . sql_syntax_caseless_contains("E.create_by", $search_str)
 
 // Unless we overriding privacy settings as "public" or user
 // is and admin, we have to restrict which listings are returned
-if (($private_override != "public") && !$is_admin) 
+if (($private_override != "public") && !getAuthorised('generic','view','applications','mrbs-admin') 
 {
   if (isset($user)) 
   {

@@ -1,7 +1,12 @@
 <?php
 // $Id$
 
+/* 
+ * Delete a room or an area.
+*/
+
 require_once "defaultincludes.inc";
+require_once "include/mrbs_acl_api.php";
 
 // Get form variables
 $day = get_form_var('day', 'int');
@@ -24,21 +29,23 @@ if (empty($area))
   $area = get_default_area();
 }
 
-$required_level = (isset($max_level) ? $max_level : 2);
-if (!getAuthorised($required_level))
-{
-  showAccessDenied($day, $month, $year, $area, "");
-  exit();
-}
-
 // This is gonna blast away something. We want them to be really
 // really sure that this is what they want to do.
 
 if ($type == "room")
 {
+  if (!getAuthorised('generic','delete','rooms',$room))
+  {
+    showAccessDenied($day, $month, $year, $area, "");
+    exit();
+  }
   // We are supposed to delete a room
   if (isset($confirm))
   {
+    // First get a result set of all the bookings in this room to use later.
+    $bookings = sql_query("select id from $tbl_entry where room_id=$room");
+    if (!$bookings) fatal_error(0, sql_error());
+
     // They have confirmed it already, so go blast!
     sql_begin();
     // First take out all appointments for this room
@@ -48,6 +55,13 @@ if ($type == "room")
     // Now take out the room itself
     sql_command("delete from $tbl_room where id=$room");
     sql_commit();
+
+    // Delete all appointments for this room from phpGACL
+    for ($i = 0; ($row = sql_row($bookings, $i)); $i++) {
+      $mrbs_acl_api->delObject('bookings',$row[$i],'AXO');
+    }
+    // Remove the room from phpGACL
+    $mrbs_acl_api->delObject('rooms',$room,'AXO');
    
     // Go back to the admin page
     Header("Location: admin.php");
@@ -56,7 +70,7 @@ if ($type == "room")
   {
     print_header($day, $month, $year, $area, isset($room) ? $room : "");
    
-    // We tell them how bad what theyre about to do is
+    // We tell them how bad what they're about to do is
     // Find out how many appointments would be deleted
    
     $sql = "select name, start_time, end_time from $tbl_entry where room_id=$room";
@@ -96,6 +110,11 @@ if ($type == "room")
 
 if ($type == "area")
 {
+  if (!getAuthorised('generic','delete','areas',$area))
+  {
+    showAccessDenied($day, $month, $year, $area, "");
+    exit();
+  }
   // We are only going to let them delete an area if there are
   // no rooms. its easier
   $n = sql_query1("select count(*) from $tbl_room where area_id=$area");
@@ -103,6 +122,9 @@ if ($type == "area")
   {
     // OK, nothing there, lets blast it away
     sql_command("delete from $tbl_area where id=$area");
+
+    // Remove the area from phpGACL
+    $mrbs_acl_api->delObject('areas',$area,'AXO');
    
     // Redirect back to the admin page
     header("Location: admin.php");

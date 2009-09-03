@@ -1,6 +1,11 @@
 <?php
 // $Id$
 
+/*
+ * Shows form data for adding entries and editing existing ones.
+ * edit_entry_handler.php actually makes the db changes.
+*/
+
 require_once "defaultincludes.inc";
 
 require_once "mrbs_sql.inc";
@@ -45,12 +50,6 @@ if (!isset($edit_type))
   $edit_type = "";
 }
 
-if (!getAuthorised('generic','add','entries','new') && !getAuthorised('generic','edit','entries',$id))
-{
-  showAccessDenied($day, $month, $year, $area, "");
-  exit();
-}
-
 // This page will either add or modify a booking
 
 // We need to know:
@@ -66,6 +65,11 @@ if (!getAuthorised('generic','add','entries','new') && !getAuthorised('generic',
 // If we had $id passed in then it's a modification.
 if (isset($id))
 {
+  if (!getAuthorised('generic','edit','bookings',$id))
+  {
+    showAccessDenied($day, $month, $year, $area, "");
+    exit();
+  }
   $sql = "select name, create_by, description, start_time, end_time,
      type, room_id, entry_type, repeat_id, private from $tbl_entry where id=$id";
    
@@ -186,6 +190,12 @@ if (isset($id))
 else
 {
   // It is a new booking. The data comes from whichever button the user clicked
+  if (!getAuthorised('generic','create','bookings','new'))
+  {
+    showAccessDenied($day, $month, $year, $area, "");
+    exit();
+  }
+
   $edit_type   = "series";
   $name        = "";
   $create_by   = getUserName();

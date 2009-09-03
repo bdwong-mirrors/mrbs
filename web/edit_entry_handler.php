@@ -1,6 +1,10 @@
 <?php
 // $Id$
 
+/*
+ * For adding entries and editing existing ones
+*/
+
 require_once "defaultincludes.inc";
 
 require_once "mrbs_sql.inc";
@@ -145,17 +149,24 @@ else
   $isprivate = ((isset($private) && ($private == "yes")));
 }
 
-if (!getAuthorised(1))
+// Check for editing permission or creating permission
+if (isset($id))
 {
-  showAccessDenied($day, $month, $year, $area, isset($room) ? $room : "");
-  exit;
+  if (!getAuthorised('generic','edit','bookings',$id)) 
+  {
+    showAccessDenied($day, $month, $year, $area, "");
+    exit();
+  }
+}
+else
+{
+  if (!getAuthorised('generic','create','bookings','new'))
+  {
+    showAccessDenied($day, $month, $year, $area, "");
+    exit();
+  }
 }
 
-if (!getWritable($create_by, getUserName()))
-{
-  showAccessDenied($day, $month, $year, $area, isset($room) ? $room : "");
-  exit;
-}
 
 if ($name == '')
 {
@@ -421,7 +432,7 @@ foreach ( $rooms as $room_id )
 } // end foreach rooms
 
 
-// If the rooms were free, go ahead an process the bookings
+// If the rooms were free, go ahead and process the bookings
 if ($valid_booking)
 {
   foreach ( $rooms as $room_id )

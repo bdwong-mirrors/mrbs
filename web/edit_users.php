@@ -39,6 +39,7 @@
 // $Id$
 
 require_once "defaultincludes.inc";
+require_once "phpgacl/gacl_api.class.php";
 
 // Get form variables
 $day = get_form_var('day', 'int');
@@ -107,12 +108,11 @@ $initial_user_creation = 0;
 if ($nusers > 0)
 {
   $user = getUserName();
-  $level = authGetUserLevel($user);
   // Do not allow unidentified people to browse the list.
-  if(!getAuthorised(1))
+  if (!getAuthorised('generic','view','applications','mrbs-admin'))
   {
     showAccessDenied($day, $month, $year, $area, "");
-    exit;
+    exit();
   }
 }
 else 
@@ -577,14 +577,7 @@ if (isset($Action) && ($Action == "Update"))
 
 if (isset($Action) && ($Action == "Delete"))
 {
-  $target_level = sql_query1("SELECT level FROM $tbl_users WHERE id=$Id LIMIT 1");
-  if ($target_level < 0)
-  {
-    fatal_error(TRUE, "Fatal error while deleting a user");
-  }
-  // you can't delete a user if you're not some kind of admin, and then you can't
-  // delete someone higher than you
-  if (($level < $min_user_editing_level) || ($level < $target_level))
+  if (!getAuthorised('generic','delete','users',$Id))
   {
     showAccessDenied(0, 0, 0, "", "");
     exit();
@@ -623,7 +616,7 @@ print_header(0, 0, 0, "", "");
 
 print "<h2>" . get_vocab("user_list") . "</h2>\n";
 
-if ($level >= $min_user_editing_level) /* Administrators get the right to add new users */
+if (!getAuthorised('generic','add','users','new'))
 {
   print "<form method=\"post\" action=\"" . htmlspecialchars(basename($PHP_SELF)) . "\">\n";
   print "  <div>\n";
@@ -688,7 +681,7 @@ if ($initial_user_creation != 1)   // don't print the user table if there are no
     // Last column (the action button)
     print "<td>\n";
     // You can only edit a user if you have sufficient admin rights, or else if that user is yourself
-    if (($level >= $min_user_editing_level) || (strcasecmp($line['name'], $user) == 0))
+    if (!getAuthorised('generic','edit','users',$line['user']))
     {
       print "<form method=\"post\" action=\"" . htmlspecialchars(basename($PHP_SELF)) . "\">\n";
       print "  <div>\n";

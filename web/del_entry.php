@@ -2,7 +2,7 @@
 // $Id$
 
 require_once "defaultincludes.inc";
-
+require_once "phpgacl/gacl_api.class.php";
 require_once "mrbs_sql.inc";
 
 // Get form variables
@@ -30,7 +30,7 @@ if (empty($returl))
   $returl .= "?year=$year&month=$month&day=$day&area=$area";
 }
 
-if (getAuthorised(1) && ($info = mrbsGetEntryInfo($id)))
+if (getAuthorised('generic','delete','bookings',$id) && ($info = mrbsGetEntryInfo($id)))
 {
   $day   = strftime("%d", $info["start_time"]);
   $month = strftime("%m", $info["start_time"]);
