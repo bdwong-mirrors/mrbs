@@ -10,22 +10,41 @@
 /*
  * mrbs_acl_api Custom Extended API Class
  *
+ * This class is specifically for simplifying
+ * calls to phpGACL from within MRBS.
+ *
+ * Once phpGACL is altered to directly access
+ * the data stored in MRBS tables this class
+ * will become redundant.
+ * 
  * @author Paul van der Westhuizen <proj_admin@users.sourceforge.net>
  *
  */
 
 class MRBS_acl_api extends gacl_api {
 
-  function addObject($section_value, $object_id, $name, $object_type)
+  function addObject($section_value, $object_value, $name, $object_type)
   {
-    $group_id = $this->get_group_id("all-$section_value",'',$object_type);
-    if ($obj_id = $this->add_object($section_value,$name,$object_id,0,0,$object_type))
-      $this->add_group_object($group_id,$section_value,$object_id,$object_type);
+    $order = 0;
+    $hidden = 0;
+    $group_id = $this->get_group_id("all-$section_value", '', $object_type);
+    if ($obj_id = $this->add_object($section_value, $name, $object_value, $order, $hidden, $object_type))
+      $this->add_group_object($group_id, $section_value, $object_id, $object_type);
+    return TRUE;
+  }
+
+  function updateObject($section_value, $object_value, $new_name, $object_type)
+  {
+    $order = 0;
+    $hidden = 0;
+    $object_id = $this->get_object_id($section_value, $object_value, $object_type);
+    $this->edit_object($object_id, $section_value, $new_name, $object_value, $order, $hidden, $object_type);
+    return TRUE;
   }
 
   function delObject($section_value, $object_value, $object_type)
   {
-    $group_id = $this->get_group_id("all-$section_value",'',$object_type);
+    $group_id = $this->get_group_id("all-$section_value", '', $object_type);
     $object_id = $this->get_object_id($section_value, $object_value, $object_type);
 
     // Delete object from group first

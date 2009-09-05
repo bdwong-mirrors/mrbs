@@ -39,7 +39,7 @@
 // $Id$
 
 require_once "defaultincludes.inc";
-require_once "phpgacl/gacl_api.class.php";
+
 
 // Get form variables
 $day = get_form_var('day', 'int');
@@ -512,8 +512,8 @@ if (isset($Action) && ($Action == "Update"))
     /* Now generate the SQL operation based on the given array of fields */
     if ($Id >= 0)
     {
-      /* if the Id exists - then we are editing an existing user, rather th
-       * creating a new one */
+      /* if the Id exists - then we are editing an existing user, rather 
+       * than creating a new one */
   
       $assign_array = array();
       $operation = "UPDATE $tbl_users SET ";
@@ -565,6 +565,9 @@ if (isset($Action) && ($Action == "Update"))
       // Print footer and exit
       print_footer(TRUE);
     }
+    // Add to phpGACL
+    if ($Id >= 0) $mrbs_acl_api->updateObject('users', $Id, $data['name'], 'ARO');
+    else $mrbs_acl_api->addObject('users', $Id, $data['name'], 'ARO');
   
     /* Success. Redirect to the user list, to remove the form args */
     Header("Location: edit_users.php");
@@ -602,6 +605,8 @@ if (isset($Action) && ($Action == "Delete"))
     // Print footer and exit
     print_footer(TRUE);
   }
+  // Remove from phpGACL
+  $mrbs_acl_api->delObject('users', $Id, 'ARO');
 
   /* Success. Do not display a message. Simply fall through into the list display. */
 }

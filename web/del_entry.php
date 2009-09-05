@@ -2,7 +2,7 @@
 // $Id$
 
 require_once "defaultincludes.inc";
-require_once "phpgacl/gacl_api.class.php";
+require_once "include/mrbs_acl_api.php";
 require_once "mrbs_sql.inc";
 
 // Get form variables
@@ -45,6 +45,8 @@ if (getAuthorised('generic','delete','bookings',$id) && ($info = mrbsGetEntryInf
   }
   sql_begin();
   $result = mrbsDelEntry(getUserName(), $id, $series, 1);
+  // Remove data from phpGACL
+  $mrbs_acl_api->delObject('entries',$id,'AXO');
   sql_commit();
   if ($result)
   {
