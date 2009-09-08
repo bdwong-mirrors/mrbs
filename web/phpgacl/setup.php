@@ -3,7 +3,7 @@
 $config_file = './gacl.ini.php';
 
 require_once('./admin/gacl_admin.inc.php');
-require_once(ADODB_DIR .'/adodb-xmlschema.inc.php');
+require_once(ADODB_DIR .'/adodb-xmlschema03.inc.php');
 
 $db_table_prefix = $gacl->_db_table_prefix;
 $db_type = $gacl->_db_type;
@@ -197,7 +197,7 @@ Installation Successful!!!
 <p>Please make sure you create the <b>&lt;phpGACL root&gt;/admin/templates_c</b> directory,
 and give it <b>write permissions</b> for the user your web server runs as.</p>
 <p>Please read the manual, and docs/examples/* to familiarize yourself with phpGACL.</p>
-<a href="admin/about.php?first_run=1"><b>Let\'s get started!</b></a>
+<a href="mrbs_default_data.php"><b>Step Two - Install default permissions (Recommended)</b></a>
 </div>
 ');
 } else {

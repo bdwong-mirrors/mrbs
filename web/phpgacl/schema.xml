@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
-<schema version="0.2">
+<schema version="0.3">
 
 	<!-- phpGACL Table -->
 	<table name="phpgacl">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="name" type="C" size="230">
 			<NOTNULL/>
 			<KEY/>
@@ -29,6 +30,7 @@
 
 	<!-- ACL Table -->
 	<table name="acl">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -68,6 +70,7 @@
 
 	<!-- ACL Section Table -->
 	<table name="acl_sections">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -114,6 +117,7 @@
 
 	<!-- ACO Table -->
 	<table name="aco">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -150,6 +154,7 @@
 
 	<!-- ACL to ACO Map Table -->
 	<table name="aco_map">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="acl_id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -168,6 +173,7 @@
 
 	<!-- ACO Section Table -->
 	<table name="aco_sections">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -199,6 +205,7 @@
 
 	<!-- ARO Table -->
 	<table name="aro">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -235,6 +242,7 @@
 
 	<!-- ACL to ARO Map Table -->
 	<table name="aro_map">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="acl_id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -253,6 +261,7 @@
 
 	<!-- ARO Section Table -->
 	<table name="aro_sections">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -284,6 +293,7 @@
 
 	<!-- AXO Table -->
 	<table name="axo">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -320,6 +330,7 @@
 
 	<!-- ACL to AXO Map Table -->
 	<table name="axo_map">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="acl_id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -338,6 +349,7 @@
 
 	<!-- AXO Section Table -->
 	<table name="axo_sections">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -369,6 +381,7 @@
 
 	<!-- ARO Group Table -->
 	<table name="aro_groups">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -409,6 +422,7 @@
 
 	<!-- ARO to ARO Group Map Table -->
 	<table name="groups_aro_map">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="group_id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -427,6 +441,7 @@
 
 	<!-- ACL to ARO Group Map Table -->
 	<table name="aro_groups_map">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="acl_id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -441,6 +456,7 @@
 
 	<!-- AXO Group Table -->
 	<table name="axo_groups">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -481,6 +497,7 @@
 
 	<!-- AXO to AXO Group Map Table -->
 	<table name="groups_axo_map">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="group_id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>
@@ -499,6 +516,7 @@
 
 	<!-- ACL to AXO Group Map Table -->
 	<table name="axo_groups_map">
+		<opt platform="mysql">ENGINE=InnoDB DEFAULT CHARSET=utf8</opt>
 		<field name="acl_id" type="I">
 			<DEFAULT value="0"/>
 			<NOTNULL/>

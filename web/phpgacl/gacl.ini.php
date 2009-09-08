@@ -13,11 +13,11 @@ debug 			= FALSE
 ;
 ;Database
 ;
-db_type 		= "mysql"
+db_type 		= "mysqli"
 db_host			= "localhost"
 db_user			= "mrbs"
 db_password		= "mrbs"
-db_name			= "mrbs-dev"
+db_name			= "mrbs"
 db_table_prefix		= "gacl_"
 
 ;

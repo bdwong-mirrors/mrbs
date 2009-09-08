@@ -1,0 +1,105 @@
+****************************
+Install
+****************************
+
+Install MRBS as per instructions.
+Open browser to install.php to install phpgacl.
+
+
+
+****************************
+Terms
+****************************
+AROs: Things requesting access
+ACOs: Actions that are requested
+AXOs: Things to control access on
+
+
+****************************
+        phpGACL Config
+****************************
+
+--------------------------------|
+	ARO			|
+--------------------------------|
+Section		Value		|
+--------------------------------|
+users		default		|
+users		admin		|
+--------------------------------|
+
+
+--------------------------------|
+	ACO			|
+--------------------------------|
+Section		Value		|
+--------------------------------|
+generic		view		|
+generic		create		|
+generic		edit		|
+generic		delete		|
+--------------------------------|
+
+--------------------------------|
+	AXO			|
+--------------------------------|
+Section		Value		|
+--------------------------------|
+entries		new		|
+rooms		new		|
+areas		new		|
+users		new		|
+entries		*		|
+rooms		*		|
+areas		*		|
+users		*		|
+applications	phpgacl		|
+applications	mrbs-admin	|
+applications	mrbs		|
+--------------------------------|
+
+* One created by MRBS for each new one of that type - e.g. rooms -> room1, rooms -> room2
+(or removed when deleted, and altered when edited)
+The "all" permission is applied via an AXO group for each.
+
+
+phpGACL ARO Groups
+------------------
+MRBS Users                      (placeholder group)
+|-Administrators                (placeholder group)
+|  |-ACL Administrators         Permission to manage the Access Control Lists
+|  |-Area Administrators        Permission to view/create/edit/delete areas
+|  |-Room Administrators        Permission to view/create/edit/delete rooms
+|  |-Booking Administrators     Permission to view/create/edit/delete entries
+|  '-User Administrators        Permission to view/create/edit/delete users
+'-Users                         (placeholder group)
+   '-General Users              Every user with an account
+
+
+phpGACL AXO Groups
+------------------
+Objects                      (placeholder group)
+|-Areas                      (placeholder group)
+|  '-All Areas               Group to hold list of all areas
+|-Rooms                      (placeholder group)
+|  '-All Rooms               Group to hold list of all rooms
+|-Bookings                   (placeholder group)
+|  '-All Bookings            Group to hold list of all entries/bookings
+|-Users                      (placeholder group)
+|  '-All Users               Group to hold list of all users
+'-Applications               (placeholder group)
+  '-All Applications         Group to hold list of all applications
+
+
+phpGACL ACO Groups
+------------------
+None currently
+
+
+******************************
+ Information
+******************************
+
+phpGACL contains the ARO "Default User". This ARO is used for applying default permissions. 
+For example, in a standard install of MRBS it is used to allow all users permission to view all areas, rooms and bookings(entries).
+You can modify the permissions of this ARO to set the default permissions to meet your needs.
