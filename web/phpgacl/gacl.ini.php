@@ -13,7 +13,7 @@ debug 			= FALSE
 ;
 ;Database
 ;
-db_type 		= "mysqli"
+db_type 		= "mysql"
 db_host			= "localhost"
 db_user			= "mrbs"
 db_password		= "mrbs"

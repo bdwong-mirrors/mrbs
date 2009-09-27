@@ -200,6 +200,7 @@ $max_slots = 60;
 // '&eacute;' or '&#233;', etc.
 
 // NOTE:  The maximum number of periods is 60.   Do not define more than this.
+unset($periods);    // Include this line when copying to config.inc.php
 $periods[] = "Period&nbsp;1";
 $periods[] = "Period&nbsp;2";
 // NOTE:  The maximum number of periods is 60.   Do not define more than this.
@@ -405,6 +406,7 @@ $cookie_path_override = '';
 // users list in the database, the system will automatically add a field to
 // the table for access rights and give admin rights to those users in the database
 // for whom admin rights are defined here.   After that this list is ignored.
+unset($auth["admin"]);              // Include this when copying to config.inc.php
 $auth["admin"][] = "127.0.0.1";     // localhost IP address. Useful with IP sessions.
 $auth["admin"][] = "administrator"; // A user name from the user list. Useful 
                                     // with most other session schemes.
@@ -629,17 +631,18 @@ $mail_settings['cc'] = '';
 // on the users' language
 $unicode_encoding = 1;
 
-// Set this to a different language specifier to default to different
-// language tokens. This must equate to a lang.* file in MRBS.
-// e.g. use "fr" to use the translations in "lang.fr" as the default
-// translations
-$default_language_tokens = "en";
-
 // Set this to 1 to disable the automatic language changing MRBS performs
 // based on the user's browser language settings. It will ensure that
 // the language displayed is always the value of $default_language_tokens,
-// as specified above
+// as specified below
 $disable_automatic_language_changing = 0;
+
+// Set this to a different language specifier to default to different
+// language tokens. This must equate to a lang.* file in MRBS.
+// e.g. use "fr" to use the translations in "lang.fr" as the default
+// translations.  [NOTE: it is only necessary to change this if you
+// have disabled automatic language changing above]
+$default_language_tokens = "en";
 
 // Set this to a valid locale (for the OS you run the MRBS server on)
 // if you want to override the automatic locale determination MRBS
@@ -651,6 +654,19 @@ $override_locale = "";
 // end of the file name, including the underscore (ie. for site_faq_fr.html
 // use "_fr"
 $faqfilelang = ""; 
+
+
+/*************
+ * Reports
+ *************/
+ 
+// Default CSV file names
+$report_filename  = "report.csv";
+$summary_filename = "summary.csv";
+
+// CSV format
+$csv_row_sep = "\n";  // Separator between rows/records
+$csv_col_sep = ",";   // Separator between columns/fields
 
 
 /*************
