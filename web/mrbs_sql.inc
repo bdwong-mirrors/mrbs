@@ -16,7 +16,6 @@
  *   something - An error occured, the return value is human readable
  */
 
-require_once str_replace('//','/',dirname(__FILE__).'/') . 'include/mrbs_acl_api.php';
 
 function mrbsCheckFree($room_id, $starttime, $endtime, $ignore, $repignore)
 {

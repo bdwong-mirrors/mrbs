@@ -21,7 +21,7 @@ $local_db_schema_version = 1;
 
 // Include the abstraction configured to be used for the default MRBS
 // database
-require_once "${dbsys}.inc";
+require_once str_replace('//','/',dirname(__FILE__).'/') . "${dbsys}.inc";
 
 
 // All the sql_* functions below apart from sql_connect(), sql_default_connect()
@@ -552,7 +552,7 @@ function sql_table_exists($table)
 function sql_connect($system, $host, $username, $password, $db_name,
                      $persist = 0)
 {
-  require_once "$system.inc";
+  require_once str_replace('//','/',dirname(__FILE__).'/') . "$system.inc";
 
   $f = "sql_${system}_connect";
 
@@ -568,7 +568,7 @@ function sql_connect($system, $host, $username, $password, $db_name,
 function sql_close($handle)
 {
   $system = $handle['system'];
-  require_once "$system.inc";
+  require_once str_replace('//','/',dirname(__FILE__).'/') . "$system.inc";
   $f = "sql_${system}_close";
   $f($handle['connection']);
 }
@@ -631,8 +631,8 @@ if (($current_db_schema_version < $db_schema_version) ||
 {
   // Upgrade needed
 
-  require_once "functions.inc";
-  require_once "upgrade.inc";
+  require_once str_replace('//','/',dirname(__FILE__).'/') . "functions.inc";
+  require_once str_replace('//','/',dirname(__FILE__).'/') . "upgrade.inc";
 
   print_header(0,0,0,0,"");
  

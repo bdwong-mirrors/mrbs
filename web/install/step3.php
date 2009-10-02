@@ -8,7 +8,6 @@
 */
 
 require_once '../defaultincludes.inc';
-require_once '../mrbs_sql.inc';
 
 $gacl_options = array(	'db_type' => $dbsys,
 			'db_host' => $db_host,

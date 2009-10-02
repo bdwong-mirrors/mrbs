@@ -6,8 +6,8 @@
 */
 
 require_once "defaultincludes.inc";
-
 require_once "mrbs_sql.inc";
+require_once "include/mrbs_acl_api.php";
 
 // Get form variables
 $day = get_form_var('day', 'int');

@@ -335,14 +335,14 @@ $aix_utf8_converters = array
 if ($mail_settings['admin_on_bookings'] or $mail_settings['area_admin_on_bookings'] or
     $mail_settings['room_admin_on_bookings'] or $mail_settings['booker'])
 {
-  include "lang." . $default_language_tokens;
-  include "lang." . $mail_settings['admin_lang'];
+  include str_replace('//','/',dirname(__FILE__).'/') . "lang." . $default_language_tokens;
+  include str_replace('//','/',dirname(__FILE__).'/') . "lang." . $mail_settings['admin_lang'];
   $mail_vocab = $vocab;
   unset ($vocab);
 }
 
 // Get a default set of language tokens, you can change this if you like
-include "lang." . $default_language_tokens;
+include str_replace('//','/',dirname(__FILE__).'/') . "lang." . $default_language_tokens;
 
 // Define the default locale here. For a list of supported
 // locales on your system do "locale -a"
@@ -385,7 +385,7 @@ if (!$disable_automatic_language_changing)
 
   foreach ($langs as $lang => $qual)
   {
-    $lang_file = "lang." . strtolower($lang);
+    $lang_file = str_replace('//','/',dirname(__FILE__).'/') . "lang." . strtolower($lang);
 
     if (file_exists($lang_file))
     {
@@ -403,7 +403,7 @@ if (!$disable_automatic_language_changing)
 
     foreach ($langs as $lang => $qual)
     {
-      $lang_file = "lang." . strtolower(substr($lang,0,2));
+      $lang_file = str_replace('//','/',dirname(__FILE__).'/') . "lang." . strtolower(substr($lang,0,2));
 
       if (file_exists($lang_file))
       {
