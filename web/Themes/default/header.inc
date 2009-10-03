@@ -6,10 +6,10 @@
 function print_theme_header($day, $month, $year, $area, $room)
 {
   global $mrbs_company, $mrbs_company_logo, $mrbs_company_url, $mrbs_company_more_info,
-    $search_str, $locale_warning, $unicode_encoding, $vocab;
+    $search_str, $locale_warning;
   global $PHP_SELF;
 
-  // If we dont know the right date then make it up 
+  // If we dont know the right date then make it up
   if (!$day)
   {
     $day   = date("d");
@@ -26,19 +26,8 @@ function print_theme_header($day, $month, $year, $area, $room)
   {
     $search_str = "";
   }
-  
-  if ($unicode_encoding)
-  {
-    header("Content-Type: text/html; charset=utf-8");
-  }
-  else
-  {
-    // We use $vocab directly instead of get_vocab() because we have
-    // no requirement to convert the vocab text, we just output
-    // the charset
-    header("Content-Type: text/html; charset=".$vocab["charset"]);
-  }
 
+  header("Content-Type: text/html; charset=" . get_charset());
   header("Pragma: no-cache");                          // HTTP 1.0
   header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");    // Date in the past
 
@@ -55,11 +44,11 @@ function print_theme_header($day, $month, $year, $area, $room)
 //<![CDATA[
 
 /*   Script inspired by "True Date Selector"
-     Created by: Lee Hinder, lee.hinder@ntlworld.com 
-     
+     Created by: Lee Hinder, lee.hinder@ntlworld.com
+
      Tested with Windows IE 6.0
      Tested with Linux Opera 7.21, Mozilla 1.3, Konqueror 3.1.0
-     
+
 */
 
 function daysInFebruary (year)
@@ -150,7 +139,7 @@ function ChangeOptionDays(formObj, prefix)
     </script>
   </head>
   <?php
-  // Put the filename in as a class to aid styling.   
+  // Put the filename in as a class to aid styling.
   // (Use a class rather than id to avoid specificity problems)
   echo "<body class=\"" . basename($PHP_SELF,".php" ) . "\">\n";
   ?>
@@ -214,7 +203,7 @@ function ChangeOptionDays(formObj, prefix)
             {
               echo "<input type=\"hidden\" name=\"room\" value=\"$room\">\n";
             }
-  
+
             ?>
             <script type="text/javascript">
               //<![CDATA[
@@ -236,20 +225,20 @@ function ChangeOptionDays(formObj, prefix)
       {
         $query_str .= "&amp;room=$room";
       }
-      
+
       echo "<td>\n";
       echo "<a href=\"help.php?$query_str\">" . get_vocab("help") . "</a>\n";
       echo "</td>\n";
-      
+
       echo "<td>\n";
       echo "<a href=\"admin.php?$query_str\">" . get_vocab("admin") . "</a>\n";
       echo "</td>\n";
-      
+
       echo "<td>\n";
       echo "<a href=\"report.php?$query_str\">" . get_vocab("report") . "</a>\n";
       echo "</td>\n";
       ?>
-      
+
       <td>
         <form id="header_search" method="get" action="search.php">
           <div>
@@ -277,7 +266,7 @@ function ChangeOptionDays(formObj, prefix)
       {
         echo "<td>\n";
         echo "<div id=\"logon_box\">\n";
-        PrintLogonBox(); 
+        PrintLogonBox();
         echo "</div>\n";
         echo "</td>\n";
       }

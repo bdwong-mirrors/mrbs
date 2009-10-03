@@ -48,7 +48,10 @@ function parse_mysql_dump($path) {
             }
         }
         // Create DB
-        mysql_query("CREATE DATABASE IF NOT EXISTS $db_database") or die('var fail_msg = "Create database failed: ' . mysql_error() . '";'."\n");
+        $result = mysql_query("SELECT Db FROM mysql.db WHERE Db='$db_database'") or die('var fail_msg = "' . mysql_error() . '";'."\n");
+        if (mysql_num_rows($result)!==0)
+            mysql_query("DROP DATABASE $db_database") or die('var fail_msg = "Drop database failed: ' . mysql_error() . '";'."\n");
+        mysql_query("CREATE DATABASE $db_database") or die('var fail_msg = "Create database failed: ' . mysql_error() . '";'."\n");
         // Create MRBS user
         $result = mysql_query("SELECT user FROM mysql.user WHERE user='$db_login'") or die('var fail_msg = "' . mysql_error() . '";'."\n");
         if (mysql_num_rows($result)!==0)

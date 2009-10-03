@@ -52,7 +52,7 @@ if ($type == "area")
     $area = sql_insert_id("$tbl_area", "id");
 
     // Add data to phpGACL
-    $mrbs_acl_api->addObject('rooms', $area, $area_name_q, 'AXO');
+    $mrbs_acl_api->addObject('areas', $area, $area_name_q, 'AXO');
   }
   // Release the mutex
   sql_mutex_unlock("$tbl_area");
@@ -98,9 +98,7 @@ if ($type == "room")
     $room = sql_insert_id("$tbl_room", "id");
 
     // Add data to phpGACL
-    $group_id = $mrbs_acl_api->get_group_id('all-rooms','','AXO');
-    if ($obj_id = $mrbs_acl_api->add_object('rooms',$room_name_q,$room,0,0,'AXO'))
-      $mrbs_acl_api->add_group_object($group_id,'rooms',$room,'AXO');
+    $mrbs_acl_api->addObject('rooms', $room, $room_name_q, 'AXO');
   }
   // Release the mutex
   sql_mutex_unlock("$tbl_room");

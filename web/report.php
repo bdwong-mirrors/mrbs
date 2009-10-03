@@ -110,7 +110,7 @@ function escape($string)
 function csv_row_add_value($row, $value)
 {
   global $csv_col_sep;
-  
+
   // if it's not the first entry add a column separator
   if (!empty($row))
   {
@@ -126,7 +126,7 @@ function csv_row_add_value($row, $value)
 function csv_report_header($display)
 {
   global $csv_row_sep;
-  
+
   // initialise the row
   $line = "";
   // add values, one by one
@@ -159,14 +159,14 @@ function reporton(&$row, &$last_area_room, &$last_date, $sortby, $display)
   global $enable_periods;
   global $output_as_csv;
   global $csv_row_sep;
-  
+
   // Initialise the line for CSV reports
   $line = "";
-  
+
   // Display Area/Room, but only when it changes:
   $area_room = $row['area_name'] . " - " . $row['room_name'];
   $date = utf8_strftime("%d-%b-%Y", $row['start_time']);
-  
+
   // entries to be sorted on area/room
   echo $output_as_csv ? '' : "<div class=\"div_report\">\n";
   if( $sortby == "r" )
@@ -208,7 +208,7 @@ function reporton(&$row, &$last_area_room, &$last_date, $sortby, $display)
       $last_date = $date;
     }
   }
-  
+
   if ($output_as_csv)
   {
     $line = csv_row_add_value($line, $area_room); // for the CSV report put the area-room name on every line
@@ -217,7 +217,7 @@ function reporton(&$row, &$last_area_room, &$last_date, $sortby, $display)
   else
   {
     echo "<div class=\"report_entry_title\">\n";
-  
+
     echo "<div class=\"report_entry_name\">\n";
     // Brief Description (title), linked to view_entry:
     echo "<a href=\"view_entry.php?id=".$row['entry_id']."\">" . htmlspecialchars($row['name']) . "</a>\n";
@@ -229,14 +229,14 @@ function reporton(&$row, &$last_area_room, &$last_date, $sortby, $display)
   if( $display == "d" )
   {
     // Start date/time and duration:
-    $when = (empty($enable_periods) ? 
-             describe_span($row['start_time'], $row['end_time']) : 
+    $when = (empty($enable_periods) ?
+             describe_span($row['start_time'], $row['end_time']) :
              describe_period_span($row['start_time'], $row['end_time']));
   }
   else
   {
     // Start date/time and End date/time:
-    $when = (empty($enable_periods) ? 
+    $when = (empty($enable_periods) ?
              start_to_end($row['start_time'], $row['end_time']) :
              start_to_end_period($row['start_time'], $row['end_time']));
   }
@@ -249,7 +249,7 @@ function reporton(&$row, &$last_area_room, &$last_date, $sortby, $display)
     echo "$when\n";
     echo "</div>\n";
     echo "</div>\n";
-    
+
     echo "<table>\n";
     echo "<colgroup>\n";
     echo "<col class=\"col1\">\n";
@@ -353,7 +353,7 @@ function accumulate_periods(&$row, &$count, &$hours, $report_start,
   global $sumby;
   global $periods;
   global $output_as_csv;
-  
+
   $max_periods = count($periods);
 
   // Use brief description or created by as the name:
@@ -377,7 +377,7 @@ function cell($count, $hours)
 {
   global $output_as_csv;
   global $csv_col_sep;
-  
+
   echo ($output_as_csv) ? $csv_col_sep . '"'  : "<td class=\"count\">(";
   echo $count;
   echo ($output_as_csv) ? '"' . $csv_col_sep . '"' : ")</td><td>";
@@ -393,7 +393,7 @@ function do_summary(&$count, &$hours, &$room_hash, &$name_hash)
   global $enable_periods;
   global $output_as_csv;
   global $csv_row_sep, $csv_col_sep;
-        
+
   // Make a sorted array of area/rooms, and of names, to use for column
   // and row indexes. Use the rooms and names hashes built by accumulate().
   // At PHP4 we could use array_keys().
@@ -417,7 +417,7 @@ function do_summary(&$count, &$hours, &$room_hash, &$name_hash)
     echo "<div id=\"div_summary\">\n";
     echo "<h1>" . (empty($enable_periods) ? get_vocab("summary_header") : get_vocab("summary_header_per")). "</h1>\n";
     echo "<table>\n";
-  
+
     echo "<thead>\n";
     echo "<tr>\n";
   }
@@ -458,7 +458,7 @@ function do_summary(&$count, &$hours, &$room_hash, &$name_hash)
   $grand_count_total = 0;
   $grand_hours_total = 0;
   echo ($output_as_csv) ? ''   : "</thead>\n";
-  
+
   echo ($output_as_csv) ? ''   : "<tbody>\n";
   for ($r = 0; $r < $n_names; $r++)
   {
@@ -573,7 +573,7 @@ $output_as_csv = $summarize & CSV;
 if ($output_as_csv)
 {
   $filename = ($summarize & REPORT) ? $report_filename : $summary_filename;
-  header("Content-type: application/octet-stream");
+  header("Content-Type: text/csv; charset=" . get_charset());
   header("Content-Disposition: attachment; filename=\"$filename\"");
 }
 else
@@ -636,20 +636,20 @@ if (!$output_as_csv)
 {
   ?>
   <div class="screenonly">
- 
+
     <form class="form_general" method="get" action="report.php">
       <fieldset>
       <legend><?php echo get_vocab("report_on");?></legend>
-      
+
         <div id="div_report_start">
           <label><?php echo get_vocab("report_start");?>:</label>
           <?php genDateSelector("From_",
                                 $From_day,
                                 $From_month,
                                 $From_year); ?>
-        
+
         </div>
-      
+
         <div id="div_report_end">
           <label><?php echo get_vocab("report_end");?>:</label>
           <?php genDateSelector("To_",
@@ -657,17 +657,17 @@ if (!$output_as_csv)
                                 $To_month,
                                 $To_year); ?>
         </div>
-      
-        <div id="div_areamatch">                  
+
+        <div id="div_areamatch">
           <label for="areamatch"><?php echo get_vocab("match_area");?>:</label>
           <input type="text" id="areamatch" name="areamatch" value="<?php echo $areamatch_default; ?>">
-        </div>   
-      
+        </div>
+
         <div id="div_roommatch">
           <label for="roommatch"><?php echo get_vocab("match_room");?>:</label>
           <input type="text" id="roommatch" name="roommatch" value="<?php echo $roommatch_default; ?>">
         </div>
-      
+
         <div id="div_typematch">
           <label for="typematch"><?php echo get_vocab("match_type")?>:</label>
           <select id="typematch" name="typematch[]" multiple="multiple" size="5">
@@ -685,22 +685,22 @@ if (!$output_as_csv)
           </select>
           <span><?php echo get_vocab("ctrl_click_type") ?></span>
         </div>
-      
-        <div id="div_namematch">     
+
+        <div id="div_namematch">
           <label for="namematch"><?php echo get_vocab("match_entry");?>:</label>
           <input type="text" id="namematch" name="namematch" value="<?php echo $namematch_default; ?>">
-        </div>   
-      
+        </div>
+
         <div id="div_descrmatch">
           <label for="descrmatch"><?php echo get_vocab("match_descr");?>:</label>
           <input type="text" id="descrmatch" name="descrmatch" value="<?php echo $descrmatch_default; ?>">
         </div>
-      
+
         <div id="div_creatormatch">
           <label for="creatormatch"><?php echo get_vocab("createdby");?>:</label>
           <input type="text" id="creatormatch" name="creatormatch" value="<?php echo $creatormatch_default; ?>">
-        </div> 
-      
+        </div>
+
         <div id="div_summarize">
           <label><?php echo get_vocab("include");?>:</label>
           <div class="group">
@@ -716,7 +716,7 @@ if (!$output_as_csv)
             foreach ($buttons as $value => $token)
             {
               echo "<label>";
-              echo "<input class=\"radio\" type=\"radio\" name=\"summarize\" value=\"$value\"";          
+              echo "<input class=\"radio\" type=\"radio\" name=\"summarize\" value=\"$value\"";
               if ($summarize == $value) echo " checked=\"checked\"";
               echo ">" . get_vocab($token);
               echo "</label>\n";
@@ -724,67 +724,67 @@ if (!$output_as_csv)
             ?>
           </div>
         </div>
-      
-        <div id="div_sortby"> 
+
+        <div id="div_sortby">
           <label><?php echo get_vocab("sort_rep");?>:</label>
           <div class="group">
             <label>
               <input class="radio" type="radio" name="sortby" value="r"
-              <?php 
+              <?php
               if ($sortby=="r") echo " checked=\"checked\"";
               echo ">". get_vocab("room");?>
             </label>
             <label>
               <input class="radio" type="radio" name="sortby" value="s"
-              <?php 
+              <?php
               if ($sortby=="s") echo " checked=\"checked\"";
               echo ">". get_vocab("sort_rep_time");?>
             </label>
           </div>
         </div>
-      
+
         <div id="div_display">
           <label><?php echo get_vocab("rep_dsp");?>:</label>
           <div class="group">
             <label>
               <input class="radio" type="radio" name="display" value="d"
-              <?php 
+              <?php
               if ($display=="d") echo " checked=\"checked\"";
               echo ">". get_vocab("rep_dsp_dur");?>
             </label>
             <label>
               <input class="radio" type="radio" name="display" value="e"
-              <?php 
+              <?php
               if ($display=="e") echo " checked=\"checked\"";
               echo ">". get_vocab("rep_dsp_end");?>
             </label>
           </div>
         </div>
-      
+
         <div id="div_sumby">
           <label><?php echo get_vocab("summarize_by");?>:</label>
           <div class="group">
             <label>
               <input class="radio" type="radio" name="sumby" value="d"
-              <?php 
+              <?php
               if ($sumby=="d") echo " checked=\"checked\"";
               echo ">" . get_vocab("sum_by_descrip");
               ?>
             </label>
             <label>
               <input class="radio" type="radio" name="sumby" value="c"
-              <?php 
+              <?php
               if ($sumby=="c") echo " checked=\"checked\"";
               echo ">" . get_vocab("sum_by_creator");
               ?>
             </label>
           </div>
         </div>
-      
+
         <div id="report_submit">
           <input class="submit" type="submit" value="<?php echo get_vocab("submitquery") ?>">
         </div>
-      
+
       </fieldset>
     </form>
   </div>
@@ -810,7 +810,7 @@ if (isset($areamatch))
   //   8  [7]   Creation timestamp, converted to Unix time_t by the database
   //   9  [8]   Area name, must be HTML escaped
   //  10  [9]   Room name, must be HTML escaped
-  
+
   $sql = "SELECT e.id AS entry_id, e.start_time, e.end_time, e.name, e.description, "
   . "e.type, e.create_by, "
   .  sql_syntax_timestamp_to_unix("e.timestamp") . " AS last_updated"
@@ -863,11 +863,11 @@ if (isset($areamatch))
   }
 
   // If not overriding as public entries and user isn't and admin...
-  if (($private_override != "public") && !$is_admin) 
+  if (($private_override != "public") && !$is_admin)
   {
     if (isset($user))
     {
-      if ($private_override == "private") 
+      if ($private_override == "private")
       {
         $sql .= " AND e.create_by = '".addslashes($user)."'";
       }
@@ -877,13 +877,13 @@ if (isset($areamatch))
       }
     }
     else
-    { 
+    {
       // un-authenticated users can only report on
       // items which are not marked private
       $sql .= " AND e.private=0";
     }
   }
-   
+
   if ( $sortby == "r" )
   {
     // Order by Area, Room, Start date/time
@@ -918,7 +918,7 @@ if (isset($areamatch))
       . ($nmatch == 1 ? get_vocab("entry_found") : get_vocab("entries_found"))
       .  "</p>\n";
     }
-    
+
     // Output the header row for CSV reports
     if ($output_as_csv && ($summarize & REPORT))
     {

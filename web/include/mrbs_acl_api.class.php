@@ -28,8 +28,9 @@ class MRBS_acl_api extends gacl_api {
     $order = 0;
     $hidden = 0;
     $group_id = $this->get_group_id("all-$section_value", '', $object_type);
-    if ($obj_id = $this->add_object($section_value, $name, $object_value, $order, $hidden, $object_type))
-      $this->add_group_object($group_id, $section_value, $object_id, $object_type);
+    $object_id = $this->add_object($section_value, $name, $object_value, $order, $hidden, $object_type);
+    if ($object_id)
+      $this->add_group_object($group_id, $section_value, $object_value, $object_type);
     return TRUE;
   }
 

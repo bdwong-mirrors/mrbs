@@ -94,7 +94,7 @@ $lang_map_windows = array
 // This maps a Windows locale to the charset it uses, which are
 // all Windows code pages
 //
-// The code pages used by these locales found at: 
+// The code pages used by these locales found at:
 // http://www.microsoft.com/globaldev/nlsweb/default.mspx
 $winlocale_codepage_map = array
 (
@@ -548,6 +548,16 @@ else
   }
 }
 
+
+function get_charset()
+{
+  global $unicode_encoding, $vocab;
+  // We use $vocab directly instead of get_vocab() because we have
+  // no requirement to convert the vocab text, we just output
+  // the charset
+  return ($unicode_encoding) ? "utf-8" : $vocab["charset"];
+}
+
 function get_server_os()
 {
   if (stristr(PHP_OS,"Darwin"))
@@ -734,7 +744,7 @@ function utf8_convert_from_locale($string)
   }
   return $string;
 }
-  
+
 function utf8_strftime($format, $time)
 {
   // %p doesn't actually work in some locales, we have to patch it up ourselves
@@ -761,10 +771,10 @@ function utf8_substr($str,$start)
   preg_match_all("/./su", $str, $ar);
 
   if(func_num_args() >= 3) {
-    $end = func_get_arg(2);
-    return join("",array_slice($ar[0],$start,$end));
+    $length = func_get_arg(2);
+    return join("", array_slice($ar[0], $start, $length));
   } else {
-    return join("",array_slice($ar[0],$start));
+    return join("", array_slice($ar[0], $start));
   }
 }
 

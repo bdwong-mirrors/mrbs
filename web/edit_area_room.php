@@ -2,7 +2,7 @@
 // $Id$
 
 require_once "defaultincludes.inc";
-require_once "phpgacl/gacl_api.class.php";
+require_once "include/mrbs_acl_api.php";
 require_once "mrbs_sql.inc";
 
 // Get form variables
