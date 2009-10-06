@@ -23,12 +23,19 @@
 
 class MRBS_acl_api extends gacl_api {
 
-  function addObject($section_value, $object_value, $name, $object_type)
+  function addObject($section_value, $object_value, $object_name, $object_type)
   {
     $order = 0;
     $hidden = 0;
+    if ($object_type == 'ARO') { // Each user is an ARO and an AXO
+        $group_id = $this->get_group_id("general-$section_value", '', $object_type); // All users by default are general users
+        $object_id = $this->add_object($section_value, $object_name, $object_value, $order, $hidden, $object_type);
+        if ($object_id)
+            $this->add_group_object($group_id, $section_value, $object_value, $object_type);
+        $object_type = 'AXO';
+    }
     $group_id = $this->get_group_id("all-$section_value", '', $object_type);
-    $object_id = $this->add_object($section_value, $name, $object_value, $order, $hidden, $object_type);
+    $object_id = $this->add_object($section_value, $object_name, $object_value, $order, $hidden, $object_type);
     if ($object_id)
       $this->add_group_object($group_id, $section_value, $object_value, $object_type);
     return TRUE;
@@ -45,32 +52,20 @@ class MRBS_acl_api extends gacl_api {
 
   function delObject($section_value, $object_value, $object_type)
   {
-    $group_id = $this->get_group_id("all-$section_value", '', $object_type);
+    // Delete object. It will be autoremoved from all groups/ACLs, because 3rd param is TRUE.
+    if ($object_type == 'ARO') { // Each user is an ARO and an AXO
+        $object_id = $this->get_object_id($section_value, $object_value, $object_type);
+        if (!$this->del_object($object_id, $object_type, TRUE)) return FALSE;
+        $object_type = 'AXO';
+    }
     $object_id = $this->get_object_id($section_value, $object_value, $object_type);
 
-    // Delete object from group first
-    $this->del_group_object($group_id, $section_value, $object_value, $object_type);
-
-    // Then delete object
-    if ($this->del_object($object_id, $object_type))
+    if ($this->del_object($object_id, $object_type, TRUE))
       return TRUE;
     else
       return FALSE;
   }
 
 }
-
-/*
-get_group_id('all-areas','','AXO');
-
-get_object_id($section_value, $value, $object_type=NULL)
-
-add_object($section_value, $name, $value=0, $order=0, $hidden=0, $object_type=NULL) -> Returns ID of new object if successful or false.
-edit_object($object_id, $section_value, $name, $value=0, $order=0, $hidden=0, $object_type=NULL) -> Returns TRUE or FALSE
-del_object($object_id, $object_type=NULL, $erase=FALSE) -> Returns TRUE or FALSE
-
-add_group_object($group_id, $object_section_value, $object_value, $group_type='ARO') -> Returns TRUE or FALSE
-del_group_object($group_id, $object_section_value, $object_value, $group_type='ARO') -> Returns TRUE or FALSE
-*/
 
 ?>

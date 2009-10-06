@@ -9,24 +9,12 @@
 *                                                                            *
 *                 Designed to be easily extensible:                          *
 *                 Adding more fields for each user does not require          *
-*                 modifying the editor code. Only to add the fields in       *
+*                 modifying the editor code. Only to add the columns in      *
 *                 the database creation code.                                *
 *                                                                            *
-*                 An admin rights model is used where the level (an          *
-*                 integer between 0 and $max_level) denotes rights:          *
-*                      0:  no rights                                         *
-*                      1:  an ordinary user                                  *
-*                      2+: admins, with increasing rights.   Designed to     *
-*                          allow more granularity of admin rights, for       *
-*                          example by having booking admins, user admins     *
-*                          snd system admins.  (System admins might be       *
-*                          necessary in the future if, for example, some     *
-*                          parameters curreently in the config file are      *
-*                          made editable from MRBS)                          *
-*                                                                            *
-*                 Only admins with at least user editing rights (level >=    *
-*                 $min_user_editing_level) can edit other users, and they    *
-*                 cannot edit users with a higher level than themselves      *
+*                 Permissions are controlled by means of Access Control      *
+*                 Lists (ACLs). An addon called phpGACL is used.             *
+*                 See README.phpgacl for more info.                          *
 *                                                                            *
 *                 To do:                                                     *
 *                     - Localisability                                       *
@@ -39,7 +27,7 @@
 // $Id$
 
 require_once "defaultincludes.inc";
-
+require_once "include/mrbs_acl_api.php";
 
 // Get form variables
 $day = get_form_var('day', 'int');
@@ -57,6 +45,9 @@ $taken_name = get_form_var('taken_name', 'string');
 
 $fields = array();
 $field_props = array();
+
+if ($Id===-1) $new_user = TRUE;
+else $new_user = FALSE;
 
 /* Get the list of fields actually in the table. (Allows the addition of new fields later on) */
 function get_fields()
@@ -103,11 +94,10 @@ function get_loc_field_name($name)
 |                         Authenticate the current user                         |
 \*---------------------------------------------------------------------------*/
 
-$initial_user_creation = 0;
+$initial_user_creation = FALSE;
 
 if ($nusers > 0)
 {
-  $user = getUserName();
   // Do not allow unidentified people to browse the list.
   if (!getAuthorised('generic','view','applications','mrbs-admin'))
   {
@@ -120,13 +110,13 @@ else
 // and then send them through to the screen to add the first user (which we'll force
 // to be an admin)
 {
-  $initial_user_creation = 1;
+  $initial_user_creation = TRUE;
   if (!isset($Action))   // second time through it will be set to "Update"
   {
     $Action = "Add";
-    $Id = -1;
+    $new_user = TRUE;
+    $Id = 0;
   }
-  $level = $max_level;
   $user = "";           // to avoid an undefined variable notice
 }
 
@@ -137,13 +127,13 @@ else
 if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
 {
   
-  if ($Id >= 0) /* -1 for new users, or >=0 for existing ones */
+  if (!$new_user)
   {
     $result = sql_query("select * from $tbl_users where id=$Id");
     $data = sql_row_keyed($result, 0);
     sql_free($result);
   }
-  if (($Id == -1) || (!$data)) /* Set blank data for undefined entries */
+  if (($new_user) || (!$data)) /* Set blank data for undefined entries */
   {
     foreach ($fields as $fieldname)
     {
@@ -152,15 +142,17 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
   }
 
   /* First make sure the user is authorized */
-  if (!$initial_user_creation && !getWritable($data['name'], $user))
+  if (!getAuthorised('generic', 'edit', 'users', $data['name']) && !$initial_user_creation)
   {
-    showAccessDenied(0, 0, 0, "", "");
-    exit();
+    if (!($Action == "Add" && getAuthorised('generic', 'create', 'users', 'new'))) {
+      showAccessDenied(0, 0, 0, "", "");
+      exit();
+    }
   }
 
   print_header(0, 0, 0, 0, "");
   
-  if ($initial_user_creation == 1)
+  if ($initial_user_creation)
   {
     print "<h3>" . get_vocab("no_users_initial") . "</h3>\n";
     print "<p>" . get_vocab("no_users_create_first_admin") . "</p>\n";
@@ -175,9 +167,12 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
           <?php
           // Find out how many admins are left in the table - it's disastrous if the last one is deleted,
           // or admin rights are removed!
-          if ($Action == "Edit")
+/*          if ($Action == "Edit")
           {
-            $n_admins = sql_query1("select count(*) from $tbl_users where level=$max_level");
+            $q = "SELECT COUNT(a.id) FROM gacl_aro a JOIN gacl_groups_aro_map m ON a.id = m.aro_id ";
+            $q .= "JOIN gacl_aro_groups g ON m.group_id = g.id ";
+            $q .= "WHERE g.value = 'user-administrators' LIMIT 2";
+            $n_admins = sql_query1($q);
             $editing_last_admin = ($n_admins <= 1) && ($data['level'] == $max_level);
           }
           else
@@ -189,7 +184,8 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
           // We don't want the user to be able to change the level if (a) it's the first user being created or
           // (b) it's the last admin left or (c) they don't have admin rights
           $disable_select = ($initial_user_creation || $editing_last_admin || ($level < $min_user_editing_level));
-          
+*/
+          $disable_select = FALSE;
           foreach ($fields as $fieldname)
           {
             // First of all output the input for the field
@@ -203,7 +199,7 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
                 echo "<input type=\"hidden\" name=\"Field_$fieldname\" value=\"". htmlspecialchars($data[$fieldname]) . "\">\n";
                 break;
               case 'level':
-                echo "<div>\n";
+/*                echo "<div>\n";
                 echo "<label for=\"Field_$fieldname\">" . get_loc_field_name($fieldname) . ":</label>\n";
                 echo "<select id=\"Field_$fieldname\" name=\"Field_$fieldname\"" . ($disable_select ? " disabled=\"disabled\"" : "") . ">\n";
                 // Only display options up to and including one's own level (you can't upgrade yourself).
@@ -240,7 +236,7 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
                   echo "<input type=\"hidden\" name=\"Field_$fieldname\" value=\"$v\">\n";
                 }
                 echo "</div>\n";
-                break;
+*/                break;
               case 'name':
                 // you cannot change a username (even your own) unless you have user editing rights
                 $html_fieldname = htmlspecialchars("Field_$fieldname");
@@ -248,13 +244,13 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
                 echo ("<label for=\"$html_fieldname\">" . get_loc_field_name($fieldname) . ":</label>\n");
                 echo ("<input id=\"$html_fieldname\" name=\"$html_fieldname\" type=\"text\" " .
                       "maxlength=\"" . $maxlength['users.name'] . "\" " .
-                     (($level < $min_user_editing_level) ? "disabled=\"disabled\" " : "") .
+//                     (($level < $min_user_editing_level) ? "disabled=\"disabled\" " : "") .
                       "value=\"" . htmlspecialchars($data[$fieldname]) . "\">\n");
                 // if the field was disabled then we still need to pass through the value as a hidden input
-                if ($level < $min_user_editing_level)
-                {
-                  echo "<input type=\"hidden\" name=\"Field_$fieldname\" value=\"" . $data[$fieldname] . "\">\n";
-                }
+//                if ($level < $min_user_editing_level)
+//                {
+//                  echo "<input type=\"hidden\" name=\"Field_$fieldname\" value=\"" . $data[$fieldname] . "\">\n";
+//                }
                 echo ("</div>\n");
                 break;
               default:
@@ -315,8 +311,8 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
         </fieldset>
       </form>
       <?php
-      /* Administrators get the right to delete users, but only those at the same level as them or lower */
-      if (($Id >= 0) && ($level >= $min_user_editing_level) && ($level >= $data['level'])) 
+      /* User Administrators get the right to delete users, but only for users where the permission isn't explicitly denied */
+      if (!$new_user && getAuthorised('generic','delete','users',$data['name']))
       {
         echo "<form id=\"form_delete_users\" method=\"post\" action=\"" . htmlspecialchars(basename($PHP_SELF)) . "\">\n";
         echo "<div>\n";
@@ -343,8 +339,7 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
 if (isset($Action) && ($Action == "Update"))
 {
   // If you haven't got the rights to do this, then exit
-  $my_id = sql_query1("SELECT id FROM $tbl_users WHERE name='".addslashes($user)."' LIMIT 1");
-  if (($level < $min_user_editing_level) && ($Id != $my_id ))
+  if ((!new_user && !getAuthorised('generic','edit','users',$Id)) || ($new_user && !getAuthorised('generic','create','users','new')))
   {
     Header("Location: edit_users.php");
     exit;
@@ -393,7 +388,7 @@ if (isset($Action) && ($Action == "Update"))
     {
       // Now display this form again with an error message
       // Build the query string
-      $q_string = "Action=" . (($Id >= 0) ? 'Edit' : 'Add');
+      $q_string = "Action=" . ((!new_user) ? 'Edit' : 'Add');
       $q_string .= "&Id=$Id&name_empty=1";
       Header("Location: edit_users.php?$q_string");
       exit;
@@ -407,7 +402,7 @@ if (isset($Action) && ($Action == "Update"))
     // If it's an update, then check to see if there are any rows with that name, except
     // for that user.
     $query = "SELECT id FROM $tbl_users WHERE name='" . addslashes($new_name) . "'";
-    if ($Id >= 0)
+    if (!$new_user)
     {
       $query .= " AND id!='$Id'";
     }
@@ -417,7 +412,7 @@ if (isset($Action) && ($Action == "Update"))
     {
       // Now display this form again with an error message
       // Build the query string
-      $q_string = "Action=" . (($Id >= 0) ? 'Edit' : 'Add');
+      $q_string = "Action=" . ((!new_user) ? 'Edit' : 'Add');
       $q_string .= "&Id=$Id";
       $q_string .= "&taken_name=" . urlencode($new_name);
       $q_string .= "&name_not_unique=1";
@@ -448,18 +443,8 @@ if (isset($Action) && ($Action == "Update"))
       }
       else if ($fieldname=="level")
       {
-        $value = get_form_var('Field_level', 'int');
-        if (!isset($value))
-        {
-          $value = 0;
-        }
-        // Check that we are not trying to upgrade our level.    This shouldn't be possible
-        // but someone might have spoofed the input in the edit form
-        if ($value > $level)
-        {
-          Header("Location: edit_users.php");
-          exit;
-        }
+        // To be removed
+        continue;
       }
       else
       {
@@ -510,7 +495,7 @@ if (isset($Action) && ($Action == "Update"))
     } /* end for each column of user database */
   
     /* Now generate the SQL operation based on the given array of fields */
-    if ($Id >= 0)
+    if (!$new_user)
     {
       /* if the Id exists - then we are editing an existing user, rather 
        * than creating a new one */
@@ -565,9 +550,15 @@ if (isset($Action) && ($Action == "Update"))
       // Print footer and exit
       print_footer(TRUE);
     }
-    // Add to phpGACL
-    if ($Id >= 0) $mrbs_acl_api->updateObject('users', $Id, $data['name'], 'ARO');
-    else $mrbs_acl_api->addObject('users', $Id, $data['name'], 'ARO');
+    else
+    {   // Add to phpGACL
+        if ($new_user) {
+            $mrbs_acl_api->addObject('users', $new_name , $new_name, 'ARO');
+        }
+        else {
+            $mrbs_acl_api->updateObject('users', $new_name , $new_name, 'ARO');
+        }
+    }
   
     /* Success. Redirect to the user list, to remove the form args */
     Header("Location: edit_users.php");
@@ -580,7 +571,8 @@ if (isset($Action) && ($Action == "Update"))
 
 if (isset($Action) && ($Action == "Delete"))
 {
-  if (!getAuthorised('generic','delete','users',$Id))
+  $name = sql_query1("SELECT name FROM $tbl_users WHERE id='$Id'");
+  if (!getAuthorised('generic','delete','users',$name))
   {
     showAccessDenied(0, 0, 0, "", "");
     exit();
@@ -605,8 +597,9 @@ if (isset($Action) && ($Action == "Delete"))
     // Print footer and exit
     print_footer(TRUE);
   }
-  // Remove from phpGACL
-  $mrbs_acl_api->delObject('users', $Id, 'ARO');
+  else { // Remove from phpGACL
+    $mrbs_acl_api->delObject('users', $name, 'ARO');
+  }
 
   /* Success. Do not display a message. Simply fall through into the list display. */
 }
@@ -632,7 +625,7 @@ if (!getAuthorised('generic','add','users','new'))
   print "</form>\n";
 }
 
-if ($initial_user_creation != 1)   // don't print the user table if there are no users
+if (!$initial_user_creation)   // don't print the user table if there are no users
 {
   $list = sql_query("SELECT * FROM $tbl_users ORDER BY level DESC, name");
   print "<table id=\"edit_users_list\" class=\"admin_table\">\n";
