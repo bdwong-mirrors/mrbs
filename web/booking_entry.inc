@@ -45,5 +45,15 @@ class BookingEntry {
   function is_awaiting_approval() {
     return $this->status & STATUS_AWAITING_APPROVAL;
   }
+
+  function set_private() {
+    $this->status |= STATUS_PRIVATE;
+  }
+  function set_tentative() {
+    $this->status |= STATUS_TENTATIVE;
+  }
+  function set_awaiting_approval() {
+    $this->status |= STATUS_AWAITING_APPROVAL;
+  }
 }
 

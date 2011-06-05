@@ -6,28 +6,27 @@ require_once "mrbs_sql.inc";
 require_once "functions_ical.inc";
 require_once "booking_entry.inc";
 
+$data = new BookingEntry;
 // Get non-standard form variables
-$create_by = get_form_var('create_by', 'string');
-$name = get_form_var('name', 'string');
-$rep_type = get_form_var('rep_type', 'int');
-$description = get_form_var('description', 'string');
+$data->create_by = get_form_var('create_by', 'string');
+$data->name = get_form_var('name', 'string');
+$data->rep_type = get_form_var('rep_type', 'int');
+$data->description = get_form_var('description', 'string');
 $start_seconds = get_form_var('start_seconds', 'int');
 $end_seconds = get_form_var('end_seconds', 'int');
 $all_day = get_form_var('all_day', 'string'); // bool, actually
-$type = get_form_var('type', 'string');
+$data->type = get_form_var('type', 'string');
 $rooms = get_form_var('rooms', 'array');
 $original_room_id = get_form_var('original_room_id', 'int');
 $ical_uid = get_form_var('ical_uid', 'string');
 $ical_sequence = get_form_var('ical_sequence', 'int');
 $ical_recur_id = get_form_var('ical_recur_id', 'string');
 $returl = get_form_var('returl', 'string');
-$rep_id = get_form_var('rep_id', 'int');
 $edit_type = get_form_var('edit_type', 'string');
 $id = get_form_var('id', 'int');
 $rep_end_day = get_form_var('rep_end_day', 'int');
 $rep_end_month = get_form_var('rep_end_month', 'int');
 $rep_end_year = get_form_var('rep_end_year', 'int');
-$rep_id = get_form_var('rep_id', 'int');
 $rep_day = get_form_var('rep_day', 'array'); // array of bools
 $rep_num_weeks = get_form_var('rep_num_weeks', 'int');
 $private = get_form_var('private', 'string'); // bool, actually
@@ -80,7 +79,7 @@ foreach($fields as $field)
 // the MAXLENGTH attribute.    Passing an oversize string to some
 // databases (eg some versions of PostgreSQL) results in an SQL error,
 // rather than silent truncation of the string.
-$name = substr($name, 0, $maxlength['entry.name']);
+$data->name = substr($data->name, 0, $maxlength['entry.name']);
 
 // Make sure the area corresponds to the room that is being booked
 if (!empty($rooms[0]))
@@ -178,7 +177,7 @@ if (!$is_admin && $auth['only_admin_can_book_multiday'])
 // is allowed to make/edit repeat bookings.   (The edit_entry form should
 // prevent you ever getting here, but this check is here as a safeguard in 
 // case someone has spoofed the HTML)
-if (isset($rep_type) && ($rep_type != REP_NONE) &&
+if (isset($data->rep_type) && ($data->rep_type != REP_NONE) &&
     !$is_admin &&
     !empty($auth['only_admin_can_book_repeat']))
 {
@@ -214,13 +213,13 @@ else
   }
   $target_room = $rooms[0];
 }
-if (!getWritable($create_by, $user, $target_room))
+if (!getWritable($data->create_by, $user, $target_room))
 {
   showAccessDenied($day, $month, $year, $area, isset($room) ? $room : "");
   exit;
 }
 
-if ($name == '')
+if ($data->name == '')
 {
   print_header($day, $month, $year, $area, isset($room) ? $room : "");
 ?>
@@ -234,7 +233,7 @@ if ($name == '')
 }       
 
 
-if (($rep_type == REP_N_WEEKLY) && ($rep_num_weeks < 2))
+if (($data->rep_type == REP_N_WEEKLY) && ($rep_num_weeks < 2))
 {
   print_header($day, $month, $year, $area, isset($room) ? $room : "");
 ?>
@@ -323,23 +322,23 @@ if ($endtime == $starttime)
 
 // Now get the duration, which will be needed for email notifications
 // (We do this before we adjust for DST so that the user sees what they expect to see)
-$duration = $endtime - $starttime;
+$data->duration = $endtime - $starttime;
 $date = getdate($starttime);
 if ($enable_periods)
 {
   $period = (($date['hours'] - 12) * 60) + $date['minutes'];
-  toPeriodString($period, $duration, $dur_units, FALSE);
+  toPeriodString($period, $data->duration, $data->dur_units, FALSE);
 }
 else
 {
-  toTimeString($duration, $dur_units, FALSE);
+  toTimeString($data->duration, $data->dur_units, FALSE);
 }
   
 // Adjust the endtime for DST
 $endtime += cross_dst( $starttime, $endtime );
 
 
-if (isset($rep_type) && ($rep_type != REP_NONE) &&
+if (isset($data->rep_type) && ($data->rep_type != REP_NONE) &&
     isset($rep_end_month) && isset($rep_end_day) && isset($rep_end_year))
 {
   // Get the repeat entry settings
@@ -348,7 +347,7 @@ if (isset($rep_type) && ($rep_type != REP_NONE) &&
 }
 else
 {
-  $rep_type = REP_NONE;
+  $data->rep_type = REP_NONE;
   $end_date = 0;  // to avoid an undefined variable notice
 }
 
@@ -360,7 +359,7 @@ if (!isset($rep_day))
 $rep_opt = "";
 
 // Processing for weekly and n-weekly repeats
-if (isset($rep_type) && (($rep_type == REP_WEEKLY) || ($rep_type == REP_N_WEEKLY)))
+if (isset($data->rep_type) && (($data->rep_type == REP_WEEKLY) || ($data->rep_type == REP_N_WEEKLY)))
 {
   // If no repeat day has been set, then set a default repeat day
   // as the day of the week of the start of the period
@@ -395,11 +394,11 @@ if (isset($rep_type) && (($rep_type == REP_WEEKLY) || ($rep_type == REP_N_WEEKLY
 }
 
 // Expand a series into a list of start times:
-if ($rep_type != REP_NONE)
+if ($data->rep_type != REP_NONE)
 {
   $reps = mrbsGetRepeatEntryList($starttime,
                                  isset($end_date) ? $end_date : 0,
-                                 $rep_type, $rep_opt, $max_rep_entrys,
+                                 $data->rep_type, $rep_opt, $max_rep_entrys,
                                  $rep_num_weeks);
 }
 
@@ -434,7 +433,7 @@ $rules_broken = array();  // Holds an array of the rules that have been broken
 // book in;  also check that the booking conforms to the policy
 foreach ( $rooms as $room_id )
 {
-  if ($rep_type != REP_NONE && !empty($reps))
+  if ($data->rep_type != REP_NONE && !empty($reps))
   {
     if(count($reps) < $max_rep_entrys)
     {
@@ -504,11 +503,11 @@ if ($valid_booking)
   foreach ($rooms as $room_id)
   { 
     // Set the various bits in the status field as appropriate
-    $status = 0;
+    $data->status = 0;
     // Privacy status
     if ($isprivate)
     {
-      $status |= STATUS_PRIVATE;  // Set the private bit
+      $data->set_private();  // Set the private bit
     }
     // If we are using booking approvals then we need to work out whether the
     // status of this booking is approved.   If the user is allowed to approve
@@ -517,16 +516,15 @@ if ($valid_booking)
     // will need to approved.
     if ($approval_enabled && !auth_book_admin($user, $room_id))
     {
-      $status |= STATUS_AWAITING_APPROVAL;
+      $data->set_awaiting_approval();
     }
     // Confirmation status
     if ($confirmation_enabled && !$confirmed)
     {
-      $status |= STATUS_TENTATIVE;
+      $data->set_tentative();
     }
     
-    // Assemble the data in an array
-    $data = new BookingEntry;
+    // Assemble the data in the BookingEntry
    
     // We need to work out whether this is the original booking being modified,
     // because, if it is, we keep the ical_uid and increment the ical_sequence.
@@ -555,27 +553,26 @@ if ($valid_booking)
     {
       // This is a new booking.   We generate a new ical_uid and start
       // the sequence at 0.
-      $data->ical_uid = generate_global_uid($name);
+      $data->ical_uid = generate_global_uid($data->name);
       $data->ical_sequence = 0;
     }
     $data->start_time = $starttime;
     $data->end_time = $endtime;
     $data->room_id = $room_id;
-    $data->create_by = $create_by;
-    $data->name = $name;
-    $data->type = $type;
-    $data->description = $description;
-    $data->status = $status;
     foreach ($custom_fields as $key => $value)
     {
       $data->$key = $value;
     }
-    $data->rep_type = $rep_type;
     if ($edit_type == "series")
     {
       $data->end_date = $end_date;
       $data->rep_opt = $rep_opt;
       $data->rep_num_weeks = (isset($rep_num_weeks)) ? $rep_num_weeks : 0;
+
+      $booking = mrbsCreateRepeatingEntrys($data);
+      $new_id = $booking['id'];
+      $is_repeat_table = $booking['series'];
+      $data->id = $new_id;  // Add in the id now we know it
     }
     else
     {
@@ -592,20 +589,7 @@ if ($valid_booking)
       }
       $data->entry_type = ($repeat_id > 0) ? ENTRY_RPT_CHANGED : ENTRY_SINGLE;
       $data->repeat_id = $repeat_id;
-    }
-    // The following elements are needed for email notifications
-    $data->duration = $duration;
-    $data->dur_units = $dur_units;
 
-    if ($edit_type == "series")
-    {
-      $booking = mrbsCreateRepeatingEntrys($data);
-      $new_id = $booking['id'];
-      $is_repeat_table = $booking['series'];
-      $data->id = $new_id;  // Add in the id now we know it
-    }
-    else
-    {
       // Create the entry:
       $new_id = mrbsCreateSingleEntry($data);
       $is_repeat_table = FALSE;
