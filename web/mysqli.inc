@@ -502,8 +502,8 @@ function sql_mysqli_connect($host, $username, $password,
 //
 function sql_mysqli_default_connect()
 {
-  global $sql_mysqli_conn, $db_nopersist, $db_host, $db_login, $db_password,
-         $db_database;
+  global $sql_mysqli_conn, $db_nopersist, $db_host, $db_login, $db_password;
+  global $db_database;
 
   /////////////////////////////////////////////
   // Open the standard MRBS database connection

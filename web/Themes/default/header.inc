@@ -68,8 +68,8 @@ function generate_autocomplete($id, $sql)
 // Print the page header
 function print_theme_header($day, $month, $year, $area, $room)
 {
-  global $mrbs_company, $mrbs_company_logo, $mrbs_company_url, $mrbs_company_more_info,
-         $search_str, $locale_warning;
+  global $mrbs_company, $mrbs_company_logo, $mrbs_company_url, $mrbs_company_more_info;
+  global $search_str, $locale_warning;
   global $tbl_entry, $tbl_room, $tbl_area;
   global $PHP_SELF, $view_week_number, $weekstarts;
   global $auth;

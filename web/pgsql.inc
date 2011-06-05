@@ -484,8 +484,8 @@ function sql_pgsql_connect($host, $username, $password, $db_name,
 //
 function sql_pgsql_default_connect()
 {
-  global $sql_pgsql_conn, $db_nopersist, $db_host, $db_login, $db_password,
-         $db_database;
+  global $sql_pgsql_conn, $db_nopersist, $db_host, $db_login, $db_password;
+  global $db_database;
 
   /////////////////////////////////////////////
   // Open the standard MRBS database connection

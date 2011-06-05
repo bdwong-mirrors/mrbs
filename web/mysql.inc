@@ -467,8 +467,8 @@ function sql_mysql_connect($host, $username, $password, $db_name, $persist = 0)
 //
 function sql_mysql_default_connect()
 {
-  global $sql_mysql_conn, $db_nopersist, $db_host, $db_login, $db_password,
-         $db_database;
+  global $sql_mysql_conn, $db_nopersist, $db_host, $db_login, $db_password;
+  global $db_database;
 
   /////////////////////////////////////////////
   // Open the standard MRBS database connection
