@@ -124,19 +124,19 @@ $row = mrbsGetBookingInfo($id, $series);
 
 // Get the area settings for the entry's area.   In particular we want
 // to know how to display private/public bookings in this area.
-get_area_settings($row['area_id']);
+get_area_settings($row->area_id);
 
 // Work out whether the room or area is disabled
-$room_disabled = $row['room_disabled'] || $row['area_disabled'];
+$room_disabled = $row->room_disabled || $row->area_disabled;
 // Get the status
-$status = $row['status'];
+$status = $row->status;
 // Work out whether this event should be kept private
-$private = $row['status'] & STATUS_PRIVATE;
-$writeable = getWritable($row['create_by'], $user, $row['room_id']);
+$private = $row->status & STATUS_PRIVATE;
+$writeable = getWritable($row->create_by, $user, $row->room_id);
 $keep_private = (is_private_event($private) && !$writeable);
 
 // Work out when the last reminder was sent
-$last_reminded = (empty($row['reminded'])) ? $row['last_updated'] : $row['reminded'];
+$last_reminded = (empty($row->reminded)) ? $row->last_updated : $row->reminded;
 
 
 if ($series == 1)
@@ -171,7 +171,7 @@ if ($series == 1)
 }
 else
 {
-  $repeat_id = $row['repeat_id'];
+  $repeat_id = $row->repeat_id;
 }
 
 
@@ -269,7 +269,7 @@ else
 // Now that we know all the data we start drawing it
 
 echo "<h3" . (($keep_private && $is_private_field['entry.name']) ? " class=\"private\"" : "") . ">\n";
-echo ($keep_private && $is_private_field['entry.name']) ? "[" . get_vocab("private") . "]" : htmlspecialchars($row['name']);
+echo ($keep_private && $is_private_field['entry.name']) ? "[" . get_vocab("private") . "]" : htmlspecialchars($row->name);
 if (is_private_event($private) && $writeable) 
 {
   echo ' ('.get_vocab("private").')';

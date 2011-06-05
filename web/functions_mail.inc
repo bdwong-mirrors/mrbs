@@ -382,7 +382,7 @@ function create_body_table_row($label, $new, $old='', $compare=FALSE, $as_html=F
 }
 
 
-function create_body($data, $compare, $series, $action, $as_html=FALSE, $note='')
+function create_body(BookingEntry $data, $compare, $series, $action, $as_html=FALSE, $note='')
 {
   global $mail_previous, $returl, $mrbs_company;
   global $enable_periods, $approval_enabled, $confirmation_enabled;
@@ -465,18 +465,18 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
     // Set the link to view entry page
     if (isset($url_base) && ($url_base != ""))
     {
-      $body .= "$url_base/view_entry.php?id=" . $data['id'];
+      $body .= "$url_base/view_entry.php?id=" . $data->id;
     }
     else
     {
       ('' != $returl) ? $url = explode(basename($returl), $returl) : '';
-      $body .= $url[0] . "view_entry.php?id=" . $data['id'];
+      $body .= $url[0] . "view_entry.php?id=" . $data->id;
     }
     if ($series)
     {
       $body .= "&series=1";
     }
-    $body .= ($as_html) ? "\">" . convertToMailCharset($data['name']) . "</a>" : "";
+    $body .= ($as_html) ? "\">" . convertToMailCharset($data->name) . "</a>" : "";
   }
   $body .= ($as_html) ? "</p>\n" : "\n\n";
   
@@ -497,8 +497,8 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
   
   // Always display the brief description
   $body .= create_body_table_row (get_mail_vocab("namebooker"),
-                                  convertToMailCharset($data['name']),
-                                  convertToMailCharset($mail_previous['name']),
+                                  convertToMailCharset($data->name),
+                                  convertToMailCharset($mail_previous->name),
                                   $compare, $as_html);
   
   // Displays/don't displays entry details
@@ -506,15 +506,15 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
   {
     // Description:
     $body .= create_body_table_row (get_mail_vocab("description"),
-                                    convertToMailCharset($data['description']),
-                                    convertToMailCharset($mail_previous['description']),
+                                    convertToMailCharset($data->description),
+                                    convertToMailCharset($mail_previous->description),
                                     $compare, $as_html);
                                                                                          
     if ($confirmation_enabled)
     {                        
       // Confirmation status:
-      $new_status = ($data['status'] & STATUS_TENTATIVE) ? get_mail_vocab("tentative") : get_mail_vocab("confirmed");
-      $old_status = ($mail_previous['status'] & STATUS_TENTATIVE) ? get_mail_vocab("tentative") : get_mail_vocab("confirmed");
+      $new_status = ($data->status & STATUS_TENTATIVE) ? get_mail_vocab("tentative") : get_mail_vocab("confirmed");
+      $old_status = ($mail_previous->status & STATUS_TENTATIVE) ? get_mail_vocab("tentative") : get_mail_vocab("confirmed");
       $body .= create_body_table_row (get_mail_vocab("confirmation_status"),
                                       $new_status,
                                       $old_status,
@@ -524,8 +524,8 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
     if ($approval_enabled)
     {                        
       // Approval status:
-      $new_status = ($data['status'] & STATUS_AWAITING_APPROVAL) ? get_mail_vocab("awaiting_approval") : get_mail_vocab("approved");
-      $old_status = ($mail_previous['status'] & STATUS_AWAITING_APPROVAL) ? get_mail_vocab("awaiting_approval") : get_mail_vocab("approved");
+      $new_status = ($data->status & STATUS_AWAITING_APPROVAL) ? get_mail_vocab("awaiting_approval") : get_mail_vocab("approved");
+      $old_status = ($mail_previous->status & STATUS_AWAITING_APPROVAL) ? get_mail_vocab("awaiting_approval") : get_mail_vocab("approved");
       $body .= create_body_table_row (get_mail_vocab("approval_status"),
                                       $new_status,
                                       $old_status,
@@ -533,8 +533,8 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
     }
                                
     // Room:
-    $new_room = $data['area_name'] . " - " . $data['room_name'];
-    $old_room = $mail_previous['area_name'] . " - " . $mail_previous['room_name'];
+    $new_room = $data->area_name . " - " . $data->room_name;
+    $old_room = $mail_previous->area_name . " - " . $mail_previous->room_name;
     $body .= create_body_table_row (get_mail_vocab("room"),
                                     $new_room,
                                     $old_room,
@@ -542,21 +542,21 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
         
     // Start time
     $body .= create_body_table_row (get_mail_vocab("start_date"),
-                                    getMailDateString($data['start_time']),
-                                    getMailDateString($mail_previous['start_time']),
+                                    getMailDateString($data->start_time),
+                                    getMailDateString($mail_previous->start_time),
                                     $compare, $as_html);
         
     // Duration
-    $new_duration = $data['duration'] . " " . get_mail_vocab($data['dur_units']);
-    $old_duration = $mail_previous['duration'] . " " . get_mail_vocab($mail_previous['dur_units']);
+    $new_duration = $data->duration . " " . get_mail_vocab($data->dur_units);
+    $old_duration = $mail_previous->duration . " " . get_mail_vocab($mail_previous->dur_units);
     $body .= create_body_table_row (get_mail_vocab("duration"),
                                     $new_duration,
                                     $old_duration,
                                     $compare, $as_html);
                                         
     // End time
-    $this_endtime = $data['end_time'];
-    $previous_endtime = ($compare) ? $mail_previous['end_time'] : 0;
+    $this_endtime = $data->end_time;
+    $previous_endtime = ($compare) ? $mail_previous->end_time : 0;
     if ($enable_periods)
     {
       // If we are using periods then the end_time is the end of the last
@@ -572,14 +572,14 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
     
     // Type of booking
     $body .= create_body_table_row (get_mail_vocab("type"),
-                                    $typel[$data['type']],
-                                    $typel[$mail_previous['type']],
+                                    $typel[$data->type],
+                                    $typel[$mail_previous->type],
                                     $compare, $as_html);
                                          
     // Created by
     $body .= create_body_table_row (get_mail_vocab("createdby"),
-                                    convertToMailCharset($data['create_by']),
-                                    convertToMailCharset($mail_previous['create_by']),
+                                    convertToMailCharset($data->create_by),
+                                    convertToMailCharset($mail_previous->create_by),
                                     $compare, $as_html);
                      
     // Custom fields
@@ -589,7 +589,7 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
       if (!in_array($field['name'], $standard_fields['entry']))
       {
         $key = $field['name'];
-        $value = (isset($data[$key])) ? $data[$key] : '';
+        $value = (isset($data->$key)) ? $data->$key : '';
         // Convert any booleans or pseudo-booleans to text strings (in the mail language)
         if (($field['nature'] == 'boolean') || 
             (($field['nature'] == 'integer') && isset($field['length']) && ($field['length'] <= 2)) )
@@ -597,12 +597,12 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
           $value = ($value) ? get_mail_vocab("yes") : get_mail_vocab("no");
           if (!$compare)
           {
-            $mail_previous[$key] = ($mail_previous[$key]) ? get_mail_vocab("yes") : get_mail_vocab("no");
+            $mail_previous->$key = ($mail_previous->$key) ? get_mail_vocab("yes") : get_mail_vocab("no");
           }
         }
         $body .= create_body_table_row (get_mail_field_name($tbl_entry, $key),
                                         convertToMailCharset($value),
-                                        convertToMailCharset($mail_previous[$key]),
+                                        convertToMailCharset($mail_previous->$key),
                                         $compare, $as_html);
       }
     }
@@ -610,35 +610,35 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
     // Last updated
     $body .= create_body_table_row (get_mail_vocab("lastupdate"),
                                     getMailTimeDateString(time()),
-                                    getMailTimeDateString($mail_previous['last_updated']),
+                                    getMailTimeDateString($mail_previous->last_updated),
                                     $compare, $as_html);
         
     // Repeat Type
     $body .= create_body_table_row (get_mail_vocab("rep_type"),
-                                    get_mail_vocab("rep_type_" . $data['rep_type']),
-                                    get_mail_vocab("rep_type_" . $mail_previous['rep_type']),
+                                    get_mail_vocab("rep_type_" . $data->rep_type),
+                                    get_mail_vocab("rep_type_" . $mail_previous->rep_type),
                                     $compare, $as_html);
                                        
     // Details if a series
-    if ($data['rep_type'] != REP_NONE)
+    if ($data->rep_type != REP_NONE)
     {     
       // Repeat number of weeks
-      if ($data['rep_type'] == REP_N_WEEKLY)
+      if ($data->rep_type == REP_N_WEEKLY)
       {
       
         $body .= create_body_table_row (get_mail_vocab("rep_num_weeks"),
-                                        $data['rep_num_weeks'],
-                                        $mail_previous["rep_num_weeks"],
+                                        $data->rep_num_weeks,
+                                        $mail_previous->rep_num_weeks,
                                         $compare, $as_html);
       }
       
       // Repeat days
-      if (($data['rep_type'] == REP_WEEKLY) || ($data['rep_type'] == REP_N_WEEKLY))
+      if (($data->rep_type == REP_WEEKLY) || ($data->rep_type == REP_N_WEEKLY))
       {
       
         // Display day names according to language and preferred weekday start.
-        $opt = get_rep_day_list($data['rep_opt']);
-        $opt_previous = ($compare) ? get_rep_day_list($mail_previous['rep_opt']) : "";
+        $opt = get_rep_day_list($data->rep_opt);
+        $opt_previous = ($compare) ? get_rep_day_list($mail_previous->rep_opt) : "";
         $body .= create_body_table_row (get_mail_vocab("rep_rep_day"),
                                         $opt,
                                         $opt_previous,
@@ -647,8 +647,8 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
       
       // Repeat end date
       $body .= create_body_table_row (get_mail_vocab("rep_end_date"),
-                                      getMailTimeDateString($data['end_date'], FALSE),
-                                      getMailTimeDateString($mail_previous['end_date'], FALSE),
+                                      getMailTimeDateString($data->end_date, FALSE),
+                                      getMailTimeDateString($mail_previous->end_date, FALSE),
                                       $compare, $as_html);                                      
     }
   }
@@ -674,7 +674,7 @@ function create_body($data, $compare, $series, $action, $as_html=FALSE, $note=''
 //   $data     an array containing all the data concerning this booking
 //   $action   the action that has caused this email to be sent
 //
-function create_addresses($data, $action)
+function create_addresses(BookingEntry $data, $action)
 {
   global $approval_enabled, $mail_settings;
   
@@ -703,9 +703,9 @@ function create_addresses($data, $action)
   // for this room, then get the email addresses of the approvers
   if (!in_array($action, array("delete", "reject")) &&
       $approval_enabled && 
-      !auth_book_admin($user, $data['room_id']))
+      !auth_book_admin($user, $data->room_id))
   {
-    $to[] = get_approvers_email($data['room_id']);
+    $to[] = get_approvers_email($data->room_id);
   }
   
   ($mail_settings['admin_on_bookings']) ? $to[] = $mail_settings['recipients'] : '';
@@ -713,9 +713,9 @@ function create_addresses($data, $action)
   if ($mail_settings['area_admin_on_bookings'])
   {
     // Look for list of area admins email addresses
-    if (empty($data['area_admin_email']))
+    if (empty($data->area_admin_email))
     {
-      $email = get_area_admin_email($data['id'], ($data['rep_type'] != REP_NONE));
+      $email = get_area_admin_email($data->id, ($data->rep_type != REP_NONE));
       if (!empty($email))
       {
         $to[] = $email;
@@ -723,16 +723,16 @@ function create_addresses($data, $action)
     }
     else
     {
-      $to[] = $data['area_admin_email'];
+      $to[] = $data->area_admin_email;
     }
   }
   
   if ($mail_settings['room_admin_on_bookings'])
   {
     // Look for list of room admins email addresses
-    if (empty($data['room_admin_email']))
+    if (empty($data->room_admin_email))
     {
-      $email = get_room_admin_email($data['id'], ($data['rep_type'] != REP_NONE));
+      $email = get_room_admin_email($data->id, ($data->rep_type != REP_NONE));
       if (!empty($email))
       {
         $to[] = $email;
@@ -740,7 +740,7 @@ function create_addresses($data, $action)
     }
     else
     {
-      $to[] = $data['room_admin_email'];
+      $to[] = $data->room_admin_email;
     }
   }
   
@@ -753,7 +753,7 @@ function create_addresses($data, $action)
       $cc = array_merge($cc, $to);
       $to = array();
     }
-    $booker = $data['create_by'];
+    $booker = $data->create_by;
     $booker_email = get_email_address($booker);
     if (!empty($booker_email))
     {
@@ -788,7 +788,7 @@ function create_addresses($data, $action)
  * @param string  $note          a note that is used with "more_info"
  * @return bool                  TRUE or PEAR error object if fails
  */
-function notifyAdminOnBooking($data, $mail_previous, $new_entry, $series, $action="book", $note='')
+function notifyAdminOnBooking(BookingEntry $data, BookingEntry $mail_previous, $new_entry, $series, $action="book", $note='')
 {
   global $mail_settings, $enable_periods;
   
@@ -800,8 +800,8 @@ function notifyAdminOnBooking($data, $mail_previous, $new_entry, $series, $actio
   // Add some values to the $data array before we go and create the addresses
   if (!$new_entry)
   {
-    $data['area_admin_email'] = (!empty($mail_previous['area_admin_email'])) ? $mail_previous['area_admin_email'] : NULL;
-    $data['room_admin_email'] = (!empty($mail_previous['room_admin_email'])) ? $mail_previous['room_admin_email'] : NULL;
+    $data->area_admin_email = (!empty($mail_previous->area_admin_email)) ? $mail_previous->area_admin_email : NULL;
+    $data->room_admin_email = (!empty($mail_previous->room_admin_email)) ? $mail_previous->room_admin_email : NULL;
   }
   
   // Set up the addresses (from, to and cc)
@@ -890,7 +890,7 @@ function notifyAdminOnBooking($data, $mail_previous, $new_entry, $series, $actio
  * @param   string  $note      a note that is used with "reject"
  * @return  bool    TRUE or PEAR error object if fails
  */
-function notifyAdminOnDelete($data, $series=FALSE, $action="delete", $note="")
+function notifyAdminOnDelete(BookingEntry $data, $series=FALSE, $action="delete", $note="")
 {
   global $mail_settings, $enable_periods;
   
@@ -901,7 +901,7 @@ function notifyAdminOnDelete($data, $series=FALSE, $action="delete", $note="")
   
   // As we are going to cancel this booking we need to increment the iCalendar
   // sequence number
-  $data['ical_sequence']++;
+  $data->ical_sequence++;
 
   // Set up the addresses (from, to and cc)
   $addresses = create_addresses($data, $action);

@@ -2,6 +2,7 @@
 
 // $Id$
 
+require_once "booking_entry.inc";
 
 // "Folds" lines longer than 75 octets.  Multi-byte safe.
 //
@@ -103,17 +104,17 @@ function ical_escape_quoted_string($str)
 
 
 // Create an iCalendar Recurrence Rule
-function create_rrule($data)
+function create_rrule(BookingEntry $data)
 {
   // Create an array which can be used to map day of the week numbers (0..6)
   // onto days of the week as defined in RFC 5545
   $RFC_5545_days = array('SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA');
   $rule = '';
-  if (!isset($data['rep_type']))
+  if (!isset($data->rep_type))
   {
     return $rule;
   }
-  switch($data['rep_type'])
+  switch($data->rep_type)
   {
     case REP_NONE:
       return $rule;
@@ -125,15 +126,15 @@ function create_rrule($data)
     case REP_N_WEEKLY;
       $rule .= "FREQ=WEEKLY";
       // Interval for N_WEEKLY (Interval defaults to 1)
-      if ($data['rep_type'] == REP_N_WEEKLY)
+      if ($data->rep_type == REP_N_WEEKLY)
       {
-        $rule .= ";INTERVAL=" . $data['rep_num_weeks'];
+        $rule .= ";INTERVAL=" . $data->rep_num_weeks;
       }
       // Get the repeat days of the week
       $days_of_week = array();
       for ($i = 0; $i < 7; $i++)
       {
-        if ($data['rep_opt'][$i])
+        if ($data->rep_opt[$i])
         {
           $days_of_week[] = $RFC_5545_days[$i];
         }
@@ -145,8 +146,8 @@ function create_rrule($data)
       }
       break;
     case REP_MONTHLY_SAMEDAY:
-      $dow = date('w', $data['start_time']);  // day of the week
-      $dom = date('j', $data['start_time']);  // day of the month
+      $dow = date('w', $data->start_time);  // day of the week
+      $dom = date('j', $data->start_time);  // day of the month
       // Work out the week of the month.    If this is the fifth week of the month
       // then make it -1 (last week of the month in RFC 5545 terms)
       $wom = intval($dom/7) + 1;
@@ -165,14 +166,14 @@ function create_rrule($data)
       $rule .= "FREQ=YEARLY";
       break;
   }
-  $rule .= ";UNTIL=" . gmdate(RFC5545_FORMAT . '\Z', $data['end_date']);
+  $rule .= ";UNTIL=" . gmdate(RFC5545_FORMAT . '\Z', $data->end_date);
 
   return $rule;
 }
 
 
 // Create an RFC 5545 iCalendar Event component
-function create_ical_event($method, $data, $text_description, $html_description, $addresses, $series=FALSE)
+function create_ical_event($method, BookingEntry $data, $text_description, $html_description, $addresses, $series=FALSE)
 {
   require_once "functions_mail.inc";
   
@@ -183,11 +184,11 @@ function create_ical_event($method, $data, $text_description, $html_description,
   $results = array();
 
   $results[] = "BEGIN:VEVENT";
-  $results[] = "UID:" . $data['ical_uid'];  // compulsory
+  $results[] = "UID:" . $data->ical_uid;  // compulsory
   $results[] = "DTSTAMP:" . gmdate(RFC5545_FORMAT . '\Z');  // compulsory
-  if (!empty($data['last_updated']))
+  if (!empty($data->last_updated))
   {
-    $results[] = "LAST-MODIFIED:" . gmdate(RFC5545_FORMAT . '\Z', $data['last_updated']);
+    $results[] = "LAST-MODIFIED:" . gmdate(RFC5545_FORMAT . '\Z', $data->last_updated);
   }
   if ($series)
   {
@@ -197,9 +198,9 @@ function create_ical_event($method, $data, $text_description, $html_description,
   // parameter then RFC 5545 says you MUST provide a corresponding VTIMEZONE component.
   // Some calendar apps, eg Microsoft Exchange, enforce the standard and fail to import
   // calendar objects that use TZID without a corresponding VTIMEZONE.
-  $results[] = "DTSTART:" . gmdate(RFC5545_FORMAT . '\Z', $data['start_time']);
-  $results[] = "DTEND:" . gmdate(RFC5545_FORMAT . '\Z', $data['end_time']);
-  $results[] = "SUMMARY:" . ical_escape_text($data['name']);
+  $results[] = "DTSTART:" . gmdate(RFC5545_FORMAT . '\Z', $data->start_time);
+  $results[] = "DTEND:" . gmdate(RFC5545_FORMAT . '\Z', $data->end_time);
+  $results[] = "SUMMARY:" . ical_escape_text($data->name);
   // Put the HTML version in an ALTREP, just in case there are any Calendars out there
   // that support it (although at the time of writing, Dec 2010, none are known)
   $results[] = "DESCRIPTION" .
@@ -211,12 +212,12 @@ function create_ical_event($method, $data, $text_description, $html_description,
   {
     $results[] = "X-ALT-DESC;FMTTYPE=text/html:" . ical_escape_text($html_description['content']);
   }
-  $results[] = "LOCATION:" . ical_escape_text($data['area_name'] . " - " . $data['room_name']);
-  $results[] = "SEQUENCE:" . $data['ical_sequence'];
+  $results[] = "LOCATION:" . ical_escape_text($data->area_name . " - " . $data->room_name);
+  $results[] = "SEQUENCE:" . $data->ical_sequence;
   // If this is an individual member of a series then set the recurrence id
-  if (!$series && ($data['entry_type'] != ENTRY_SINGLE))
+  if (!$series && ($data->entry_type != ENTRY_SINGLE))
   {
-    $results[] = "RECURRENCE-ID:" . $data['ical_recur_id'];
+    $results[] = "RECURRENCE-ID:" . $data->ical_recur_id;
   }
   // STATUS:  As we can have confirmed and tentative bookings we will send that information
   // in the Status property, as some calendar apps will use it.   For example Outlook 2007 will
@@ -230,7 +231,7 @@ function create_ical_event($method, $data, $text_description, $html_description,
   }
   else
   {
-    $results[] = "STATUS:" . (($data['status'] & STATUS_TENTATIVE) ? "TENTATIVE" : "CONFIRMED");
+    $results[] = "STATUS:" . (($data->status & STATUS_TENTATIVE) ? "TENTATIVE" : "CONFIRMED");
   }
   
   /*  
@@ -238,14 +239,14 @@ function create_ical_event($method, $data, $text_description, $html_description,
   hand in hand with an ORGANIZER, otherwise people won't be able to see their own
   bookings
   // CLASS
-  $results[] = "CLASS:" . (($data['status'] & STATUS_PRIVATE) ? "PRIVATE" : "PUBLIC");
+  $results[] = "CLASS:" . (($data->status & STATUS_PRIVATE) ? "PRIVATE" : "PUBLIC");
   */
   
   // ORGANIZER
   // The organizer is the booking creator if we've got an email address for him/her.
   // Otherwise we'll make the 'from' address the organizer.   In both cases we'll try
   // and extract the common name from the email address.
-  $organizer_email = get_email_address($data['create_by']);
+  $organizer_email = get_email_address($data->create_by);
   if (empty($organizer_email))
   {
     $organizer = parse_address($addresses['from']);
@@ -261,7 +262,7 @@ function create_ical_event($method, $data, $text_description, $html_description,
     {
       // If the email address doesn't have a common name
       // then we can use the creator's username
-      $organizer['common_name'] = $data['create_by'];
+      $organizer['common_name'] = $data->create_by;
     }
   }
   if (!empty($organizer['address']))
@@ -395,20 +396,25 @@ function export_icalendar(&$res, $keep_private, $export_end=PHP_INT_MAX)
   
   for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
   {
+    $entry = new BookingEntry;
+    foreach( $row as $key => $value ) {
+      // TODO assign fields explicitly
+      $entry->$key = $value;
+    }
     $text_body = array();
     $html_body = array();
     // If this is an individual entry, then construct an event
-    if ($row['repeat_id'] == 0)
+    if ($entry->repeat_id == 0)
     {
-      $text_body['content'] = create_details_body($row, FALSE, $keep_private);
-      $html_body['content'] = "<table>" . create_details_body($row, TRUE, $keep_private) . " </table>";
-      $ical_events[] = create_ical_event("REQUEST", $row, $text_body, $html_body, NULL, FALSE);
+      $text_body['content'] = create_details_body($entry, FALSE, $keep_private);
+      $html_body['content'] = "<table>" . create_details_body($entry, TRUE, $keep_private) . " </table>";
+      $ical_events[] = create_ical_event("REQUEST", $entry, $text_body, $html_body, NULL, FALSE);
     }
     // Otherwise it's a series
     else
     {
       // if it's a series that we haven't seen yet, then construct an event
-      if ($row['repeat_id'] != $last_repeat_id)
+      if ($entry->repeat_id != $last_repeat_id)
       {
         // Unless is the very first series, check to see whether we got
         // all the entries we would have expected in the last series and
@@ -421,29 +427,29 @@ function export_icalendar(&$res, $keep_private, $export_end=PHP_INT_MAX)
             if ($keep_private)
             {
               // We don't want private details appearing in the .ics file
-              $start_row['name'] = $private_text;
-              $start_row['create_by'] = $private_text;
+              $start_row->name = $private_text;
+              $start_row->create_by = $private_text;
             }
-            $duration = $start_row['end_time'] - $start_row['start_time'];
-            $start_row['start_time'] = $missing_entry;
-            $start_row['end_time'] = $start_row['start_time'] + $duration;
-            $start_row['ical_recur_id'] = gmdate(RFC5545_FORMAT . '\Z', $missing_entry);
+            $duration = $start_row->end_time - $start_row->start_time;
+            $start_row->start_time = $missing_entry;
+            $start_row->end_time = $start_row->start_time + $duration;
+            $start_row->ical_recur_id = gmdate(RFC5545_FORMAT . '\Z', $missing_entry);
             $ical_events[] = create_ical_event("CANCEL", $start_row, NULL, NULL, NULL, FALSE);
           }
         }
         // Initialise for the new series
-        $last_repeat_id = $row['repeat_id'];
+        $last_repeat_id = $entry->repeat_id;
         unset($replace_index);
         // We need to set the repeat start and end dates because we've only been
         // asked to export dates in the report range.  The end date will be the earlier
         // of the series end date and the report end date.  The start date of the series
         // will be the recurrence-id of the first entry in the series, which is this one
         // thanks to the SQL query which ordered the entries by recurrence-id.
-        $start_row = $row;  // Make a copy of the data because we are going to tweak it.
-        $start_row['end_date'] = min($export_end, $start_row['end_date']);
-        $duration = $start_row['end_time'] - $start_row['start_time'];
-        $start_row['start_time'] = strtotime($row['ical_recur_id']);
-        $start_row['end_time'] = $start_row['start_time'] + $duration;
+        $start_row = clone $entry;  // Make a copy of the data because we are going to tweak it.
+        $start_row->end_date = min($export_end, $start_row->end_date);
+        $duration = $start_row->end_time - $start_row->start_time;
+        $start_row->start_time = strtotime($entry->ical_recur_id);
+        $start_row->end_time = $start_row->start_time + $duration;
         // However, if this is a series member that has been changed, then we 
         // cannot trust the rest of the data (eg the description).   We will
         // use this data for now in case we don't get anything better, but we
@@ -452,7 +458,7 @@ function export_icalendar(&$res, $keep_private, $export_end=PHP_INT_MAX)
         // replace this event.   (Of course, if we don't get an unchanged member
         // then it doesn't matter because all the original members will have been
         // changed and so there's no longer any need for the original data.)
-        if ($row['entry_type'] == ENTRY_RPT_CHANGED)
+        if ($entry->entry_type == ENTRY_RPT_CHANGED)
         {
           // Record the index number of the event that needs to be replaced.
           // As we have not yet added that event to the array, it will be
@@ -463,12 +469,12 @@ function export_icalendar(&$res, $keep_private, $export_end=PHP_INT_MAX)
         // we can check whether any are missing and if so set their status to cancelled.
         // (We use PHP_INT_MAX rather than $max_rep_entrys because $max_rep_entrys may
         // have changed since the series was created.)
-        $expected_entries = mrbsGetRepeatEntryList($start_row['start_time'], 
-                                                   $start_row['end_date'],
-                                                   $start_row['rep_type'],
-                                                   $start_row['rep_opt'],
+        $expected_entries = mrbsGetRepeatEntryList($start_row->start_time, 
+                                                   $start_row->end_date,
+                                                   $start_row->rep_type,
+                                                   $start_row->rep_opt,
                                                    PHP_INT_MAX,
-                                                   $start_row['rep_num_weeks']);
+                                                   $start_row->rep_num_weeks);
         // And keep an array of all the entries we actually see
         $actual_entries = array();
         // Create the series event
@@ -477,13 +483,13 @@ function export_icalendar(&$res, $keep_private, $export_end=PHP_INT_MAX)
         $ical_events[] = create_ical_event("REQUEST", $start_row, $text_body, $html_body, NULL, TRUE);
       }
       // Add this entry to the array of ones we've seen
-      $actual_entries[] = strtotime($row['ical_recur_id']);
+      $actual_entries[] = strtotime($entry->ical_recur_id);
       // And if it's a series member that has been altered
-      if ($row['entry_type'] == ENTRY_RPT_CHANGED)
+      if ($entry->entry_type == ENTRY_RPT_CHANGED)
       {
-        $text_body['content'] = create_details_body($row, FALSE, $keep_private);
-        $html_body['content'] = "<table>" . create_details_body($row, TRUE, $keep_private) . "</table>";
-        $ical_events[] = create_ical_event("REQUEST", $row, $text_body, $html_body, NULL, FALSE);
+        $text_body['content'] = create_details_body($entry, FALSE, $keep_private);
+        $html_body['content'] = "<table>" . create_details_body($entry, TRUE, $keep_private) . "</table>";
+        $ical_events[] = create_ical_event("REQUEST", $entry, $text_body, $html_body, NULL, FALSE);
       }
       // Otherwise it must be an original member, in which case check
       // to see if we were looking out for one
@@ -493,13 +499,13 @@ function export_icalendar(&$res, $keep_private, $export_end=PHP_INT_MAX)
         // data, except that we need to change the start and end times, keeping
         // the original duration.   We get the start time from the recurrence
         // id of the first member of the series, which we saved earlier on.
-        $duration = $row['end_time'] - $row['start_time'];
-        $row['start_time'] = $start_row['start_time'];
-        $row['end_time'] = $row['start_time'] + $duration;
-        $row['end_date'] = min($export_end, $row['end_date']);
-        $text_body['content'] = create_details_body($row, FALSE, $keep_private);
-        $html_body['content'] = "<table>" . create_details_body($row, TRUE, $keep_private) . "</table>";
-        $ical_events[$replace_index] = create_ical_event("REQUEST", $row, $text_body, $html_body, NULL, TRUE);
+        $duration = $entry->end_time - $entry->start_time;
+        $entry->start_time = $start_row->start_time;
+        $entry->end_time = $entry->start_time + $duration;
+        $entry->end_date = min($export_end, $entry->end_date);
+        $text_body['content'] = create_details_body($entry, FALSE, $keep_private);
+        $html_body['content'] = "<table>" . create_details_body($entry, TRUE, $keep_private) . "</table>";
+        $ical_events[$replace_index] = create_ical_event("REQUEST", $entry, $text_body, $html_body, NULL, TRUE);
         // Clear the $replace_index now that we've found an original entry
         unset ($replace_index);
       }
@@ -517,13 +523,13 @@ function export_icalendar(&$res, $keep_private, $export_end=PHP_INT_MAX)
       if ($keep_private)
       {
         // We don't want private details appearing in the .ics file
-        $start_row['name'] = $private_text;
-        $start_row['create_by'] = $private_text;
+        $start_row->name = $private_text;
+        $start_row->create_by = $private_text;
       }
-      $duration = $start_row['end_time'] - $start_row['start_time'];
-      $start_row['start_time'] = $missing_entry;
-      $start_row['end_time'] = $start_row['start_time'] + $duration;
-      $start_row['ical_recur_id'] = gmdate(RFC5545_FORMAT . '\Z', $missing_entry);
+      $duration = $start_row->end_time - $start_row->start_time;
+      $start_row->start_time = $missing_entry;
+      $start_row->end_time = $start_row->start_time + $duration;
+      $start_row->ical_recur_id = gmdate(RFC5545_FORMAT . '\Z', $missing_entry);
       $ical_events[] = create_ical_event("CANCEL", $start_row, NULL, NULL, NULL, FALSE);
     }
   }

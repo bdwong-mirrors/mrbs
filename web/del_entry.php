@@ -48,18 +48,18 @@ if ($info = mrbsGetBookingInfo($id, FALSE, TRUE))
   // check that the user is allowed to delete this entry
   if (isset($action) && ($action="reject"))
   {
-    $authorised = auth_book_admin($user, $info['room_id']);
+    $authorised = auth_book_admin($user, $info->room_id);
   }
   else
   {
-    $authorised = getWritable($info['create_by'], $user, $info['room_id']);
+    $authorised = getWritable($info->create_by, $user, $info->room_id);
   }
   if ($authorised)
   {
-    $day   = strftime("%d", $info["start_time"]);
-    $month = strftime("%m", $info["start_time"]);
-    $year  = strftime("%Y", $info["start_time"]);
-    $area  = mrbsGetRoomArea($info["room_id"]);
+    $day   = strftime("%d", $info->start_time);
+    $month = strftime("%m", $info->start_time);
+    $year  = strftime("%Y", $info->start_time);
+    $area  = mrbsGetRoomArea($info->room_id);
     // Get the settings for this area (they will be needed for policy checking)
     get_area_settings($area);
     
@@ -73,9 +73,9 @@ if ($info = mrbsGetBookingInfo($id, FALSE, TRUE))
       // If this is an individual entry of a series then force the entry_type
       // to be a changed entry, so that when we create the iCalendar object we know that
       // we only want to delete the individual entry
-      if (!$series && ($mail_previous['rep_type'] != REP_NONE))
+      if (!$series && ($mail_previous->rep_type != REP_NONE))
       {
-        $mail_previous['entry_type'] = ENTRY_RPT_CHANGED;
+        $mail_previous->entry_type = ENTRY_RPT_CHANGED;
       }
     }
     sql_begin();
@@ -97,7 +97,7 @@ if ($info = mrbsGetBookingInfo($id, FALSE, TRUE))
         // of del_entry is fixed) 
         if ($series)
         {
-          $mail_previous['id'] = $mail_previous['repeat_id'];
+          $mail_previous->id = $mail_previous->repeat_id;
         }
         if (isset($action) && ($action == "reject"))
         {

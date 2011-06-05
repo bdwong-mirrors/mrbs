@@ -1,6 +1,8 @@
 <?php
 // $Id$
 
+require_once "booking_entry.inc";
+
 /** mrbsCheckFree()
  * 
  * Check to see if the time period specified is free
@@ -242,7 +244,7 @@ function mrbsDelEntry($user, $id, $series, $all)
  *   0        - An error occured while inserting the entry
  *   non-zero - The entry's ID
  */
-function mrbsCreateEntry($table, $data)
+function mrbsCreateEntry($table, BookingEntry $data)
 {
   global $standard_fields, $db_tbl_prefix;
   
@@ -268,7 +270,7 @@ function mrbsCreateEntry($table, $data)
       case 'status':
       case 'ical_sequence':
         $sql_col[] = $key;
-        $sql_val[] = $data[$key];
+        $sql_val[] = $data->$key;
         break;
         
       // strings  
@@ -279,22 +281,22 @@ function mrbsCreateEntry($table, $data)
       case 'ical_uid':
       case 'ical_recur_id':
         $sql_col[] = $key;
-        $sql_val[] = "'" . addslashes($data[$key]) . "'";
+        $sql_val[] = "'" . addslashes($data->$key) . "'";
         break;
       
       // special case - rep_opt
       case 'rep_opt':
         // pgsql doesn't like empty strings
         $sql_col[] = $key;
-        $sql_val[] = (empty($data[$key])) ? "'0'" : "'" . addslashes($data[$key]) . "'";
+        $sql_val[] = (empty($data->$key)) ? "'0'" : "'" . addslashes($data->$key) . "'";
         break;
           
       // special case - rep_num_weeks
       case 'rep_num_weeks':
-        if (!empty($data[$key]))
+        if (!empty($data->$key))
         {
           $sql_col[] = $key;
-          $sql_val[] = $data[$key];
+          $sql_val[] = $data->$key;
         }
         break;
         
@@ -308,7 +310,7 @@ function mrbsCreateEntry($table, $data)
           switch ($field['nature'])
           {
             case 'integer':
-              if (!isset($data[$key]) || ($data[$key] === ''))
+              if (!isset($data->$key) || ($data->$key === ''))
               {
                 // Try and set it to NULL when we can because there will be cases when we
                 // want to distinguish between NULL and 0 - especially when the field
@@ -317,17 +319,17 @@ function mrbsCreateEntry($table, $data)
               }
               else
               {
-                $value = $data[$key];
+                $value = $data->$key;
               }
               break;
             default:
-              if (!isset($data[$key]))
+              if (!isset($data->$key))
               {
                 $value = '';
               }
               else
               {
-                $value = "'" . addslashes($data[$key]) . "'";
+                $value = "'" . addslashes($data->$key) . "'";
               }
               break;
           } // switch ($field_natures[$key])
@@ -364,21 +366,21 @@ function mrbsCreateEntry($table, $data)
  *   0        - An error occured while inserting the entry
  *   non-zero - The entry's ID
  */
-function mrbsCreateSingleEntry($data)
+function mrbsCreateSingleEntry(BookingEntry $data)
 {
   global $tbl_entry;
   
   // make sure that any entry is of a positive duration
   // this is to trap potential negative duration created when DST comes
   // into effect
-  if ($data['end_time'] > $data['start_time'])
+  if ($data->end_time > $data->start_time)
   {
     // If we're about to create an individual member of a series for the first time
     // then give it a recurrence-id equivalent to the start time.  It should always
     // keep this value, even if the start time is subsequently changed.
-    if ($data['entry_type'] == ENTRY_RPT_ORIGINAL)
+    if ($data->entry_type == ENTRY_RPT_ORIGINAL)
     {
-      $data['ical_recur_id'] = gmdate(RFC5545_FORMAT . '\Z', $data['start_time']);
+      $data->ical_recur_id = gmdate(RFC5545_FORMAT . '\Z', $data->start_time);
     }
     $result = mrbsCreateEntry($tbl_entry, $data);
     return $result;
@@ -399,7 +401,7 @@ function mrbsCreateSingleEntry($data)
  *   0        - An error occured while inserting the entry
  *   non-zero - The entry's ID
  */
-function mrbsCreateRepeatEntry($data)
+function mrbsCreateRepeatEntry(BookingEntry $data)
 {
   global $tbl_repeat;
   
@@ -595,15 +597,15 @@ function mrbsGetRepeatEntryList($time, $enddate, $rep_type, $rep_opt,
  *                          FALSE if the id refers to the entry table
  *
  */
-function mrbsCreateRepeatingEntrys($data)
+function mrbsCreateRepeatingEntrys(BookingEntry $data)
 {
   global $max_rep_entrys;
   
   $result = array('id' => 0, 'series' => FALSE);
    
-  $reps = mrbsGetRepeatEntryList($data['start_time'], $data['end_date'],
-                                 $data['rep_type'], $data['rep_opt'],
-                                 $max_rep_entrys, $data['rep_num_weeks']);
+  $reps = mrbsGetRepeatEntryList($data->start_time, $data->end_date,
+                                 $data->rep_type, $data->rep_opt,
+                                 $max_rep_entrys, $data->rep_num_weeks);
 
   if (count($reps) > $max_rep_entrys)
   {
@@ -613,8 +615,8 @@ function mrbsCreateRepeatingEntrys($data)
 
   if (empty($reps))
   {
-    $data['entry_type'] = ENTRY_SINGLE;
-    $data['repeat_id'] = 0;
+    $data->entry_type = ENTRY_SINGLE;
+    $data->repeat_id = 0;
     $id = mrbsCreateSingleEntry($data);
     $result['id'] = $id;
     $result['series'] = FALSE;
@@ -625,18 +627,18 @@ function mrbsCreateRepeatingEntrys($data)
     
   if ($id)
   {
-    $data['entry_type'] = ENTRY_RPT_ORIGINAL;
-    $data['repeat_id'] = $id;
-    $starttime = $data['start_time'];
-    $endtime = $data['end_time'];
+    $data->entry_type = ENTRY_RPT_ORIGINAL;
+    $data->repeat_id = $id;
+    $starttime = $data->start_time;
+    $endtime = $data->end_time;
     for ($i = 0; $i < count($reps); $i++)
     {
       // calculate diff each time and correct where events
       // cross DST
       $diff = $endtime - $starttime;
       $diff += cross_dst($reps[$i], $reps[$i] + $diff);  
-      $data['start_time'] = $reps[$i];
-      $data['end_time'] = $reps[$i] + $diff;
+      $data->start_time = $reps[$i];
+      $data->end_time = $reps[$i] + $diff;
 
       $ent_id = mrbsCreateSingleEntry($data);
     }
@@ -942,8 +944,12 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
       sql_free($res);
     }
   }
-  
-  return $row;
+  $data = new BookingEntry;
+  foreach( $row as $key => $value ) {
+    // TODO assign fields explicitly
+    $data->$key = $value;
+  }
+  return $data;
 }
 
 function mrbsGetRoomArea($id)

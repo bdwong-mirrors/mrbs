@@ -34,7 +34,7 @@ function create_details_row($label, $value, $as_html=FALSE, $class='')
 //                              note that $data must already have had values substituted
 //                              for private fields
 //    $room_disabled  boolean   if TRUE then a note will be added that the room is disabled
-function create_details_body($data, $as_html=FALSE, $keep_private=FALSE, $room_disabled=FALSE)
+function create_details_body(BookingEntry $data, $as_html=FALSE, $keep_private=FALSE, $room_disabled=FALSE)
 {
   global $enable_periods, $confirmation_enabled, $approval_enabled;
   global $is_private_field, $standard_fields, $typel;
@@ -42,18 +42,18 @@ function create_details_body($data, $as_html=FALSE, $keep_private=FALSE, $room_d
   global $tbl_entry;
   
   // Get the duration if we haven't got it already
-  if (!isset($data['duration']))
+  if (!isset($data->duration))
   {
     // We will translate the units later
-    $d = get_duration($data['start_time'], $data['end_time'], FALSE);
-    $data['duration'] = $d['duration'];
-    $data['dur_units'] = $d['dur_units'];
+    $d = get_duration($data->start_time, $data->end_time, FALSE);
+    $data->duration = $d['duration'];
+    $data->dur_units = $d['dur_units'];
   }
   
   // Set a rep_type if it hasn't been
-  if (!isset($data['rep_type']))
+  if (!isset($data->rep_type))
   {
-    $data['rep_type'] = REP_NONE;
+    $data->rep_type = REP_NONE;
   }
   
   // Go throuh each of the columns and for each of them that can be made private
@@ -80,13 +80,13 @@ function create_details_body($data, $as_html=FALSE, $keep_private=FALSE, $room_d
       case 'repeat_info_time':
       case 'repeat_info_user':
       case 'repeat_info_text':
-        $data[$key] = ($keep_private && $is_private_field["entry.$key"]) ? $private_text : $data[$key];
+        $data->$key = ($keep_private && $is_private_field["entry.$key"]) ? $private_text : $data->$key;
         break;
       
       default:
         if (!in_array($key, $standard_fields['entry']))
         {
-          $data[$key] = ($keep_private && $is_private_field["entry.$key"]) ? $private_text : $data[$key];
+          $data->$key = ($keep_private && $is_private_field["entry.$key"]) ? $private_text : $data->$key;
         }
         break;
     }
@@ -97,21 +97,21 @@ function create_details_body($data, $as_html=FALSE, $keep_private=FALSE, $room_d
   $tbody .= ($as_html) ? "<tbody>\n" : "";
   // Description
   $class = ($keep_private & $is_private_field['entry.description']) ? "private" : "";
-  $tbody .= create_details_row(get_vocab("description"), $data['description'], $as_html, $class);
+  $tbody .= create_details_row(get_vocab("description"), $data->description, $as_html, $class);
   // Confirmation status
   if ($confirmation_enabled)
   {
-    $value = ($data['status'] & STATUS_TENTATIVE) ? get_vocab("tentative") : get_vocab("confirmed");
+    $value = ($data->status & STATUS_TENTATIVE) ? get_vocab("tentative") : get_vocab("confirmed");
     $tbody .= create_details_row(get_vocab("confirmation_status"), $value, $as_html);
   }
   // Approval status
   if ($approval_enabled)
   {
-    $value = ($data['status'] & STATUS_AWAITING_APPROVAL) ? get_vocab("awaiting_approval") : get_vocab("approved");
+    $value = ($data->status & STATUS_AWAITING_APPROVAL) ? get_vocab("awaiting_approval") : get_vocab("approved");
     $tbody .= create_details_row(get_vocab("approval_status"), $value, $as_html);
   }
   // Room
-  $value = $data['area_name'] . " - " . $data['room_name'];
+  $value = $data->area_name . " - " . $data->room_name;
   if ($room_disabled)
   {
     $value .= ($as_html) ? "<span class=\"note\">" : "";
@@ -122,33 +122,33 @@ function create_details_body($data, $as_html=FALSE, $keep_private=FALSE, $room_d
   // Start date
   if ($enable_periods)
   {
-    list($start_period, $start_date) =  period_date_string($data['start_time']);
+    list($start_period, $start_date) =  period_date_string($data->start_time);
   }
   else
   {
-    $start_date = time_date_string($data['start_time']);
+    $start_date = time_date_string($data->start_time);
   }
   $tbody .= create_details_row(get_vocab("start_date"), $start_date, $as_html);
   // Duration
-  $tbody .= create_details_row(get_vocab("duration"), $data['duration'] . " " . get_vocab($data['dur_units']), $as_html);
+  $tbody .= create_details_row(get_vocab("duration"), $data->duration . " " . get_vocab($data->dur_units), $as_html);
   // End date
   if ($enable_periods)
   {
-    list( , $end_date) =  period_date_string($data['end_time'], -1);
+    list( , $end_date) =  period_date_string($data->end_time, -1);
   }
   else
   {
-    $end_date = time_date_string($data['end_time']);
+    $end_date = time_date_string($data->end_time);
   }
   $tbody .= create_details_row(get_vocab("end_date"), $end_date, $as_html);
   // Type
-  $value = (empty($typel[$data['type']])) ? "?${data['type']}?" : $typel[$data['type']];
+  $value = (empty($typel[$data->type])) ? "?".$data->type."?" : $typel[$data->type];
   $tbody .= create_details_row(get_vocab("type"), $value, $as_html);
   // Created by
   $class = ($keep_private && $is_private_field['entry.create_by']) ? "private" : "";
-  $tbody .= create_details_row(get_vocab("createdby"), $data['create_by'], $as_html, $class);
+  $tbody .= create_details_row(get_vocab("createdby"), $data->create_by, $as_html, $class);
   // Last updated
-  $tbody .= create_details_row(get_vocab("lastupdate"), time_date_string($data['last_updated']), $as_html);
+  $tbody .= create_details_row(get_vocab("lastupdate"), time_date_string($data->last_updated), $as_html);
   // The custom fields
   $fields = sql_field_info($tbl_entry);
   foreach ($fields as $field)
@@ -164,41 +164,41 @@ function create_details_body($data, $as_html=FALSE, $keep_private=FALSE, $room_d
       {
         if ($keep_private && $is_private_field["entry.$key"])
         {
-          $value = $data[$key];  // Will have been set previously
+          $value = $data->$key;  // Will have been set previously
         }
         else
         {
-          $value = empty($data[$key]) ? get_vocab("no") : get_vocab("yes");
+          $value = empty($data->$key) ? get_vocab("no") : get_vocab("yes");
         }
       }
       // Otherwise output a string
       else
       {
-        $value = (isset($data[$key])) ? $data[$key] : "&nbsp;"; 
+        $value = (isset($data->$key)) ? $data->$key : "&nbsp;"; 
       }
       $class = ($keep_private && $is_private_field["entry.$key"]) ? "private" : "";
       $tbody .= create_details_row($label, $value, $as_html, $class);
     }
   }
   // Repeat type
-  $tbody .= create_details_row(get_vocab("rep_type"), get_vocab("rep_type_" . $data['rep_type']), $as_html);
+  $tbody .= create_details_row(get_vocab("rep_type"), get_vocab("rep_type_" . $data->rep_type), $as_html);
   // Repeat details
-  if($data['rep_type'] != REP_NONE)
+  if($data->rep_type != REP_NONE)
   {
-    if (($data['rep_type'] == REP_WEEKLY) || ($data['rep_type'] == REP_N_WEEKLY))
+    if (($data->rep_type == REP_WEEKLY) || ($data->rep_type == REP_N_WEEKLY))
     {
-      if ($data['rep_type'] == REP_N_WEEKLY)
+      if ($data->rep_type == REP_N_WEEKLY)
       {
         // Repeat number of weeks
-        $tbody .= create_details_row(get_vocab("rep_num_weeks")." ".get_vocab("rep_for_nweekly"), $data['rep_num_weeks'], $as_html);
+        $tbody .= create_details_row(get_vocab("rep_num_weeks")." ".get_vocab("rep_for_nweekly"), $data->rep_num_weeks, $as_html);
       }
       // Repeat days
-      $tbody .= create_details_row(get_vocab("rep_rep_day"), get_rep_day_list($data['rep_opt']), $as_html);
+      $tbody .= create_details_row(get_vocab("rep_rep_day"), get_rep_day_list($data->rep_opt), $as_html);
     }
     // Repeat end date
     $tbody .= create_details_row(get_vocab("rep_end_date"),
                                  utf8_strftime($strftime_format['date'],
-                                 $data['end_date']),
+                                 $data->end_date),
                                  $as_html);
   }
   $tbody .= ($as_html) ? "</tbody>\n" : "";

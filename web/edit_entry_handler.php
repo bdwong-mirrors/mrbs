@@ -4,6 +4,7 @@
 require_once "defaultincludes.inc";
 require_once "mrbs_sql.inc";
 require_once "functions_ical.inc";
+require_once "booking_entry.inc";
 
 // Get non-standard form variables
 $create_by = get_form_var('create_by', 'string');
@@ -525,7 +526,7 @@ if ($valid_booking)
     }
     
     // Assemble the data in an array
-    $data = array();
+    $data = new BookingEntry;
    
     // We need to work out whether this is the original booking being modified,
     // because, if it is, we keep the ical_uid and increment the ical_sequence.
@@ -547,68 +548,68 @@ if ($valid_booking)
     {
       // This is an existing booking which has been changed.   Keep the
       // original ical_uid and increment the sequence number.
-      $data['ical_uid'] = $ical_uid;
-      $data['ical_sequence'] = $ical_sequence + 1;
+      $data->ical_uid = $ical_uid;
+      $data->ical_sequence = $ical_sequence + 1;
     }
     else
     {
       // This is a new booking.   We generate a new ical_uid and start
       // the sequence at 0.
-      $data['ical_uid'] = generate_global_uid($name);
-      $data['ical_sequence'] = 0;
+      $data->ical_uid = generate_global_uid($name);
+      $data->ical_sequence = 0;
     }
-    $data['start_time'] = $starttime;
-    $data['end_time'] = $endtime;
-    $data['room_id'] = $room_id;
-    $data['create_by'] = $create_by;
-    $data['name'] = $name;
-    $data['type'] = $type;
-    $data['description'] = $description;
-    $data['status'] = $status;
+    $data->start_time = $starttime;
+    $data->end_time = $endtime;
+    $data->room_id = $room_id;
+    $data->create_by = $create_by;
+    $data->name = $name;
+    $data->type = $type;
+    $data->description = $description;
+    $data->status = $status;
     foreach ($custom_fields as $key => $value)
     {
-      $data[$key] = $value;
+      $data->$key = $value;
     }
-    $data['rep_type'] = $rep_type;
+    $data->rep_type = $rep_type;
     if ($edit_type == "series")
     {
-      $data['end_date'] = $end_date;
-      $data['rep_opt'] = $rep_opt;
-      $data['rep_num_weeks'] = (isset($rep_num_weeks)) ? $rep_num_weeks : 0;
+      $data->end_date = $end_date;
+      $data->rep_opt = $rep_opt;
+      $data->rep_num_weeks = (isset($rep_num_weeks)) ? $rep_num_weeks : 0;
     }
     else
     {
       if ($repeat_id > 0)
       {
         // Mark changed entry in a series with entry_type:
-        $data['entry_type'] = ENTRY_RPT_CHANGED;
+        $data->entry_type = ENTRY_RPT_CHANGED;
         // Keep the same recurrence id (this never changes once an entry has been made)
-        $data['ical_recur_id'] = $ical_recur_id;
+        $data->ical_recur_id = $ical_recur_id;
       }
       else
       {
-        $data['entry_type'] = ENTRY_SINGLE;
+        $data->entry_type = ENTRY_SINGLE;
       }
-      $data['entry_type'] = ($repeat_id > 0) ? ENTRY_RPT_CHANGED : ENTRY_SINGLE;
-      $data['repeat_id'] = $repeat_id;
+      $data->entry_type = ($repeat_id > 0) ? ENTRY_RPT_CHANGED : ENTRY_SINGLE;
+      $data->repeat_id = $repeat_id;
     }
     // The following elements are needed for email notifications
-    $data['duration'] = $duration;
-    $data['dur_units'] = $dur_units;
+    $data->duration = $duration;
+    $data->dur_units = $dur_units;
 
     if ($edit_type == "series")
     {
       $booking = mrbsCreateRepeatingEntrys($data);
       $new_id = $booking['id'];
       $is_repeat_table = $booking['series'];
-      $data['id'] = $new_id;  // Add in the id now we know it
+      $data->id = $new_id;  // Add in the id now we know it
     }
     else
     {
       // Create the entry:
       $new_id = mrbsCreateSingleEntry($data);
       $is_repeat_table = FALSE;
-      $data['id'] = $new_id;  // Add in the id now we know it
+      $data->id = $new_id;  // Add in the id now we know it
     }
     
     // Send an email if neccessary, provided that the entry creation was successful
@@ -631,8 +632,8 @@ if ($valid_booking)
                    LIMIT 1";
           $res = sql_query($sql);
           $row = sql_row_keyed($res, 0);
-          $data['room_name'] = $row['room_name'];
-          $data['area_name'] = $row['area_name'];
+          $data->room_name = $row['room_name'];
+          $data->area_name = $row['area_name'];
         }
         // If this is a modified entry then get the previous entry data
         // so that we can highlight the changes
@@ -649,7 +650,7 @@ if ($valid_booking)
         }
         else
         {
-          $mail_previous = array();
+          $mail_previous = new BookingEntry;
         }
         // Send the email
         $result = notifyAdminOnBooking($data, $mail_previous, !isset($id), $is_repeat_table);
