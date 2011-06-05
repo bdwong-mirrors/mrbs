@@ -513,8 +513,8 @@ function create_body(BookingEntry $data, $compare, $series, $action, $as_html=FA
     if ($confirmation_enabled)
     {                        
       // Confirmation status:
-      $new_status = ($data->status & STATUS_TENTATIVE) ? get_mail_vocab("tentative") : get_mail_vocab("confirmed");
-      $old_status = ($mail_previous->status & STATUS_TENTATIVE) ? get_mail_vocab("tentative") : get_mail_vocab("confirmed");
+      $new_status = $data->is_tentative() ? get_mail_vocab("tentative") : get_mail_vocab("confirmed");
+      $old_status = $mail_previous->is_tentative() ? get_mail_vocab("tentative") : get_mail_vocab("confirmed");
       $body .= create_body_table_row (get_mail_vocab("confirmation_status"),
                                       $new_status,
                                       $old_status,
@@ -524,8 +524,8 @@ function create_body(BookingEntry $data, $compare, $series, $action, $as_html=FA
     if ($approval_enabled)
     {                        
       // Approval status:
-      $new_status = ($data->status & STATUS_AWAITING_APPROVAL) ? get_mail_vocab("awaiting_approval") : get_mail_vocab("approved");
-      $old_status = ($mail_previous->status & STATUS_AWAITING_APPROVAL) ? get_mail_vocab("awaiting_approval") : get_mail_vocab("approved");
+      $new_status = $data->is_awaiting_approval() ? get_mail_vocab("awaiting_approval") : get_mail_vocab("approved");
+      $old_status = $mail_previous->is_awaiting_approval() ? get_mail_vocab("awaiting_approval") : get_mail_vocab("approved");
       $body .= create_body_table_row (get_mail_vocab("approval_status"),
                                       $new_status,
                                       $old_status,

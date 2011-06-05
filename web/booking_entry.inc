@@ -35,5 +35,15 @@ class BookingEntry {
   var $room_admin_email;
 
   // TODO integrate custom_fields differently
+
+  function is_private() {
+    return $this->status & STATUS_PRIVATE;
+  }
+  function is_tentative() {
+    return $this->status & STATUS_TENTATIVE;
+  }
+  function is_awaiting_approval() {
+    return $this->status & STATUS_AWAITING_APPROVAL;
+  }
 }
 

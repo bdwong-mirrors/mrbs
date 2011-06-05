@@ -131,7 +131,7 @@ $room_disabled = $row->room_disabled || $row->area_disabled;
 // Get the status
 $status = $row->status;
 // Work out whether this event should be kept private
-$private = $row->status & STATUS_PRIVATE;
+$private = $row->is_private();
 $writeable = getWritable($row->create_by, $user, $row->room_id);
 $keep_private = (is_private_event($private) && !$writeable);
 
