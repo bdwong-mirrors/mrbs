@@ -395,12 +395,16 @@ function mrbsCheckPolicy(&$booking, $ignore, $repignore, $delete=FALSE)
  */
 function mrbsDelEntry($user, $id, $series, $all)
 {
-  global $tbl_entry, $tbl_repeat;
+  global $tbl_entry, $tbl_repeat, $tbl_room_entry;
   
   $start_times = array();
 
   // Get the repeat_id and room_id for this entry
-  $res = sql_query("SELECT repeat_id, room_id FROM $tbl_entry WHERE id=$id LIMIT 1");
+  $res = sql_query("SELECT E.repeat_id, RE.room_id
+                      FROM $tbl_entry E, $tbl_room_entry RE
+                     WHERE E.id=$id
+                       AND E.id=RE.entry_id
+                     LIMIT 1");
   if (($res === FALSE) || (sql_count($res) <= 0))
   {
     return FALSE;
@@ -409,7 +413,11 @@ function mrbsDelEntry($user, $id, $series, $all)
   $repeat_id = $row['repeat_id'];
   $room_id = $row['room_id'];
 
-  $sql = "SELECT start_time, end_time, room_id, create_by, id, entry_type FROM $tbl_entry WHERE ";
+  $sql = "SELECT start_time, end_time, RE.room_id,
+                 create_by, E.id, entry_type
+            FROM $tbl_entry E, $tbl_room_entry RE
+           WHERE E.id=RE.entry_id
+             AND ";
    
   if ($series)
   {
@@ -417,7 +425,7 @@ function mrbsDelEntry($user, $id, $series, $all)
   }
   else
   {
-    $sql .= "id=$id";
+    $sql .= "E.id=$id";
   }
 
   $res = sql_query($sql);
@@ -428,7 +436,7 @@ function mrbsDelEntry($user, $id, $series, $all)
     {
       continue;
     }
-   
+
     if ($series && $row['entry_type'] == ENTRY_RPT_CHANGED && !$all)
     {
       continue;
@@ -440,7 +448,8 @@ function mrbsDelEntry($user, $id, $series, $all)
     {
       continue;
     }
-   
+    
+    // No need to delete the room_entry row as the delete will cascade through
     if (sql_command("DELETE FROM $tbl_entry WHERE id=" . $row['id']) > 0)
     {
       $start_times[] = $row['start_time'];
@@ -450,6 +459,7 @@ function mrbsDelEntry($user, $id, $series, $all)
   if ($repeat_id > 0 &&
       sql_query1("SELECT count(*) FROM $tbl_entry WHERE repeat_id=$repeat_id") == 0)
   {
+    // No need to delete the room_repeat row as the delete will cascade through
     sql_command("DELETE FROM $tbl_repeat WHERE id=$repeat_id");
   }
 
