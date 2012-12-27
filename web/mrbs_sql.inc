@@ -17,7 +17,7 @@ define('INTERVAL_DAY', 0);
  */
 function mrbsCheckFree(&$booking, $ignore, $repignore)
 {
-  global $tbl_entry;
+  global $tbl_entry, $tbl_room_entry;
   global $enable_periods, $periods, $twentyfourhour_format;
   global $strftime_format;
 
@@ -27,11 +27,12 @@ function mrbsCheckFree(&$booking, $ignore, $repignore)
   get_area_settings(get_area($room_id));
 
   // Select any meetings which overlap for this room:
-  $sql = "SELECT id, name, start_time, create_by, status
-            FROM $tbl_entry
+  $sql = "SELECT E.id, name, start_time, create_by, status
+            FROM $tbl_entry E, $tbl_room_entry RE
            WHERE start_time < ${booking['end_time']}
              AND end_time > ${booking['start_time']}
-             AND room_id = $room_id";
+             AND E.id = RE.entry_id
+             AND RE.room_id = $room_id";
 
   if ($ignore > 0)
   {
@@ -103,7 +104,7 @@ function mrbsCheckFree(&$booking, $ignore, $repignore)
 function checkInterval(&$booking, $ignore, $repignore, $interval_type='day', $only_area=FALSE)
 {
   global $max_per_interval_global, $max_per_interval_area;
-  global $tbl_entry, $tbl_room;
+  global $tbl_entry, $tbl_room, $tbl_room_entry;
   
   // Get the area id.   We only need to do this once as all bookings will be
   // in the same area.
@@ -172,11 +173,12 @@ function checkInterval(&$booking, $ignore, $repignore, $interval_type='day', $on
     if (!isset($existing[$location][$interval_type][$interval_start]))
     {
       $sql = "SELECT COUNT(*)
-                FROM $tbl_entry E, $tbl_room R
+                FROM $tbl_entry E, $tbl_room R, $tbl_room_entry RE
                WHERE E.start_time<$interval_end
                  AND E.end_time>$interval_start
                  AND E.create_by='" . sql_escape($booking['create_by']) . "'
-                 AND E.room_id=R.id
+                 AND E.id = RE.entry_id
+                 AND RE.room_id=R.id
                  AND R.disabled=0";
       if ($only_area)
       {
@@ -190,7 +192,7 @@ function checkInterval(&$booking, $ignore, $repignore, $interval_type='day', $on
       {
         $sql .= " AND E.repeat_id <> $repignore";
       }
-      
+
       $existing[$location][$interval_type][$interval_start] = sql_query1($sql);
       if ($existing[$location][$interval_type][$interval_start] < 0)
       {
