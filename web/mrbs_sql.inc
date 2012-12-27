@@ -469,6 +469,7 @@ function mrbsDelEntry($user, $id, $series, $all)
 function mrbsCreateEntry($table, $data)
 {
   global $standard_fields, $db_tbl_prefix;
+  global $tbl_entry, $tbl_room_entry, $tbl_room_repeat;
   
   $sql_col = array();
   $sql_val = array();
@@ -483,6 +484,10 @@ function mrbsCreateEntry($table, $data)
     {
       switch ($key)
       {
+        // fields to ignore
+        case 'room_id':  // We'll do something else later
+          break;
+          
         // integers
         case 'start_time':
         case 'end_time':
@@ -491,7 +496,6 @@ function mrbsCreateEntry($table, $data)
         case 'rep_type':
         case 'month_absolute':
         case 'end_date':
-        case 'room_id':
         case 'status':
         case 'ical_sequence':
           $sql_col[] = $key;
@@ -569,6 +573,7 @@ function mrbsCreateEntry($table, $data)
     } // if
   } // foreach
   
+  sql_begin();
   // Note that we don't have to escape or quote the fieldname
   // thanks to the restriction on custom field names
   $sql = "INSERT INTO $table (" . implode(', ',$sql_col) . ") VALUES (" . implode(', ',$sql_val) . ")";
@@ -580,7 +585,25 @@ function mrbsCreateEntry($table, $data)
     fatal_error(TRUE, get_vocab("fatal_db_error"));
   }
 
-  return sql_insert_id($table, "id");
+  $id = sql_insert_id($table, "id");
+  
+  if ($table == $tbl_entry)
+  {
+    $sql = "INSERT INTO $tbl_room_entry (room_id, entry_id) VALUES(${data['room_id']}, $id)";
+  }
+  else
+  {
+    $sql = "INSERT INTO $tbl_room_repeat (room_id, repeat_id) VALUES(${data['room_id']}, $id)";
+  }
+  if (sql_command($sql) < 0)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(TRUE, get_vocab("fatal_db_error"));
+  }
+  
+  sql_commit();
+  
+  return $id;
 }
 
 /** mrbsCreateSingleEntry()
