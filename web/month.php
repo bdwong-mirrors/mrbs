@@ -181,10 +181,11 @@ $all_day = preg_replace("/ /", "&nbsp;", get_vocab("all_day"));
 // This data will be retrieved day-by-day fo the whole month
 for ($day_num = 1; $day_num<=$days_in_month; $day_num++)
 {
-  $sql = "SELECT start_time, end_time, id, name, type,
+  $sql = "SELECT start_time, end_time, E.id, name, type,
                  repeat_id, status, create_by
-            FROM $tbl_entry
-           WHERE room_id=$room
+            FROM $tbl_entry E, $tbl_room_entry RE
+           WHERE E.id = RE.entry_id
+             AND RE.room_id=$room
              AND start_time <= $pm7[$day_num] AND end_time > $am7[$day_num]
         ORDER BY start_time";
 
