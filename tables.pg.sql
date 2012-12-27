@@ -112,6 +112,19 @@ CREATE TABLE mrbs_entry
 create index mrbs_idxStartTime on mrbs_entry(start_time);
 create index mrbs_idxEndTime on mrbs_entry(end_time);
 
+CREATE TABLE mrbs_room_entry
+(
+  id             serial primary key,
+  room_id        int DEFAULT NULL REFERENCES mrbs_room(id)
+                    ON UPDATE CASCADE
+                    ON DELETE CASCADE,
+  entry_id       int DEFAULT NULL REFERENCES mrbs_entry(id)
+                    ON UPDATE CASCADE
+                    ON DELETE CASCADE
+);
+create index mrbs_idxRoomEntryRoom on mrbs_room_entry(room_id);
+create index mrbs_idxRoomEntryEntry on mrbs_room_entry(entry_id);
+
 CREATE TABLE mrbs_repeat
 (
   id             serial primary key,
@@ -137,6 +150,19 @@ CREATE TABLE mrbs_repeat
   ical_uid       varchar(255) DEFAULT '' NOT NULL,
   ical_sequence  smallint DEFAULT 0 NOT NULL
 );
+
+CREATE TABLE mrbs_room_repeat
+(
+  id             serial primary key,
+  room_id        int DEFAULT NULL REFERENCES mrbs_room(id)
+                    ON UPDATE CASCADE
+                    ON DELETE CASCADE,
+  repeat_id      int DEFAULT NULL REFERENCES mrbs_repeat(id)
+                    ON UPDATE CASCADE
+                    ON DELETE CASCADE
+);
+create index mrbs_idxRoomRepeatRoom on mrbs_room_repeat(room_id);
+create index mrbs_idxRoomRepeatEntry on mrbs_room_repeat(repeat_id);
 
 CREATE TABLE mrbs_variables
 (
@@ -165,6 +191,6 @@ CREATE TABLE mrbs_users
 );
 
 INSERT INTO mrbs_variables (variable_name, variable_content)
-  VALUES ('db_version', '35');
+  VALUES ('db_version', '36');
 INSERT INTO mrbs_variables (variable_name, variable_content)
   VALUES ('local_db_version', '1');

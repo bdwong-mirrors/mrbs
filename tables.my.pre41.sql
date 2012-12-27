@@ -102,6 +102,22 @@ CREATE TABLE mrbs_entry
   KEY idxEndTime   (end_time)
 );
 
+CREATE TABLE mrbs_room_entry
+(
+  id             int NOT NULL auto_increment,
+  room_id        int DEFAULT NULL,
+  entry_id       int DEFAULT NULL,
+  FOREIGN KEY (room_id) REFERENCES mrbs_room(id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  FOREIGN KEY (entry_id) REFERENCES mrbs_entry(id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  PRIMARY KEY (id),
+  KEY idxRoomEntryRoom  (room_id),
+  KEY idxRoomEntryEntry (entry_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE mrbs_repeat
 (
   id             int NOT NULL auto_increment,
@@ -129,6 +145,22 @@ CREATE TABLE mrbs_repeat
   
   PRIMARY KEY (id)
 );
+
+CREATE TABLE IF NOT EXISTS mrbs_room_repeat
+(
+  id             int NOT NULL auto_increment,
+  room_id        int DEFAULT NULL,
+  repeat_id      int DEFAULT NULL,
+  FOREIGN KEY (room_id) REFERENCES mrbs_room(id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  FOREIGN KEY (repeat_id) REFERENCES mrbs_repeat(id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  PRIMARY KEY (id),
+  KEY idxRoomRepeatRoom   (room_id),
+  KEY idxRoomRepeatRepeat (repeat_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE mrbs_variables
 (
@@ -163,6 +195,6 @@ CREATE TABLE mrbs_users
 );
 
 INSERT INTO mrbs_variables (variable_name, variable_content)
-  VALUES ( 'db_version', '35');
+  VALUES ( 'db_version', '36');
 INSERT INTO mrbs_variables (variable_name, variable_content)
   VALUES ( 'local_db_version', '1');
