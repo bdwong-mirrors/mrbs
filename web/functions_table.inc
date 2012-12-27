@@ -747,6 +747,7 @@ function day_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight
   // Note: The predicate clause 'start_time <= ...' is an equivalent but simpler
   // form of the original which had 3 BETWEEN parts. It selects all entries which
   // occur on or cross the current day.
+  // ORDER BY necessary so that multiple bookings appear in the right order
   $sql = "SELECT RE.room_id AS room_id, start_time, end_time, name, repeat_id,
                  E.id AS entry_id, type,
                  E.description AS entry_description, status,
@@ -757,8 +758,9 @@ function day_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight
              AND R.area_id = $area
              AND R.disabled = 0
              AND start_time <= $pm7 AND end_time > $am7
-        ORDER BY start_time";   // necessary so that multiple bookings appear in the right order
-
+        ORDER BY start_time
+           LIMIT $n_rooms";
+  
   $res = sql_query($sql);
   if (! $res)
   {
