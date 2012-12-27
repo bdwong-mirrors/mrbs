@@ -1099,6 +1099,7 @@ function mrbsApproveEntry($id, $series)
 function mrbsGetBookingInfo($id, $series, $silent=FALSE)
 {
   global $tbl_entry, $tbl_repeat, $tbl_room, $tbl_area;
+  global $tbl_room_repeat, $tbl_room_entry;
 
   // Check that we've got an id
   if (!isset($id))
@@ -1114,7 +1115,10 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
     }
   }
 
-  $table = ($series) ? $tbl_repeat : $tbl_entry;
+  $table          = ($series) ? $tbl_repeat      : $tbl_entry;
+  $junction_table = ($series) ? $tbl_room_repeat : $tbl_room_entry;
+  $junction_id    = ($series) ? 'repeat_id'      : 'entry_id';
+  
   $table_fields = sql_field_info($table);
 
   // Build an array of the field names in the repeat table so that
@@ -1126,7 +1130,8 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
     $rep_fields[$field['name']] = 1;
   }
 
-  $terms = array("M.room_name",
+  $terms = array("J.room_id",
+                 "M.room_name",
                  "M.room_admin_email",
                  "M.area_id",
                  "A.area_name",
@@ -1140,6 +1145,12 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
   {
     switch ($field['name'])
     {
+      // This is just a temporary measure while we're still developing the
+      // code to use the new junction tables.   It can be removed as soon as
+      // we have removed the room_id columns from the entry and repeat tables
+      case 'room_id':
+        break;
+        
       // these fields only exist in the entry table
       case 'entry_type':
       case 'repeat_id':
@@ -1181,8 +1192,9 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
   }
   
   $sql = "SELECT " . implode(", ",$terms)."
-            FROM $table T, $tbl_room M, $tbl_area A
-           WHERE T.room_id = M.id
+            FROM $table T, $tbl_room M, $tbl_area A, $junction_table J
+           WHERE T.id=J.$junction_id
+             AND J.room_id = M.id
              AND M.area_id = A.id
              AND T.id=$id";
 
