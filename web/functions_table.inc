@@ -1000,7 +1000,7 @@ function week_table_innerhtml($day, $month, $year, $room, $area, $timetohighligh
   global $resolution, $morningstarts, $morningstarts_minutes, $eveningends, $eveningends_minutes;
   global $weekstarts, $strftime_format;
 
-  // Check that we've gor a valid, enabled room
+  // Check that we've got a valid, enabled room
   $sql = "SELECT COUNT(*)
             FROM $tbl_room R, $tbl_area A
            WHERE R.id=$room
