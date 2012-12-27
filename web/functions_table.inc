@@ -994,7 +994,7 @@ function day_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight
 
 function week_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight=NULL)
 {
-  global $tbl_entry, $tbl_room, $tbl_area;
+  global $tbl_entry, $tbl_room, $tbl_area, $tbl_room_entry;
   global $enable_periods, $periods;
   global $times_along_top, $row_labels_both_sides, $column_labels_both_ends;
   global $resolution, $morningstarts, $morningstarts_minutes, $eveningends, $eveningends_minutes;
@@ -1071,11 +1071,12 @@ function week_table_innerhtml($day, $month, $year, $room, $area, $timetohighligh
 
   for ($j = 0; $j<=($num_of_days-1) ; $j++)
   {
-    $sql = "SELECT room_id, start_time, end_time, type, name, status, repeat_id,
-                   id AS entry_id, description AS entry_description,
+    $sql = "SELECT RE.room_id AS room_id, start_time, end_time, type, name, status, repeat_id,
+                   E.id AS entry_id, description AS entry_description,
                    create_by AS entry_create_by
-              FROM $tbl_entry
-             WHERE room_id = $room
+              FROM $tbl_entry E, $tbl_room_entry RE
+             WHERE E.id = RE.entry_id
+               AND RE.room_id = $room
                AND start_time <= $pm7[$j] AND end_time > $am7[$j]
           ORDER BY start_time";   // necessary so that multiple bookings appear in the right order
 
