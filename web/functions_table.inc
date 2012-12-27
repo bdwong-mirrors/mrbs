@@ -683,7 +683,7 @@ function get_query_strings($area, $room, $month, $day, $year, $s)
 
 function day_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight=NULL)
 {
-  global $tbl_entry, $tbl_room, $tbl_area;
+  global $tbl_entry, $tbl_room, $tbl_area, $tbl_room_entry;
   global $enable_periods, $periods;
   global $times_along_top, $row_labels_both_sides, $column_labels_both_ends;
   global $resolution, $morningstarts, $morningstarts_minutes, $eveningends, $eveningends_minutes;
@@ -747,12 +747,13 @@ function day_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight
   // Note: The predicate clause 'start_time <= ...' is an equivalent but simpler
   // form of the original which had 3 BETWEEN parts. It selects all entries which
   // occur on or cross the current day.
-  $sql = "SELECT R.id AS room_id, start_time, end_time, name, repeat_id,
+  $sql = "SELECT RE.room_id AS room_id, start_time, end_time, name, repeat_id,
                  E.id AS entry_id, type,
                  E.description AS entry_description, status,
                  E.create_by AS entry_create_by
-            FROM $tbl_entry E, $tbl_room R
-           WHERE E.room_id = R.id
+            FROM $tbl_entry E, $tbl_room R, $tbl_room_entry RE
+           WHERE E.id = RE.entry_id
+             AND RE.room_id = R.id
              AND R.area_id = $area
              AND R.disabled = 0
              AND start_time <= $pm7 AND end_time > $am7
