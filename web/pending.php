@@ -207,15 +207,16 @@ echo "<h1>" . get_vocab("pending") . "</h1>\n";
 
 $sql_approval_enabled = some_area_predicate('approval_enabled');
         
-$sql = "SELECT E.id, E.name, E.room_id, E.start_time, E.create_by, " .
+$sql = "SELECT E.id, E.name, RE.room_id, E.start_time, E.create_by, " .
                sql_syntax_timestamp_to_unix("E.timestamp") . " AS last_updated,
                E.reminded, E.repeat_id,
                M.room_name, M.area_id, A.area_name, A.enable_periods,
                E.info_time AS entry_info_time, E.info_user AS entry_info_user,
                T.info_time AS repeat_info_time, T.info_user AS repeat_info_user
-          FROM $tbl_room AS M, $tbl_area AS A, $tbl_entry AS E
+          FROM $tbl_room AS M, $tbl_area AS A, $tbl_room_entry AS RE, $tbl_entry AS E
      LEFT JOIN $tbl_repeat AS T ON E.repeat_id=T.id
-         WHERE E.room_id = M.id
+         WHERE E.id=RE.entry_id
+           AND RE.room_id = M.id
            AND M.area_id = A.id
            AND M.disabled = 0
            AND A.disabled = 0
