@@ -82,7 +82,6 @@ CREATE TABLE mrbs_entry
   end_time       int DEFAULT '0' NOT NULL,
   entry_type     int DEFAULT '0' NOT NULL,
   repeat_id      int DEFAULT '0' NOT NULL,
-  room_id        int DEFAULT '1' NOT NULL,
   timestamp      timestamp,
   create_by      varchar(80) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT '' NOT NULL,
   name           varchar(80) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT '' NOT NULL,
@@ -126,7 +125,6 @@ CREATE TABLE mrbs_repeat
   rep_type       int DEFAULT '0' NOT NULL,
   end_date       int DEFAULT '0' NOT NULL,
   rep_opt        varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT '' NOT NULL,
-  room_id        int DEFAULT '1' NOT NULL,
   timestamp      timestamp,
   create_by      varchar(80) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT '' NOT NULL,
   name           varchar(80) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT '' NOT NULL,
@@ -195,6 +193,6 @@ CREATE TABLE mrbs_users
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO mrbs_variables (variable_name, variable_content)
-  VALUES ( 'db_version', '36');
+  VALUES ( 'db_version', '37');
 INSERT INTO mrbs_variables (variable_name, variable_content)
   VALUES ( 'local_db_version', '1');
