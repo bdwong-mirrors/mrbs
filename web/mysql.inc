@@ -335,6 +335,28 @@ function sql_mysql_syntax_bitwise_xor($db_conn = null)
 }
 
 
+// Returns the syntax for a DELETE FROM $target_table which is
+// joined on $join_table using $join_condition with deleted
+// rows selected by a $where_condition
+function sql_mysql_syntax_delete_from_with_join($target_table, $join_table,
+                                                $join_condition, $where_condition,
+                                                $db_conn = null)
+{
+  $conditions = array('join_condition', 'where_condition');
+  foreach ($conditions as $condition)
+  {
+    $$condition = str_replace("$target_table.", "T.", $$condition);
+    $$condition = str_replace("$join_table.", "J.", $$condition);
+  }
+  $sql = "DELETE FROM T
+                USING `$target_table` T
+           INNER JOIN `$join_table` J
+                   ON $join_condition
+                WHERE $where_condition";
+  return $sql;
+}
+
+
 // Returns the name of a field.
 function sql_mysql_field_name($result, $index, $db_conn = null)
 {

@@ -446,7 +446,7 @@ function sql_syntax_timestamp_to_unix($fieldname)
 // Returns the syntax for a case sensitive string "equals" function
 // (By default MySQL is case insensitive, whereas PostgreSQL is not)
 // NB:  This function is also assumed to do a strict comparison, ie
-// take account of training spaces.  (The '=' comparison in MySQL allows
+// take account of trailing spaces.  (The '=' comparison in MySQL allows
 // trailing spaces, eg 'john' = 'john ').
 function sql_syntax_casesensitive_equals($fieldname, $s)
 {
@@ -562,6 +562,33 @@ function sql_syntax_bitwise_xor()
 
   $f = "sql_${db_sys}_syntax_bitwise_xor";
   return $f($db_conn);
+}
+
+
+// Returns the syntax for a DELETE FROM $target_table which is
+// joined on $join_table using $join_condition with deleted
+// rows selected by a $where_condition
+function sql_syntax_delete_from_with_join($target_table, $join_table,
+                                          $join_condition, $where_condition)
+{
+  if (func_num_args() > 4)
+  {
+    $handle = func_get_arg(4);
+    $db_sys = $handle['system'];
+    $db_conn = $handle['connection'];
+  }
+  else
+  {
+    global $dbsys;
+
+    $db_sys = $dbsys;
+    $db_conn = null;
+  }
+  
+  $f = "sql_${db_sys}_syntax_delete_from_with_join";
+  return $f($target_table, $join_table,
+            $join_condition, $where_condition,
+            $db_conn);
 }
 
 

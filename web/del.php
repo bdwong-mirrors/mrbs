@@ -20,13 +20,35 @@ if ($type == "room")
   if (isset($confirm))
   {
     // They have confirmed it already, so go blast!
+    $commands = array();
+    
+    // First take out all appointments for this room in the entry table
+    // Good for PG
+    $commands[] = sql_syntax_delete_from_with_join($tbl_entry,
+                                                   $tbl_room_entry,
+                                                   "$tbl_entry.id=$tbl_room_entry.entry_id",
+                                                   "$tbl_room_entry.room_id=$room");
+    
+    // Then take out all appointments for this room in the repeat table
+    $commands[] = sql_syntax_delete_from_with_join($tbl_repeat,
+                                                   $tbl_room_repeat,
+                                                   "$tbl_repeat.id=$tbl_room_repeat.repeat_id",
+                                                   "$tbl_room_repeat.room_id=$room");
+        
+    // Finally take out the room itself (the room_entry and room_repeat
+    // rows will be deleted by a cascade operation when the corresponding
+    // rows from the entry/repeat/room tables are deleted)
+    $commands[] = "DELETE FROM $tbl_room WHERE id=$room";
+    
     sql_begin();
-    // First take out all appointments for this room
-    sql_command("delete from $tbl_entry where room_id=$room");
-    sql_command("delete from $tbl_repeat where room_id=$room");
-   
-    // Now take out the room itself
-    sql_command("delete from $tbl_room where id=$room");
+    foreach ($commands as $command)
+    {
+      if (sql_command($command) < 0)
+      {
+        trigger_error(sql_error(), E_USER_WARNING);
+        fatal_error(TRUE, get_vocab("fatal_db_error"));
+      }
+    }
     sql_commit();
    
     // Go back to the admin page
@@ -39,7 +61,10 @@ if ($type == "room")
     // We tell them how bad what they're about to do is
     // Find out how many appointments would be deleted
    
-    $sql = "select name, start_time, end_time from $tbl_entry where room_id=$room";
+    $sql = "SELECT name, start_time, end_time
+              FROM $tbl_entry E, $tbl_room_entry RE
+             WHERE E.id=RE.entry_id
+               AND RE.room_id=$room";
     $res = sql_query($sql);
     if (! $res)
     {
@@ -79,11 +104,11 @@ if ($type == "area")
 {
   // We are only going to let them delete an area if there are
   // no rooms. its easier
-  $n = sql_query1("select count(*) from $tbl_room where area_id=$area");
+  $n = sql_query1("SELECT COUNT(*) FROM $tbl_room WHERE area_id=$area");
   if ($n == 0)
   {
     // OK, nothing there, lets blast it away
-    sql_command("delete from $tbl_area where id=$area");
+    sql_command("DELETE FROM $tbl_area WHERE id=$area");
    
     // Redirect back to the admin page
     header("Location: admin.php");
