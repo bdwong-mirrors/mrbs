@@ -245,25 +245,21 @@ function get_approvers_email($room_id)
 // Returns an empty string in the case of an error
 function get_area_admin_email($id, $series=FALSE)
 {
-  global $tbl_room, $tbl_area, $tbl_entry, $tbl_repeat;
+  global $tbl_room, $tbl_area, $tbl_room_entry, $tbl_room_repeat;
   
-  $id_table = ($series) ? "rep" : "e";
-  
-  $sql = "SELECT a.area_admin_email ";
-  $sql .= "FROM $tbl_room r, $tbl_area a, $tbl_entry e ";
-  // If this is a repeating entry...
-  if ($id_table == 'rep')
-  {
-    // ...use the repeat table
-    $sql .= ", $tbl_repeat rep ";
-  }
-  $sql .= "WHERE ${id_table}.id=$id 
-             AND r.id=${id_table}.room_id
-             AND a.id=r.area_id
-           LIMIT 1";
+  $sql  = "SELECT A.area_admin_email
+             FROM $tbl_room R, $tbl_area A, " .
+                  (($series) ? "$tbl_room_repeat" : "$tbl_room_entry") . " J
+            WHERE " . (($series) ? "J.repeat_id" : "J.entry_id") . "=$id
+              AND R.id=J.room_id
+              AND A.id=R.area_id
+            LIMIT 1";
+            
   $email = sql_query1($sql);
+  
   if ($email == -1)
   {
+    trigger_error(sql_error(), E_USER_NOTICE);
     $email = "";
   }
   return $email;
@@ -275,24 +271,20 @@ function get_area_admin_email($id, $series=FALSE)
 // Returns an empty string in the case of an error
 function get_room_admin_email($id, $series=FALSE)
 {
-  global $tbl_room, $tbl_entry, $tbl_repeat;
+  global $tbl_room, $tbl_room_entry, $tbl_room_repeat;
   
-  $id_table = ($series) ? "rep" : "e";
-  
-  $sql = "SELECT r.room_admin_email ";
-  $sql .= "FROM $tbl_room r, $tbl_entry e ";
-  // If this is a repeating entry...
-  if ($id_table == 'rep')
-  {
-    // ...use the repeat table
-    $sql .= ", $tbl_repeat rep ";
-  }
-  $sql .= "WHERE ${id_table}.id=$id 
-             AND r.id=${id_table}.room_id
-           LIMIT 1";
+  $sql  = "SELECT R.room_admin_email
+             FROM $tbl_room R, " .
+                  (($series) ? "$tbl_room_repeat" : "$tbl_room_entry") . " J
+            WHERE " . (($series) ? "J.repeat_id" : "J.entry_id") . "=$id
+              AND R.id=J.room_id
+            LIMIT 1";
+            
   $email = sql_query1($sql);
+  
   if ($email == -1)
   {
+    trigger_error(sql_error(), E_USER_NOTICE);
     $email = "";
   }
   return $email;
