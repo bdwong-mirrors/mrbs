@@ -228,7 +228,9 @@ foreach ($fields as $field)
 }
 
 $sql_pred .= ") AND E.end_time > $now";
-$sql_pred .= " AND E.room_id = R.id AND R.area_id = A.id";
+$sql_pred .= " AND E.id=RE.entry_id
+               AND RE.room_id=R.id
+               AND R.area_id=A.id";
 
 
 // If we're not an admin (they are allowed to see everything), then we need
@@ -263,7 +265,7 @@ if (!$is_admin)
 if (!isset($total))
 {
   $total = sql_query1("SELECT count(*)
-                       FROM $tbl_entry E, $tbl_room R, $tbl_area A
+                       FROM $tbl_entry E, $tbl_room R, $tbl_area A, $tbl_room_entry RE
                        WHERE $sql_pred");
 }
 if ($total < 0)
@@ -295,7 +297,7 @@ if (!$ajax_capable || $ajax)
   // Now we set up the "real" query
   $sql = "SELECT E.id AS entry_id, E.create_by, E.name, E.description, E.start_time,
                  R.area_id, A.enable_periods
-            FROM $tbl_entry E, $tbl_room R, $tbl_area A
+            FROM $tbl_entry E, $tbl_room R, $tbl_area A, $tbl_room_entry RE
            WHERE $sql_pred
         ORDER BY E.start_time asc";
   // If it's an Ajax query we want everything.  Otherwise we use LIMIT to just get
