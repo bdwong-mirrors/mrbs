@@ -208,7 +208,7 @@ if (isset($action) && ($action == "export"))
       // If it's a series we want the repeat information
       $sql .= ", T.rep_type, T.end_date, T.rep_opt, T.rep_num_weeks";
     }
-    $sql .= " FROM $tbl_area A, $tbl_room R, $tbl_entry E";
+    $sql .= " FROM $tbl_area A, $tbl_room R, $tbl_entry E, $tbl_room_entry RE";
     if ($series)
     {
       $sql .= ", $tbl_repeat T"
@@ -220,7 +220,8 @@ if (isset($action) && ($action == "export"))
       $sql .= " WHERE E.id=$id";
     }
     
-    $sql .= " AND E.room_id=R.id
+    $sql .= " AND E.id=RE.entry_id
+              AND RE.room_id=R.id
               AND R.area_id=A.id";
               
     if ($series)
