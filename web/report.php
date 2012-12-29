@@ -1203,14 +1203,16 @@ if ($phase == 2)
     // information in order to construct the recurrence rule
     $sql .= ", T.rep_type, T.end_date, T.rep_opt, T.rep_num_weeks";
   }
-  $sql .= " FROM $tbl_area A, $tbl_room R, $tbl_entry E";
+  $sql .= " FROM $tbl_area A, $tbl_room R, $tbl_room_entry RE, $tbl_entry E";
   if ($output_format == OUTPUT_ICAL)
   {
     // We do a LEFT JOIN because we still want the single entries, ie the ones
     // that won't have a match in the repeat table
     $sql .= " LEFT JOIN $tbl_repeat T ON E.repeat_id=T.id";
   }
-  $sql .= " WHERE E.room_id=R.id AND R.area_id=A.id"
+  $sql .= " WHERE E.id=RE.entry_id"
+        . " AND RE.room_id=R.id"
+        . " AND R.area_id=A.id"
         . " AND E.start_time < $report_end AND E.end_time > $report_start";
   if ($output_format == OUTPUT_ICAL)
   {
