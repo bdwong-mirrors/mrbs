@@ -8,7 +8,7 @@ function print_theme_header($day, $month, $year, $area, $room)
 {
   global $mrbs_company, $mrbs_company_logo, $mrbs_company_url, $mrbs_company_more_info,
          $search_str, $locale_warning;
-  global $tbl_entry, $tbl_room, $tbl_area;
+  global $tbl_entry, $tbl_room, $tbl_area, $tbl_room_entry;
   global $PHP_SELF, $HTTP_HOST, $QUERY_STRING;
   global $view_week_number, $weekstarts, $times_along_top, $periods, $enable_periods;
   global $auth, $max_level;
@@ -158,10 +158,11 @@ function print_theme_header($day, $month, $year, $area, $room)
           // Find out how many bookings are awaiting approval
           // (but only for areas where approval is required)
           $sql = "SELECT COUNT(*)
-                    FROM $tbl_entry E, $tbl_room R, $tbl_area A
+                    FROM $tbl_entry E, $tbl_room R, $tbl_area A, $tbl_room_entry RE
                    WHERE (status&" . STATUS_AWAITING_APPROVAL . " != 0)
-                     AND E.room_id = R.id
-                     AND R.area_id = A.id
+                     AND E.id=RE.entry_id
+                     AND RE.room_id=R.id
+                     AND R.area_id=A.id
                      AND R.disabled = 0
                      AND A.disabled = 0
                      AND $sql_approval_enabled";
