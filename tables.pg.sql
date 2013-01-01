@@ -113,16 +113,14 @@ create index mrbs_idxEndTime on mrbs_entry(end_time);
 
 CREATE TABLE mrbs_room_entry
 (
-  id             serial primary key,
-  room_id        int DEFAULT NULL REFERENCES mrbs_room(id)
+  room_id        int NOT NULL REFERENCES mrbs_room(id)
                     ON UPDATE CASCADE
                     ON DELETE CASCADE,
-  entry_id       int DEFAULT NULL REFERENCES mrbs_entry(id)
+  entry_id       int NOT NULL REFERENCES mrbs_entry(id)
                     ON UPDATE CASCADE
-                    ON DELETE CASCADE
+                    ON DELETE CASCADE,
+  PRIMARY KEY (room_id, entry_id)
 );
-create index mrbs_idxRoomEntryRoom on mrbs_room_entry(room_id);
-create index mrbs_idxRoomEntryEntry on mrbs_room_entry(entry_id);
 
 CREATE TABLE mrbs_repeat
 (
@@ -151,16 +149,14 @@ CREATE TABLE mrbs_repeat
 
 CREATE TABLE mrbs_room_repeat
 (
-  id             serial primary key,
-  room_id        int DEFAULT NULL REFERENCES mrbs_room(id)
+  room_id        int NOT NULL REFERENCES mrbs_room(id)
                     ON UPDATE CASCADE
                     ON DELETE CASCADE,
-  repeat_id      int DEFAULT NULL REFERENCES mrbs_repeat(id)
+  repeat_id      int NOT NULL REFERENCES mrbs_repeat(id)
                     ON UPDATE CASCADE
-                    ON DELETE CASCADE
+                    ON DELETE CASCADE,
+  PRIMARY KEY (room_id, repeat_id)
 );
-create index mrbs_idxRoomRepeatRoom on mrbs_room_repeat(room_id);
-create index mrbs_idxRoomRepeatEntry on mrbs_room_repeat(repeat_id);
 
 CREATE TABLE mrbs_variables
 (

@@ -101,20 +101,17 @@ CREATE TABLE mrbs_entry
   KEY idxEndTime   (end_time)
 );
 
-CREATE TABLE mrbs_room_entry
+CREATE TABLE IF NOT EXISTS mrbs_room_entry
 (
-  id             int NOT NULL auto_increment,
-  room_id        int DEFAULT NULL,
-  entry_id       int DEFAULT NULL,
+  room_id        int NOT NULL,
+  entry_id       int NOT NULL,
   FOREIGN KEY (room_id) REFERENCES mrbs_room(id)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
   FOREIGN KEY (entry_id) REFERENCES mrbs_entry(id)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
-  PRIMARY KEY (id),
-  KEY idxRoomEntryRoom  (room_id),
-  KEY idxRoomEntryEntry (entry_id)
+  PRIMARY KEY (room_id, entry_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE mrbs_repeat
@@ -146,18 +143,15 @@ CREATE TABLE mrbs_repeat
 
 CREATE TABLE IF NOT EXISTS mrbs_room_repeat
 (
-  id             int NOT NULL auto_increment,
-  room_id        int DEFAULT NULL,
-  repeat_id      int DEFAULT NULL,
+  room_id        int NOT NULL,
+  repeat_id      int NOT NULL,
   FOREIGN KEY (room_id) REFERENCES mrbs_room(id)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
   FOREIGN KEY (repeat_id) REFERENCES mrbs_repeat(id)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
-  PRIMARY KEY (id),
-  KEY idxRoomRepeatRoom   (room_id),
-  KEY idxRoomRepeatRepeat (repeat_id)
+  PRIMARY KEY (room_id, repeat_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE mrbs_variables
