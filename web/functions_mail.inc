@@ -259,7 +259,7 @@ function get_area_admin_email($id, $series=FALSE)
   
   if ($email == -1)
   {
-    trigger_error(sql_error(), E_USER_NOTICE);
+    // The result can be -1 if there's an error or if there are no matching rows
     $email = "";
   }
   return $email;
@@ -284,7 +284,7 @@ function get_room_admin_email($id, $series=FALSE)
   
   if ($email == -1)
   {
-    trigger_error(sql_error(), E_USER_NOTICE);
+    // The result can be -1 if there's an error or if there are no matching rows
     $email = "";
   }
   return $email;
