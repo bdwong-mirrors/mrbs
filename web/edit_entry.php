@@ -720,24 +720,6 @@ if (isset($id))
       
       // These columns cannot be made private  
       case 'room_id':
-        // We need to preserve the original room_id for existing bookings and pass
-        // it through to edit_entry_handler.    We need this because we need to know
-        // in edit_entry_handler which room contains the original booking.   It's
-        // possible in this form to select multiple rooms, or even change the room.
-        // We will need to know which booking is the "original booking" because the 
-        // original booking will keep the same ical_uid and have the ical_sequence
-        // incremented, whereas new bookings will have a new ical_uid and start with 
-        // an ical_sequence of 0.    (If there is more than one room when we get to
-        // edit_entry_handler and the original room isn't among them, then we will 
-        // just have to make an arbitrary choice as to which is the room containing
-        // the original booking.)
-        // NOTE:  We do not set the original_room_id if we are copying an entry,
-        // because when we are copying we are effectively making a new entry and
-        // so we want edit_entry_handler to assign a new UID, etc.
-        if (!$copy)
-        {
-          $original_room_id = $row['room_id'];
-        }
       case 'ical_uid':
       case 'ical_sequence':
       case 'ical_recur_id':
@@ -1332,25 +1314,18 @@ if (($edit_type == "series") && $repeats_allowed)
     <input type="hidden" name="rep_id" value="<?php echo $rep_id?>">
     <input type="hidden" name="edit_type" value="<?php echo $edit_type?>">
     <?php
-    // The original_room_id will only be set if this was an existing booking.
-    // If it is an existing booking then edit_entry_handler needs to know the
-    // original room id and the ical_uid and the ical_sequence, because it will
-    // have to keep the ical_uid and increment the ical_sequence for the room that
-    // contained the original booking.  If it's a new booking it will generate a new
+    // If this is an existing booking then edit_entry_handler needs to know the
+    // the ical_uid and the ical_sequence, because it will have to keep the ical_uid
+    // and increment the ical_sequence.  If it's a new booking it will generate a new
     // ical_uid and start the ical_sequence at 0.
-    if (isset($original_room_id))
+    if(isset($id) && !isset($copy))
     {
-      echo "<input type=\"hidden\" name=\"original_room_id\" ".
-        "value=\"$original_room_id\">\n";
       echo "<input type=\"hidden\" name=\"ical_uid\" value=\"".
         htmlspecialchars($ical_uid)."\">\n";
       echo "<input type=\"hidden\" name=\"ical_sequence\" value=\"".
         htmlspecialchars($ical_sequence)."\">\n";
       echo "<input type=\"hidden\" name=\"ical_recur_id\" value=\"".
         htmlspecialchars($ical_recur_id)."\">\n";
-    }
-    if(isset($id) && !isset($copy))
-    {
       echo "<input type=\"hidden\" name=\"id\" value=\"$id\">\n";
     }
 

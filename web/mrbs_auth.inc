@@ -207,18 +207,19 @@ function auth_can_edit_user($user, $target)
   return 0;
 }
 
-// auth_book_admin($user, $room)
+// auth_book_admin($user, $rooms)
 //
 // Checks whether $user is allowed has booking administration rights
-// for $room - ie is allowed to modify and delete other people's bookings
-// and to approve bookings.
+// for $rooms - ie is allowed to modify and delete other people's bookings
+// and to approve bookings.  $rooms can be either a single room or an 
+// array of rooms.
 //
-// At the moment $room is ignored, but is passed here so that later
+// At the moment $rooms is ignored, but is passed here so that later
 // it can be enhanced to provide fine-grained permissions
 // 
 // Returns:  TRUE if the user is allowed has booking admin rights for
-//           the room; otherwise FALSE
-function auth_book_admin($user, $room)
+//           *all* the rooms; otherwise FALSE
+function auth_book_admin($user, $rooms)
 {
   return (authGetUserLevel($user) >= 2);
 }

@@ -801,7 +801,7 @@ function create_addresses($data, $action)
   // for this room, then get the email addresses of the approvers
   if (!in_array($action, array("delete", "reject")) &&
       $approval_enabled && 
-      !auth_book_admin($user, $data['room_id']))
+      !auth_book_admin($user, $data['rooms']))
   {
     $to[] = get_approvers_email($data['room_id']);
   }

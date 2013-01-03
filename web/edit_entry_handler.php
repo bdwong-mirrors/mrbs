@@ -50,7 +50,6 @@ $formvars = array('create_by'          => 'string',
                   'all_day'            => 'string',  // bool, actually
                   'type'               => 'string',
                   'rooms'              => 'array',
-                  'original_room_id'   => 'int',
                   'ical_uid'           => 'string',
                   'ical_sequence'      => 'int',
                   'ical_recur_id'      => 'string',
@@ -246,9 +245,6 @@ if ($ajax && $commit)
       {
         case 'rooms':
           $rooms = array($old_booking['room_id']);
-          break;
-        case 'original_room_id':
-          $$var = $old_booking['room_id'];
           break;
         case 'private':
           $$var = $old_booking['status'] & STATUS_PRIVATE;
@@ -576,73 +572,68 @@ if (isset($rep_type) && ($rep_type != REP_NONE) &&
 // (4) Assemble the booking data
 // -----------------------------
 
-// Assemble an array of bookings, one for each room
-$bookings = array();
-foreach ($rooms as $room_id)
+$booking = array();
+$booking['rooms'] = $rooms;
+$booking['create_by'] = $create_by;
+$booking['name'] = $name;
+$booking['type'] = $type;
+$booking['description'] = $description;
+$booking['start_time'] = $starttime;
+$booking['end_time'] = $endtime;
+$booking['rep_type'] = $rep_type;
+$booking['rep_opt'] = $rep_opt;
+$booking['rep_num_weeks'] = $rep_num_weeks;
+$booking['end_date'] = $end_date;
+$booking['ical_uid'] = $ical_uid;
+$booking['ical_sequence'] = $ical_sequence;
+$booking['ical_recur_id'] = $ical_recur_id;
+if ($booking['rep_type'] == REP_MONTHLY)
 {
-  $booking = array();
-  $booking['create_by'] = $create_by;
-  $booking['name'] = $name;
-  $booking['type'] = $type;
-  $booking['description'] = $description;
-  $booking['room_id'] = $room_id;
-  $booking['start_time'] = $starttime;
-  $booking['end_time'] = $endtime;
-  $booking['rep_type'] = $rep_type;
-  $booking['rep_opt'] = $rep_opt;
-  $booking['rep_num_weeks'] = $rep_num_weeks;
-  $booking['end_date'] = $end_date;
-  $booking['ical_uid'] = $ical_uid;
-  $booking['ical_sequence'] = $ical_sequence;
-  $booking['ical_recur_id'] = $ical_recur_id;
-  if ($booking['rep_type'] == REP_MONTHLY)
+  if ($month_type == REP_MONTH_ABSOLUTE)
   {
-    if ($month_type == REP_MONTH_ABSOLUTE)
-    {
-      $booking['month_absolute'] = $month_absolute;
-    }
-    else
-    {
-      $booking['month_relative'] = $month_relative;
-    }
+    $booking['month_absolute'] = $month_absolute;
   }
-
-  // Do the custom fields
-  foreach ($custom_fields as $key => $value)
+  else
   {
-    $booking[$key] = $value;
+    $booking['month_relative'] = $month_relative;
   }
-
-  // Set the various bits in the status field as appropriate
-  // (Note: the status field is the only one that can differ by room)
-  $status = 0;
-  // Privacy status
-  if ($isprivate)
-  {
-    $status |= STATUS_PRIVATE;  // Set the private bit
-  }
-  // If we are using booking approvals then we need to work out whether the
-  // status of this booking is approved.   If the user is allowed to approve
-  // bookings for this room, then the status will be approved, since they are
-  // in effect immediately approving their own booking.  Otherwise the booking
-  // will need to approved.
-  if ($approval_enabled && !auth_book_admin($user, $room_id))
-  {
-    $status |= STATUS_AWAITING_APPROVAL;
-  }
-  // Confirmation status
-  if ($confirmation_enabled && !$confirmed)
-  {
-    $status |= STATUS_TENTATIVE;
-  }
-  $booking['status'] = $status;
-  
-  $bookings[] = $booking;
 }
+
+// Do the custom fields
+foreach ($custom_fields as $key => $value)
+{
+  $booking[$key] = $value;
+}
+
+// Set the various bits in the status field as appropriate
+// (Note: the status field is the only one that can differ by room)
+$status = 0;
+// Privacy status
+if ($isprivate)
+{
+  $status |= STATUS_PRIVATE;  // Set the private bit
+}
+// If we are using booking approvals then we need to work out whether the
+// status of this booking is approved.   If the user is allowed to approve
+// bookings for all rooms requested, then the status will be approved, since
+// they are in effect immediately approving their own booking.  Otherwise the
+// booking will need to approved.
+if ($approval_enabled && !auth_book_admin($user, $rooms))
+{
+  $status |= STATUS_AWAITING_APPROVAL;
+}
+// Confirmation status
+if ($confirmation_enabled && !$confirmed)
+{
+  $status |= STATUS_TENTATIVE;
+}
+$booking['status'] = $status;
+  
+
 
 $just_check = $ajax && function_exists('json_encode') && !$commit;
 $this_id = (isset($id)) ? $id : NULL;
-$result = mrbsMakeBookings($bookings, $this_id, $just_check, $skip, $original_room_id, $need_to_send_mail, $edit_type);
+$result = mrbsMakeBooking($booking, $this_id, $just_check, $skip, $need_to_send_mail, $edit_type);
 
 // If we weren't just checking and this was a succesful booking and
 // we were editing an existing booking, then delete the old booking
