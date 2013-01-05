@@ -4,24 +4,36 @@
 
 // Returns a string containg a single line of data details, or if $as_html is set
 // a table row of details.   The first column is the $label and the second column
-// the $value.   $class is an optional class name which can be applied to the 
+// the $values.   $class is an optional class name which can be applied to the 
 // second column.
-function create_details_row($label, $value, $as_html=FALSE, $class='')
+//
+// $values can be either a single value or an array of values
+function create_details_row($label, $values, $as_html=FALSE, $class='')
 {
   $result = '';
+  
+  if (!is_array($values))
+  {
+    $values = array($values);
+  }
+  $n_values = count($values);
+  
   if ($as_html)
   {
-    $result .= "<tr>\n";
-    $result .= "<td>$label:</td>\n";
-    $result .= "<td" .
-               ((!empty($class)) ? " class=\"$class\"" : "") .
-               ">" . mrbs_nl2br(htmlspecialchars($value)) . "</td>\n";
-    $result .= "</tr>\n";
+    for ($i=0; $i<$n_values; $i++)
+    {
+      $result .= "<tr>\n";
+      $result .= "<td>" . (($i==0) ? "$label:" : "") . "</td>\n";
+      $result .= "<td" .
+                 ((!empty($class)) ? " class=\"$class\"" : "") .
+                 ">" . mrbs_nl2br(htmlspecialchars($values[$i])) . "</td>\n";
+      $result .= "</tr>\n";
+    }
   }
   else
   {
     // Some of the vocab strings contain &nbsp;
-    $result .= str_replace('&nbsp;', ' ', $label) . ": $value\n";
+    $result .= str_replace('&nbsp;', ' ', $label) . ": " . implode(', ', $values) . "\n";
   }
   return $result;
 }
@@ -57,40 +69,13 @@ function create_details_body($data, $as_html=FALSE, $keep_private=FALSE, $room_d
     $data['rep_type'] = REP_NONE;
   }
   
-  // Go throuh each of the columns and for each of them that can be made private
+  // Go through each of the columns and for each of them that can be made private
   // substitute the private text if the user is not allowed to see the data
   $private_text = "[" . get_vocab("private") . "]";
-  
+
   foreach ($data as $key => $value)
   {
-    // We could just test each column against $is_private_field["entry.$key"]
-    // but restricting the test to the columns below guards against the possibility
-    // that somebody has accidentally configured a 'system' field to be private
-    switch ($key)
-    { 
-      case 'name':
-      case 'description':
-      case 'create_by':
-      case 'room_name':
-      case 'area_name':
-      case 'type':
-      case 'room_id':
-      case 'entry_info_time':
-      case 'entry_info_user':
-      case 'entry_info_text':
-      case 'repeat_info_time':
-      case 'repeat_info_user':
-      case 'repeat_info_text':
-        $data[$key] = ($keep_private && isset($is_private_field["entry.$key"]) && $is_private_field["entry.$key"]) ? $private_text : $data[$key];
-        break;
-      
-      default:
-        if (!in_array($key, $standard_fields['entry']))
-        {
-          $data[$key] = ($keep_private && isset($is_private_field["entry.$key"]) && $is_private_field["entry.$key"]) ? $private_text : $data[$key];
-        }
-        break;
-    }
+    $data[$key] = ($keep_private && isset($is_private_field["entry.$key"]) && $is_private_field["entry.$key"]) ? $private_text : $data[$key];
   }
 
   
@@ -112,7 +97,7 @@ function create_details_body($data, $as_html=FALSE, $keep_private=FALSE, $room_d
     $tbody .= create_details_row(get_vocab("approval_status"), $value, $as_html);
   }
   // Room
-  $value = $data['area_name'] . " - " . $data['room_name'];
+  $value = $data['room_names'];
   if ($room_disabled)
   {
     $value .= " (" . get_vocab("disabled") . ")";

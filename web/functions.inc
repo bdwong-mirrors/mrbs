@@ -1567,6 +1567,26 @@ function get_area($room)
 }
 
 
+// Gets all the rooms for a booking
+//    $id       The id of the booking
+//    $series   Whether the id refers to the repeat table or the entry table
+function get_rooms($id, $series)
+{
+  global $tbl_room_entry, $tbl_room_repeat;
+  
+  $junction_table = ($series) ? $tbl_room_repeat : $tbl_room_entry;
+  $junction_id    = ($series) ? 'repeat_id'      : 'entry_id';
+  
+  $rooms = sql_query_array("SELECT room_id FROM $junction_table WHERE $junction_id=$id");
+  if ($rooms === FALSE)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(TRUE, get_vocab("fatal_db_error"));
+  }
+  return $rooms;
+}
+
+
 // Clean up a row from the area table, making sure there are no nulls, casting
 // boolean fields into bools and doing some sanity checking
 function clean_area_row($row)

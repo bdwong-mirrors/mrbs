@@ -124,7 +124,8 @@ $row = mrbsGetBookingInfo($id, $series);
 
 // Get the area settings for the entry's area.   In particular we want
 // to know how to display private/public bookings in this area.
-get_area_settings($row['area_id']);
+// MAY HAVE TO BE REVISTED WHEN WE ALLOW LINKED ROOMS ACROSS AREAS
+get_area_settings($row['areas'][0]);
 
 // Work out whether the room or area is disabled
 $room_disabled = $row['room_disabled'] || $row['area_disabled'];
@@ -134,7 +135,7 @@ $status = $row['status'];
 $create_by = $row['create_by'];
 // Work out whether this event should be kept private
 $private = $row['status'] & STATUS_PRIVATE;
-$writeable = getWritable($row['create_by'], $user, $row['room_id']);
+$writeable = getWritable($row['create_by'], $user, $row['rooms']);
 $keep_private = (is_private_event($private) && !$writeable);
 
 // Work out when the last reminder was sent
@@ -358,7 +359,7 @@ if ($approval_enabled && !$room_disabled && ($status & STATUS_AWAITING_APPROVAL)
   else
   {
     // Buttons for those who are allowed to approve this booking
-    if (auth_book_admin($user, $row['room_id']))
+    if (auth_book_admin($user, $row['rooms']))
     {
       if (!$series)
       {

@@ -1132,7 +1132,7 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
     $rep_fields[$field['name']] = 1;
   }
 
-  $terms = array("J.room_id",
+  $terms = array("M.id AS room_id",
                  "M.room_name",
                  "M.room_admin_email",
                  "M.area_id",
@@ -1147,12 +1147,6 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
   {
     switch ($field['name'])
     {
-      // This is just a temporary measure while we're still developing the
-      // code to use the new junction tables.   It can be removed as soon as
-      // we have removed the room_id columns from the entry and repeat tables
-      case 'room_id':
-        break;
-        
       // these fields only exist in the entry table
       case 'entry_type':
       case 'repeat_id':
@@ -1198,7 +1192,8 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
            WHERE T.id=J.$junction_id
              AND J.room_id = M.id
              AND M.area_id = A.id
-             AND T.id=$id";
+             AND T.id=$id
+        ORDER BY area_name, M.sort_key";
 
   $res = sql_query($sql);
   if (! $res)
@@ -1228,38 +1223,69 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
       fatal_error(TRUE, ($series ? get_vocab("invalid_series_id") : get_vocab("invalid_entry_id")));
     }
   }
-
-  $row = sql_row_keyed($res, 0);
-  sql_free($res);
+  else
+  {
+    for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
+    {
+      // Most of the columns will hold the same data for every row, so we
+      // just take the values from the first row.   But because a booking can
+      // span multiple rooms, those rows to do with an area or room can have
+      // multiple values, so we put them in arrays.
+      if ($i == 0)
+      {
+        $booking = $row;
+        unset($booking['area_name']);
+        unset($booking['room_name']);
+        unset($booking['area_id']);
+        unset($booking['room_id']);
+        $booking['room_names'] = array();
+        $booking['areas'] = array();
+        $booking['rooms'] = array();
+        $booking['area_admin_email'] = array();
+        $booking['room_admin_email'] = array();
+      }
+      $booking['room_names'][] = $row['area_name'] . ' - ' . $row['room_name'];
+      $booking['areas'][] = $row['area_id'];
+      $booking['rooms'][] = $row['room_id'];
+      if (isset($row['area_admin_email']) && ($row['area_admin_email'] != ''))
+      {
+        $booking['area_admin_email'][] = array($row['area_admin_email']);
+      }
+      if (isset($row['room_admin_email']) && ($row['room_admin_email'] != ''))
+      {
+        $booking['room_admin_email'][] = array($row['room_admin_email']);
+      }
+    }
+  }
   
   // Now get the duration.
   // Don't translate the units at this stage.   We'll translate them later.
-  $d = get_duration($row['start_time'], $row['end_time'], $row['enable_periods'], FALSE);
-  $row['duration'] = $d['duration'];
-  $row['dur_units'] = $d['dur_units'];
+  $d = get_duration($booking['start_time'], $booking['end_time'], $booking['enable_periods'], FALSE);
+  $booking['duration'] = $d['duration'];
+  $booking['dur_units'] = $d['dur_units'];
     
   // Get some extra information
   if ($series)
   {
-    $row['entry_info_time'] = '';
-    $row['entry_info_user'] = '';
-    $row['entry_info_text'] = '';
+    $booking['entry_info_time'] = '';
+    $booking['entry_info_user'] = '';
+    $booking['entry_info_text'] = '';
   }
   else
   {
     // Get the repeat information
-    if (empty($row['repeat_id']))
+    if (empty($booking['repeat_id']))
     {
-      $row['rep_type'] = REP_NONE;   // just as a precaution
-      $row['repeat_info_time'] = '';
-      $row['repeat_info_user'] = '';
-      $row['repeat_info_text'] = '';
+      $booking['rep_type'] = REP_NONE;   // just as a precaution
+      $booking['repeat_info_time'] = '';
+      $booking['repeat_info_user'] = '';
+      $booking['repeat_info_text'] = '';
     }
     else
     {
       $res = sql_query("SELECT rep_type, end_date, rep_opt, rep_num_weeks, month_absolute, month_relative,
                         info_time AS repeat_info_time, info_user AS repeat_info_user, info_text AS repeat_info_text
-                        FROM $tbl_repeat WHERE id=${row['repeat_id']} LIMIT 1");
+                        FROM $tbl_repeat WHERE id=${booking['repeat_id']} LIMIT 1");
       if (!$res || (!$extra_row = sql_row_keyed($res, 0)))
       {
         if (!$res)
@@ -1275,20 +1301,14 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
           fatal_error(TRUE, get_vocab("invalid_series_id"));
         }
       }
-      $row['rep_type']         = $extra_row['rep_type'];
-      $row['end_date']         = $extra_row['end_date'];
-      $row['rep_opt']          = $extra_row['rep_opt'];
-      $row['rep_num_weeks']    = $extra_row['rep_num_weeks'];
-      $row['month_absolute']   = $extra_row['month_absolute'];
-      $row['month_relative']   = $extra_row['month_relative'];
-      $row['repeat_info_time'] = $extra_row['repeat_info_time'];
-      $row['repeat_info_user'] = $extra_row['repeat_info_user'];
-      $row['repeat_info_text'] = $extra_row['repeat_info_text'];
-      sql_free($res);
+      foreach ($extra_row as $key => $value)
+      {
+        $booking[$key] = $value;
+      }
     }
   }
   
-  return $row;
+  return $booking;
 }
 
 function mrbsGetRoomArea($id)

@@ -677,12 +677,7 @@ if (isset($id))
   sql_free($res);
   
   // Get the rooms
-  $row['rooms'] = sql_query_array("SELECT room_id FROM $tbl_room_entry WHERE entry_id=$id");
-  if ($row['rooms'] === FALSE)
-  {
-    trigger_error(sql_error(), E_USER_WARNING);
-    fatal_error(TRUE, get_vocab("fatal_db_error"));
-  }
+  $row['rooms'] = get_rooms($id, FALSE);
   
   // We've possibly got a new room and area, so we need to update the settings
   // for this area.
