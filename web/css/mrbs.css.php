@@ -219,7 +219,9 @@ table.dwm_main {clear: both; width: 100%; border-spacing: 0; border-collapse: se
 
 td.new a, a.new_booking {display: block; font-size: medium; text-align: center}
 td.new img, .new_booking img {margin: auto; padding: 4px 0 2px 0}
-img.repeat_symbol {float: right; padding: 3px}
+img.link_symbol {float: right; z-index: 1000; margin-right: 16px}
+img.link_symbol.series {margin-right: 2px}
+img.repeat_symbol {float: right; z-index: 1000; padding: 3px 2px}
 .dwm_main#month_main img.repeat_symbol {padding: 2px}
 
 

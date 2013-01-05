@@ -28,6 +28,7 @@ function map_add_booking ($row, &$column, $am7, $pm7)
   // It looks like:
   //     $column[s][n][id]
   //                  [is_repeat]
+  //                  [n_linked]           the number of entries that are linked together
   //                  [is_multiday_start]  a boolean indicating if the booking stretches
   //                                       beyond the day start
   //                  [is_multiday_end]    a boolean indicating if the booking stretches
@@ -117,6 +118,7 @@ function map_add_booking ($row, &$column, $am7, $pm7)
     // fill in the id, type and start time
     $column[$s][$n]["id"] = $row['entry_id'];
     $column[$s][$n]["is_repeat"] = !empty($row['repeat_id']);
+    $column[$s][$n]["n_linked"] = $row['n_linked'];
     $column[$s][$n]["is_multiday_start"] = $is_multiday_start;
     $column[$s][$n]["is_multiday_end"] = $is_multiday_end;
     $column[$s][$n]["status"] = $row['status'];
@@ -261,6 +263,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
   // 
   // $cell[n][id]
   //         [is_repeat]
+  //         [n_linked]
   //         [is_multiday_start]
   //         [is_multiday_end]
   //         [color]
@@ -327,6 +330,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
     {
       $id          = $cell[$n]["id"];
       $is_repeat   = $cell[$n]["is_repeat"];
+      $n_linked    = $cell[$n]["n_linked"];
       $is_multiday_start = $cell[$n]["is_multiday_start"];
       $is_multiday_end   = $cell[$n]["is_multiday_end"];
       $status      = $cell[$n]["status"];
@@ -387,6 +391,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
     {
       $id          = $cell[$n]["id"];
       $is_repeat   = $cell[$n]["is_repeat"];
+      $n_linked    = $cell[$n]["n_linked"];
       $is_multiday_start = $cell[$n]["is_multiday_start"];
       $is_multiday_end   = $cell[$n]["is_multiday_end"];
       $status      = $cell[$n]["status"];
@@ -421,6 +426,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
       $html .= "<div class=\"celldiv slots1\">\n";     // we want clipping of overflow
       $html .= "<a href=\"view_entry.php?id=$id&amp;". $query_strings['booking'] . "\" title=\"$long_descr\">";
       $html .= ($is_repeat) ? "<img class=\"repeat_symbol\" src=\"images/repeat.png\" alt=\"" . get_vocab("series") . "\" title=\"" . get_vocab("series") . "\" width=\"10\" height=\"10\">" : '';
+      $html .= ($n_linked > 1) ? "<img class=\"link_symbol $c\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
       $html .= "$descr</a>\n";
       $html .= "</div>\n";
      
@@ -441,6 +447,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
     {       
       $id         = $cell[0]["id"];
       $is_repeat  = $cell[0]["is_repeat"];
+      $n_linked   = $cell[0]["n_linked"];
       $is_multiday_start = $cell[0]["is_multiday_start"];
       $is_multiday_end   = $cell[0]["is_multiday_end"];
       $status     = $cell[0]["status"];
@@ -532,6 +539,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
                  "\">\n";
         $html .= "<a href=\"view_entry.php?id=$id&amp;". $query_strings['booking'] . "\" title=\"$long_descr\">";
         $html .= ($is_repeat) ? "<img class=\"repeat_symbol $c\" src=\"images/repeat.png\" alt=\"" . get_vocab("series") . "\" title=\"" . get_vocab("series") . "\" width=\"10\" height=\"10\">" : '';
+        $html .= ($n_linked > 1) ? "<img class=\"link_symbol $c\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
         $html .= "$descr</a>\n";
         $html .= "</div>\n";
       }
@@ -740,6 +748,40 @@ function day_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight
   // We want to build an array containing all the data we want to show
   // and then spit it out. 
 
+  // First of all get an array showing which entries are linked, ie span
+  // more than one room.   We can confine the query to the start and end
+  // times, because any linked booking will have the same start and end times.
+  // However we will get entries for all areas because in the future we hope
+  // to be able to have bookings linked across areas.  (But we don't include
+  // linked entries in disabled rooms or areas.  If we did it would be confusing
+  // to the user to see a linked booking covering two rooms, one of which is
+  // disabled.   The booking would show as linked in the calendar view, but
+  // when they look at view_entry they'd only see one room.   So we exclude the
+  // disabled rooms and areas - and if they edit the booking a new booking will
+  // be made leaving the rest of the linked booking in the disabled room as a
+  // separate booking).
+  $sql = "SELECT entry_id, COUNT(*) AS n_linked
+            FROM $tbl_room_entry RE, $tbl_entry E, $tbl_room R, $tbl_area A
+           WHERE E.id = RE.entry_id
+             AND RE.room_id = R.id
+             AND R.area_id = A.id
+             AND R.disabled = 0
+             AND A.disabled = 0
+             AND start_time <= $pm7 AND end_time > $am7
+        GROUP BY entry_id";
+  
+  $res = sql_query($sql);
+  if ($res === FALSE)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(FALSE, get_vocab("fatal_db_error"));
+  }
+  $linked_entries = array();
+  for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
+  {
+    $linked_entries[$row['entry_id']] = $row['n_linked'];
+  }
+
   // Get all appointments for today in the area that we care about.  We
   // only get the data for enabled rooms.  (If the whole area is disabled
   // then the main table won't get displayed anyway).
@@ -760,7 +802,7 @@ function day_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight
         ORDER BY start_time";   // necessary so that multiple bookings appear in the right order
 
   $res = sql_query($sql);
-  if (! $res)
+  if ($res === FALSE)
   {
     trigger_error(sql_error(), E_USER_WARNING);
     fatal_error(FALSE, get_vocab("fatal_db_error"));
@@ -781,6 +823,9 @@ function day_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight
     //  row['entry_description'] = description
     //  row['entry_create_by'] = Creator/owner of entry
     //  row['status'] = Status code of the entry
+    
+    // Add in the number of entries that are linked
+    $row['n_linked'] = $linked_entries[$row['entry_id']];
   
     map_add_booking($row, $today[$row['room_id']][$day], $am7, $pm7);
 
