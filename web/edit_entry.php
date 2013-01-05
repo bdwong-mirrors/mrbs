@@ -333,7 +333,7 @@ function create_field_entry_end_date($disabled=FALSE)
 
 function create_field_entry_areas($disabled=FALSE)
 {
-  global $areas, $area_id, $rooms;
+  global $areas, $area_id;
   
   // if there is more than one area then give the option
   // to choose areas.
@@ -365,13 +365,13 @@ function create_field_entry_areas($disabled=FALSE)
 
 function create_field_entry_rooms($disabled=FALSE)
 {
-  global $multiroom_allowed, $room_id, $area_id, $selected_rooms, $areas;
+  global $multiroom_allowed, $rooms, $area_id, $selected_rooms, $areas;
   global $tbl_room, $tbl_area;
   
   // $selected_rooms will be populated if we've come from a drag selection
   if (empty($selected_rooms))
   {
-    $selected_rooms = array($room_id);
+    $selected_rooms = $rooms;
   }
   
   // Get the details of all the enabled rooms
@@ -411,7 +411,7 @@ function create_field_entry_rooms($disabled=FALSE)
   // Then generate templates for all the rooms
   $params['disabled']      = TRUE;
   $params['create_hidden'] = FALSE;
-  foreach ($all_rooms as $a => $rooms)
+  foreach ($all_rooms as $a => $enabled_rooms)
   {
     $attributes = array();
     $attributes[] = 'style="display: none"';
@@ -426,7 +426,7 @@ function create_field_entry_rooms($disabled=FALSE)
     $attributes[] = 'data-timezone="'            . htmlspecialchars($areas[$a]['timezone']) . '"';
     
     $params['id']         = 'rooms' . $a;
-    $params['options']    = $rooms;
+    $params['options']    = $enabled_rooms;
     $params['attributes'] = $attributes;
     generate_select($params);
   }
@@ -663,7 +663,7 @@ if (isset($id))
            LIMIT 1";
    
   $res = sql_query($sql);
-  if (! $res)
+  if ($res === FALSE)
   {
     trigger_error(sql_error(), E_USER_WARNING);
     fatal_error(TRUE, get_vocab("fatal_db_error"));
@@ -676,9 +676,18 @@ if (isset($id))
   $row = sql_row_keyed($res, 0);
   sql_free($res);
   
+  // Get the rooms
+  $row['rooms'] = sql_query_array("SELECT room_id FROM $tbl_room_entry WHERE entry_id=$id");
+  if ($row['rooms'] === FALSE)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(TRUE, get_vocab("fatal_db_error"));
+  }
+  
   // We've possibly got a new room and area, so we need to update the settings
   // for this area.
-  $area = get_area($row['room_id']);
+  // MAY HAVE TO REVISIT THIS IF LINKED ROOMS ACROSS AREAS ARE ALLOWED
+  $area = get_area($row['rooms'][0]);
   get_area_settings($area);
   
   $private = $row['status'] & STATUS_PRIVATE;
@@ -692,7 +701,7 @@ if (isset($id))
   {
     // Entry being copied by different user
     // If they don't have rights to view details, clear them
-    $privatewriteable = getWritable($row['create_by'], $user, $row['room_id']);
+    $privatewriteable = getWritable($row['create_by'], $user, $row['rooms']);
     $keep_private = (is_private_event($private) && !$privatewriteable);
   }
   else
@@ -719,7 +728,7 @@ if (isset($id))
         break;
       
       // These columns cannot be made private  
-      case 'room_id':
+      case 'rooms':
       case 'ical_uid':
       case 'ical_sequence':
       case 'ical_recur_id':
@@ -857,7 +866,7 @@ else
   $create_by     = $user;
   $description   = $default_description;
   $type          = $default_type;
-  $room_id       = $room;
+  $rooms         = array($room);
   $private       = $private_default;
   $confirmed     = $confirmed_default;
 
@@ -946,17 +955,21 @@ $start_min   = strftime('%M', $start_time);
 // These next 4 if statements handle the situation where
 // this page has been accessed directly and no arguments have
 // been passed to it.
-// If we have not been provided with a room_id
-if (empty( $room_id ) )
+// If we have not been provided with a room
+if (empty($rooms))
 {
   $sql = "SELECT id FROM $tbl_room WHERE disabled=0 LIMIT 1";
-  $res = sql_query($sql);
-  $row = sql_row_keyed($res, 0);
-  $room_id = $row['id'];
+  $rooms = array(sql_query1($sql));
+  if ($rooms[0] < 0)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(FALSE, get_vocab("fatal_db_error"));
+  }
 }
 
 // Determine the area id of the room in question first
-$area_id = mrbsGetRoomArea($room_id);
+// MAY HAVE TO REVISIT THIS IF LINKED ROOMS ARE ALLOWED ACROSS AREAS
+$area_id = mrbsGetRoomArea($rooms[0]);
 
 
 // Remove "Undefined variable" notice
@@ -969,7 +982,7 @@ $enable_periods ? toPeriodString($start_min, $duration, $dur_units) : toTimeStri
 
 //now that we know all the data to fill the form with we start drawing it
 
-if (!getWritable($create_by, $user, $room_id))
+if (!getWritable($create_by, $user, $rooms))
 {
   showAccessDenied($day, $month, $year, $area, isset($room) ? $room : "");
   exit;
@@ -977,23 +990,7 @@ if (!getWritable($create_by, $user, $room_id))
 
 print_header($day, $month, $year, $area, isset($room) ? $room : "");
 
-// Get the details of all the enabled rooms
-$rooms = array();
-$sql = "SELECT R.id, R.room_name, R.area_id
-          FROM $tbl_room R, $tbl_area A
-         WHERE R.area_id = A.id
-           AND R.disabled=0
-           AND A.disabled=0
-      ORDER BY R.area_id, R.sort_key";
-$res = sql_query($sql);
-if ($res)
-{
-  for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
-  {
-    $rooms[$row['id']] = $row;
-  }
-}
-    
+
 // Get the details of all the enabled areas
 $areas = array();
 $sql = "SELECT id, area_name, resolution, default_duration, enable_periods, timezone,

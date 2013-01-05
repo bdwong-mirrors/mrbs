@@ -123,17 +123,20 @@ function checkAuthorised()
 
 /* getWritable($creator, $user, $room)
  * 
- * Determines if a user is able to modify an entry
+ * Determines if a user is able to modify an entry for ALL the rooms
+ * in $rooms
  *
  * $creator - The creator of the entry
  * $user    - Who wants to modify it
- * $room    - The id of the room that the entry is in
+ * $rooms   - The ids of the rooms that the entry is in.  Can be
+ *            an array of rooms or a single room
  *
  * Returns:
- *   0        - The user does not have the required access
- *   non-zero - The user has the required access
+ *   0        - The user does not have the required access for at least
+ *              one room
+ *   non-zero - The user has the required access for all the rooms
  */
-function getWritable($creator, $user, $room)
+function getWritable($creator, $user, $rooms)
 {
   // Always allowed to modify your own stuff
   if(strcasecmp($creator, $user) == 0)
@@ -142,7 +145,7 @@ function getWritable($creator, $user, $room)
   }
   
   // Otherwise you have to be a (booking) admin for this room
-  if (auth_book_admin($user, $room))
+  if (auth_book_admin($user, $rooms))
   {
     return 1;
   }
