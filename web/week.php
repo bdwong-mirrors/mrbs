@@ -57,7 +57,7 @@ if ($this_room_name === -1)
   $this_room_name = '';
 }
 echo "<div id=\"dwm\">\n";
-echo "<h2>" . htmlspecialchars("$this_area_name - $this_room_name") . "</h2>\n";
+echo "<h2>" . htmlspecialchars($this_area_name . $area_room_separator . $this_room_name) . "</h2>\n";
 echo "</div>\n";
 
 //y? are year, month and day of the previous week.

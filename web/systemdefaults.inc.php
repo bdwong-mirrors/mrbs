@@ -436,6 +436,11 @@ $text_input_max = 70;  // characters
 // support <datalist> present the options in a scrollable select box]
 $autocomplete_length_breaks = array(25, 250, 2500);
 
+// The string to use when combining an area name and a room name into a single
+// string.   For example, with the default setting of ' - ' the room 'Room 1' in
+// 'Area A' would become 'Area A - Room 1'.
+$area_room_separator = ' - ';
+
 
 /************************
  * Miscellaneous settings

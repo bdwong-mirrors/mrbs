@@ -1102,6 +1102,7 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
 {
   global $tbl_entry, $tbl_repeat, $tbl_room, $tbl_area;
   global $tbl_room_repeat, $tbl_room_entry;
+  global $area_room_separator;
 
   // Check that we've got an id
   if (!isset($id))
@@ -1244,7 +1245,7 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
         $booking['area_admin_email'] = array();
         $booking['room_admin_email'] = array();
       }
-      $booking['room_names'][] = $row['area_name'] . ' - ' . $row['room_name'];
+      $booking['room_names'][] = $row['area_name'] . $area_room_separator . $row['room_name'];
       $booking['areas'][] = $row['area_id'];
       $booking['rooms'][] = $row['room_id'];
       if (isset($row['area_admin_email']) && ($row['area_admin_email'] != ''))
