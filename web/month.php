@@ -179,6 +179,9 @@ $all_day = preg_replace("/ /", "&nbsp;", get_vocab("all_day"));
 // row[1] = End time
 // row[2] = Entry ID
 // This data will be retrieved day-by-day fo the whole month
+
+$linked_entries = get_linked_entries($am7[1], $pm7[$days_in_month]);
+
 for ($day_num = 1; $day_num<=$days_in_month; $day_num++)
 {
   $sql = "SELECT start_time, end_time, E.id, name, type,
@@ -213,9 +216,10 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++)
       {
         echo "<br>DEBUG: Entry ".$row['id']." day $day_num\n";
       }
-      $d[$day_num]["id"][] = $row['id'];
-      $d[$day_num]["color"][] = $row['type'];
-      $d[$day_num]["is_repeat"][] = !empty($row['repeat_id']);
+      $d[$day_num]['id'][] = $row['id'];
+      $d[$day_num]['color'][] = $row['type'];
+      $d[$day_num]['is_repeat'][] = !empty($row['repeat_id']);
+      $d[$day_num]['n_linked'][] = $linked_entries[$row['id']];
       
       // Handle private events
       if (is_private_event($row['status'] & STATUS_PRIVATE)) 
@@ -236,13 +240,13 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++)
 
       if ($private & $is_private_field['entry.name']) 
       {
-        $d[$day_num]["status"][] = $row['status'] | STATUS_PRIVATE;  // Set the private bit
-        $d[$day_num]["shortdescrip"][] = '['.get_vocab('unavailable').']';
+        $d[$day_num]['status'][] = $row['status'] | STATUS_PRIVATE;  // Set the private bit
+        $d[$day_num]['shortdescrip'][] = '['.get_vocab('unavailable').']';
       }
       else
       {
-        $d[$day_num]["status"][] = $row['status'] & ~STATUS_PRIVATE;  // Clear the private bit
-        $d[$day_num]["shortdescrip"][] = htmlspecialchars($row['name']);
+        $d[$day_num]['status'][] = $row['status'] & ~STATUS_PRIVATE;  // Clear the private bit
+        $d[$day_num]['shortdescrip'][] = htmlspecialchars($row['name']);
       }
       
 
@@ -259,28 +263,28 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++)
         {
           case "> < ":         // Starts after midnight, ends before midnight
           case "= < ":         // Starts at midnight, ends before midnight
-            $d[$day_num]["data"][] = htmlspecialchars(utf8_strftime(hour_min_format(), $row['start_time'])) . "~" . htmlspecialchars(utf8_strftime(hour_min_format(), $row['end_time']));
+            $d[$day_num]['data'][] = htmlspecialchars(utf8_strftime(hour_min_format(), $row['start_time'])) . "~" . htmlspecialchars(utf8_strftime(hour_min_format(), $row['end_time']));
             break;
           case "> = ":         // Starts after midnight, ends at midnight
-            $d[$day_num]["data"][] = htmlspecialchars(utf8_strftime(hour_min_format(), $row['start_time'])) . "~24:00";
+            $d[$day_num]['data'][] = htmlspecialchars(utf8_strftime(hour_min_format(), $row['start_time'])) . "~24:00";
             break;
           case "> > ":         // Starts after midnight, continues tomorrow
-            $d[$day_num]["data"][] = htmlspecialchars(utf8_strftime(hour_min_format(), $row['start_time'])) . "~====&gt;";
+            $d[$day_num]['data'][] = htmlspecialchars(utf8_strftime(hour_min_format(), $row['start_time'])) . "~====&gt;";
             break;
           case "= = ":         // Starts at midnight, ends at midnight
-            $d[$day_num]["data"][] = $all_day;
+            $d[$day_num]['data'][] = $all_day;
             break;
           case "= > ":         // Starts at midnight, continues tomorrow
-            $d[$day_num]["data"][] = $all_day . "====&gt;";
+            $d[$day_num]['data'][] = $all_day . "====&gt;";
             break;
           case "< < ":         // Starts before today, ends before midnight
-            $d[$day_num]["data"][] = "&lt;====~" . htmlspecialchars(utf8_strftime(hour_min_format(), $row['end_time']));
+            $d[$day_num]['data'][] = "&lt;====~" . htmlspecialchars(utf8_strftime(hour_min_format(), $row['end_time']));
             break;
           case "< = ":         // Starts before today, ends at midnight
-            $d[$day_num]["data"][] = "&lt;====" . $all_day;
+            $d[$day_num]['data'][] = "&lt;====" . $all_day;
             break;
           case "< > ":         // Starts before today, continues tomorrow
-            $d[$day_num]["data"][] = "&lt;====" . $all_day . "====&gt;";
+            $d[$day_num]['data'][] = "&lt;====" . $all_day . "====&gt;";
             break;
         }
       }
@@ -292,28 +296,28 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++)
         {
           case "> < ":         // Starts after midnight, ends before midnight
           case "= < ":         // Starts at midnight, ends before midnight
-            $d[$day_num]["data"][] = $start_str . "~" . $end_str;
+            $d[$day_num]['data'][] = $start_str . "~" . $end_str;
             break;
           case "> = ":         // Starts after midnight, ends at midnight
-            $d[$day_num]["data"][] = $start_str . "~24:00";
+            $d[$day_num]['data'][] = $start_str . "~24:00";
             break;
           case "> > ":         // Starts after midnight, continues tomorrow
-            $d[$day_num]["data"][] = $start_str . "~====&gt;";
+            $d[$day_num]['data'][] = $start_str . "~====&gt;";
             break;
           case "= = ":         // Starts at midnight, ends at midnight
-            $d[$day_num]["data"][] = $all_day;
+            $d[$day_num]['data'][] = $all_day;
             break;
           case "= > ":         // Starts at midnight, continues tomorrow
-            $d[$day_num]["data"][] = $all_day . "====&gt;";
+            $d[$day_num]['data'][] = $all_day . "====&gt;";
             break;
           case "< < ":         // Starts before today, ends before midnight
-            $d[$day_num]["data"][] = "&lt;====~" . $end_str;
+            $d[$day_num]['data'][] = "&lt;====~" . $end_str;
             break;
           case "< = ":         // Starts before today, ends at midnight
-            $d[$day_num]["data"][] = "&lt;====" . $all_day;
+            $d[$day_num]['data'][] = "&lt;====" . $all_day;
             break;
           case "< > ":         // Starts before today, continues tomorrow
-            $d[$day_num]["data"][] = "&lt;====" . $all_day . "====&gt;";
+            $d[$day_num]['data'][] = "&lt;====" . $all_day . "====&gt;";
             break;
         }
       }
@@ -325,14 +329,14 @@ if ($debug_flag)
   echo "<p>DEBUG: Array of month day data:</p><pre>\n";
   for ($i = 1; $i <= $days_in_month; $i++)
   {
-    if (isset($d[$i]["id"]))
+    if (isset($d[$i]['id']))
     {
-      $n = count($d[$i]["id"]);
+      $n = count($d[$i]['id']);
       echo "Day $i has $n entries:\n";
       for ($j = 0; $j < $n; $j++)
       {
-        echo "  ID: " . $d[$i]["id"][$j] .
-          " Data: " . $d[$i]["data"][$j] . "\n";
+        echo "  ID: " . $d[$i]['id'][$j] .
+          " Data: " . $d[$i]['data'][$j] . "\n";
       }
     }
   }
@@ -489,6 +493,7 @@ for ($cday = 1; $cday <= $days_in_month; $cday++)
         }
         echo "<a href=\"$booking_link\" title=\"$full_text\">";
         echo ($d[$cday]['is_repeat'][$i]) ? "<img class=\"repeat_symbol\" src=\"images/repeat.png\" alt=\"" . get_vocab("series") . "\" title=\"" . get_vocab("series") . "\" width=\"10\" height=\"10\">" : '';
+        echo ($d[$cday]['n_linked'][$i] > 1) ? "<img class=\"link_symbol\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
         echo "$display_text</a>\n";
         echo "</div>\n";
       }
