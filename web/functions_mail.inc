@@ -240,7 +240,7 @@ function get_approvers_email($room_id)
 }
 
 
-// Get the area_admin_email for an entry $id
+// Get the area_admin_emails for an entry $id
 // If $series is set this is an entry in the repeat table, otherwise the entry table
 // Returns an empty string in the case of an error
 function get_area_admin_email($id, $series=FALSE)
@@ -252,21 +252,20 @@ function get_area_admin_email($id, $series=FALSE)
                   (($series) ? "$tbl_room_repeat" : "$tbl_room_entry") . " J
             WHERE " . (($series) ? "J.repeat_id" : "J.entry_id") . "=$id
               AND R.id=J.room_id
-              AND A.id=R.area_id
-            LIMIT 1";
+              AND A.id=R.area_id";
             
-  $email = sql_query1($sql);
+  $emails = sql_query_array($sql);
   
-  if ($email == -1)
+  if ($emails === FALSE)
   {
-    // The result can be -1 if there's an error or if there are no matching rows
-    $email = "";
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(TRUE, get_vocab("fatal_db_error"));
   }
-  return $email;
+  return implode(',', $emails);
 }
 
 
-// Get the room_admin_email for an entry $id
+// Get the room_admin_emails for an entry $id
 // If $series is set this is an entry in the repeat table, otherwise the entry table
 // Returns an empty string in the case of an error
 function get_room_admin_email($id, $series=FALSE)
@@ -277,17 +276,16 @@ function get_room_admin_email($id, $series=FALSE)
              FROM $tbl_room R, " .
                   (($series) ? "$tbl_room_repeat" : "$tbl_room_entry") . " J
             WHERE " . (($series) ? "J.repeat_id" : "J.entry_id") . "=$id
-              AND R.id=J.room_id
-            LIMIT 1";
+              AND R.id=J.room_id";
             
-  $email = sql_query1($sql);
+  $emails = sql_query_array($sql);
   
-  if ($email == -1)
+  if ($emails === FALSE)
   {
-    // The result can be -1 if there's an error or if there are no matching rows
-    $email = "";
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(TRUE, get_vocab("fatal_db_error"));
   }
-  return $email;
+  return implode(',', $emails);
 }
 
 
@@ -560,11 +558,9 @@ function create_body($data, $mail_previous, $compare, $series, $action, $as_html
     }
                                
     // Room:
-    $new_room = $data['area_name'] . " - " . $data['room_name'];
-    $old_room = $mail_previous['area_name'] . " - " . $mail_previous['room_name'];
     $body .= create_body_table_row (get_mail_vocab("room"),
-                                    $new_room,
-                                    $old_room,
+                                    implode(', ', $data['room_names']),
+                                    implode(', ', $mail_previous['room_names']),
                                     $compare, $as_html);
         
     // Start time
@@ -899,8 +895,8 @@ function notifyAdminOnBooking($data, $mail_previous, $new_entry, $series, $start
   // Add some values to the $data array before we go and create the addresses
   if (!$new_entry)
   {
-    $data['area_admin_email'] = (!empty($mail_previous['area_admin_email'])) ? $mail_previous['area_admin_email'] : NULL;
-    $data['room_admin_email'] = (!empty($mail_previous['room_admin_email'])) ? $mail_previous['room_admin_email'] : NULL;
+    $data['area_admin_email'] = (!empty($mail_previous['area_admin_email'])) ? implode(',', $mail_previous['area_admin_email']) : NULL;
+    $data['room_admin_email'] = (!empty($mail_previous['room_admin_email'])) ? implode(',', $mail_previous['room_admin_email']) : NULL;
   }
   
   // Set up the addresses (from, to and cc)

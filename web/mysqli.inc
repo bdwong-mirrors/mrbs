@@ -277,6 +277,16 @@ function sql_mysqli_syntax_limit($count, $offset, $db_conn = null)
 }
 
 
+// Returns the syntax for a CONCAT statement
+// Requires any strings to be escaped and enclosed in single quotes
+function sql_mysqli_syntax_concat($strings, $db_conn = null)
+{
+  sql_mysqli_ensure_handle($db_conn);
+
+  return "CONCAT(" . implode(',', $strings) . ")";
+}
+
+
 // Generate non-standard SQL to output a TIMESTAMP as a Unix-time:
 function sql_mysqli_syntax_timestamp_to_unix($fieldname, $db_conn = null)
 {

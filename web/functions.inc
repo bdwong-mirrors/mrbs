@@ -1587,6 +1587,28 @@ function get_rooms($id, $series)
 }
 
 
+function get_full_room_names($rooms)
+{
+  global $tbl_room, $tbl_area;
+  
+  $strings = array("A.area_name",
+                   "'" . sql_escape(' - ') . "'",
+                   "R.room_name");
+  $sql = "SELECT " . sql_syntax_concat($strings) . "
+            FROM $tbl_room R, $tbl_area A
+           WHERE R.id IN (" . implode(',', $rooms) . ") AND R.area_id = A.id
+        ORDER BY A.area_name, R.sort_key";
+  $room_names = sql_query_array($sql);
+  if ($room_names === FALSE)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(TRUE, get_vocab("fatal_db_error"));
+  }
+  
+  return $room_names;
+}
+
+
 // Clean up a row from the area table, making sure there are no nulls, casting
 // boolean fields into bools and doing some sanity checking
 function clean_area_row($row)

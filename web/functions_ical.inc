@@ -883,7 +883,7 @@ function create_ical_event($method, $data, $text_description, $html_description,
   {
     $results[] = "X-ALT-DESC;FMTTYPE=text/html:" . ical_escape_text($html_description['content']);
   }
-  $results[] = "LOCATION:" . ical_escape_text($data['area_name'] . " - " . $data['room_name']);
+  $results[] = "LOCATION:" . ical_escape_text(implode(', ', $data['room_names']));
   $results[] = "SEQUENCE:" . $data['ical_sequence'];
   // If this is an individual member of a series then set the recurrence id
   if (!$series && ($data['entry_type'] != ENTRY_SINGLE))

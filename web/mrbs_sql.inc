@@ -1249,11 +1249,11 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
       $booking['rooms'][] = $row['room_id'];
       if (isset($row['area_admin_email']) && ($row['area_admin_email'] != ''))
       {
-        $booking['area_admin_email'][] = array($row['area_admin_email']);
+        $booking['area_admin_email'][] = $row['area_admin_email'];
       }
       if (isset($row['room_admin_email']) && ($row['room_admin_email'] != ''))
       {
-        $booking['room_admin_email'][] = array($row['room_admin_email']);
+        $booking['room_admin_email'][] = $row['room_admin_email'];
       }
     }
   }
@@ -1702,19 +1702,10 @@ function mrbsMakeBooking($booking, $id=NULL, $just_check=FALSE, $skip=FALSE, $se
         (!isset($id) && $mail_settings['on_new']))
     {
       require_once "functions_mail.inc";
-      // Get room name and area name for email notifications.
-      // Would be better to avoid a database access just for that.
-      // Ran only if we need details
+      // Get room names for email notifications.
       if ($mail_settings['details'])
       {
-        $sql = "SELECT R.room_name, A.area_name
-                  FROM $tbl_room R, $tbl_area A
-                 WHERE R.id=$room_id AND R.area_id = A.id
-                 LIMIT 1";
-        $res = sql_query($sql);
-        $row = sql_row_keyed($res, 0);
-        $booking['room_name'] = $row['room_name'];
-        $booking['area_name'] = $row['area_name'];
+        $booking['room_names'] = get_full_room_names($booking['rooms']);
       }
       // If this is a modified entry then get the previous entry data
       // so that we can highlight the changes

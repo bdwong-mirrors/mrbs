@@ -421,6 +421,29 @@ function sql_syntax_limit($count, $offset)
 }
 
 
+// Returns the syntax for a CONCAT statement
+// Requires any strings to be escaped and enclosed in single quotes
+function sql_syntax_concat($strings)
+{
+  if (func_num_args() > 1)
+  {
+    $handle = func_get_arg(1);
+    $db_sys = $handle['system'];
+    $db_conn = $handle['connection'];
+  }
+  else
+  {
+    global $dbsys;
+
+    $db_sys = $dbsys;
+    $db_conn = null;
+  }
+
+  $f = "sql_${db_sys}_syntax_concat";
+  return $f($strings, $db_conn);
+}
+
+
 // Returns the syntax for converting a timestamp into a "UNIX timestamp"
 function sql_syntax_timestamp_to_unix($fieldname)
 {
