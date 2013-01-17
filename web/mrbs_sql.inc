@@ -1738,4 +1738,48 @@ function mrbsMakeBooking($booking, $id=NULL, $just_check=FALSE, $skip=FALSE, $se
   return $result;
 }
 
+
+// Get all the linked entries in the system between $interval_start and $interval_end
+// Returns an array with index id and value the number of linked entries
+function get_linked_entries($interval_start, $interval_end)
+{
+  global $tbl_room_entry, $tbl_entry, $tbl_room, $tbl_area;
+  
+  $linked_entries = array();
+  
+  // We can confine the query to the start and end times, because any linked
+  // booking will have the same start and end times.   However we will get entries
+  // for all areas because in the future we hope to be able to have bookings
+  // linked across areas.  (But we don't include linked entries in disabled rooms
+  // or areas.  If we did it would be confusing to the user to see a linked booking
+  // covering two rooms, one of which is disabled.   The booking would show as
+  // linked in the calendar view, but when they look at view_entry they'd only see
+  // one room.   So we exclude the disabled rooms and areas - and if they edit the
+  // booking a new booking will be made leaving the rest of the linked booking in
+  // the disabled room as a separate booking).
+  
+  $sql = "SELECT entry_id, COUNT(*) AS n_linked
+            FROM $tbl_room_entry RE, $tbl_entry E, $tbl_room R, $tbl_area A
+           WHERE E.id = RE.entry_id
+             AND RE.room_id = R.id
+             AND R.area_id = A.id
+             AND R.disabled = 0
+             AND A.disabled = 0
+             AND start_time <= $interval_end AND end_time > $interval_start
+        GROUP BY entry_id";
+  
+  $res = sql_query($sql);
+  if ($res === FALSE)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(FALSE, get_vocab("fatal_db_error"));
+  }
+
+  for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
+  {
+    $linked_entries[$row['entry_id']] = $row['n_linked'];
+  }
+  
+  return $linked_entries;
+}
 ?>

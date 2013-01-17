@@ -2,6 +2,8 @@
 
 // $Id$
 
+require_once "mrbs_sql.inc";
+
 function map_add_booking ($row, &$column, $am7, $pm7)
 {
   // Enters the contents of the booking found in $row into $column, which is
@@ -748,39 +750,7 @@ function day_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight
   // We want to build an array containing all the data we want to show
   // and then spit it out. 
 
-  // First of all get an array showing which entries are linked, ie span
-  // more than one room.   We can confine the query to the start and end
-  // times, because any linked booking will have the same start and end times.
-  // However we will get entries for all areas because in the future we hope
-  // to be able to have bookings linked across areas.  (But we don't include
-  // linked entries in disabled rooms or areas.  If we did it would be confusing
-  // to the user to see a linked booking covering two rooms, one of which is
-  // disabled.   The booking would show as linked in the calendar view, but
-  // when they look at view_entry they'd only see one room.   So we exclude the
-  // disabled rooms and areas - and if they edit the booking a new booking will
-  // be made leaving the rest of the linked booking in the disabled room as a
-  // separate booking).
-  $sql = "SELECT entry_id, COUNT(*) AS n_linked
-            FROM $tbl_room_entry RE, $tbl_entry E, $tbl_room R, $tbl_area A
-           WHERE E.id = RE.entry_id
-             AND RE.room_id = R.id
-             AND R.area_id = A.id
-             AND R.disabled = 0
-             AND A.disabled = 0
-             AND start_time <= $pm7 AND end_time > $am7
-        GROUP BY entry_id";
-  
-  $res = sql_query($sql);
-  if ($res === FALSE)
-  {
-    trigger_error(sql_error(), E_USER_WARNING);
-    fatal_error(FALSE, get_vocab("fatal_db_error"));
-  }
-  $linked_entries = array();
-  for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
-  {
-    $linked_entries[$row['entry_id']] = $row['n_linked'];
-  }
+  $linked_entries = get_linked_entries($am7, $pm7);
 
   // Get all appointments for today in the area that we care about.  We
   // only get the data for enabled rooms.  (If the whole area is disabled
@@ -1099,40 +1069,8 @@ function week_table_innerhtml($day, $month, $year, $room, $area, $timetohighligh
   }
   unset($j);  // Just so that we pick up any accidental attempt to use it later
 
-  // First of all get an array showing which entries are linked, ie span
-  // more than one room.   We can confine the query to the start and end
-  // times, because any linked booking will have the same start and end times.
-  // However we will get entries for all areas because in the future we hope
-  // to be able to have bookings linked across areas.  (But we don't include
-  // linked entries in disabled rooms or areas.  If we did it would be confusing
-  // to the user to see a linked booking covering two rooms, one of which is
-  // disabled.   The booking would show as linked in the calendar view, but
-  // when they look at view_entry they'd only see one room.   So we exclude the
-  // disabled rooms and areas - and if they edit the booking a new booking will
-  // be made leaving the rest of the linked booking in the disabled room as a
-  // separate booking).
-  $sql = "SELECT entry_id, COUNT(*) AS n_linked
-            FROM $tbl_room_entry RE, $tbl_entry E, $tbl_room R, $tbl_area A
-           WHERE E.id = RE.entry_id
-             AND RE.room_id = R.id
-             AND R.area_id = A.id
-             AND R.disabled = 0
-             AND A.disabled = 0
-             AND start_time <= ${pm7[$num_of_days - 1]} AND end_time > $am7[0]
-        GROUP BY entry_id";
-  
-  $res = sql_query($sql);
-  if ($res === FALSE)
-  {
-    trigger_error(sql_error(), E_USER_WARNING);
-    fatal_error(FALSE, get_vocab("fatal_db_error"));
-  }
-  $linked_entries = array();
-  for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
-  {
-    $linked_entries[$row['entry_id']] = $row['n_linked'];
-  }
-  
+  $linked_entries = get_linked_entries($am7[0], $pm7[$num_of_days - 1]);
+
   // Get all appointments for this week in the room that we care about.
   //
   // row['room_id'] = Room ID
