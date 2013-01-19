@@ -363,10 +363,47 @@ function create_field_entry_areas($disabled=FALSE)
 }
 
 
+// Return an array of room options for the area with $area_id
+function get_room_options($area_id)
+{
+  global $tbl_room, $tbl_area, $areas;
+  
+  static $all_rooms;
+  
+  // Get the details of all the enabled rooms
+  if (!isset($all_rooms))
+  {
+    $all_rooms = array();
+    $sql = "SELECT R.id, R.room_name, R.area_id
+              FROM $tbl_room R, $tbl_area A
+             WHERE R.area_id = A.id
+               AND R.disabled=0
+               AND A.disabled=0
+          ORDER BY R.area_id, R.sort_key";
+    $res = sql_query($sql);
+    if ($res === FALSE)
+    {
+      trigger_error(sql_error(), E_USER_WARNING);
+      fatal_error(FALSE, get_vocab("fatal_db_error"));
+    }
+    for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
+    {
+      $all_rooms[$row['area_id']][$row['id']] = $row['room_name'];
+    }
+  }
+  
+  $options = array();
+  if (isset($all_rooms[$area_id]))
+  {
+    $options = array($areas[$area_id]['area_name'] => $all_rooms[$area_id]);
+  }
+  return $options;
+}
+
+
 function create_field_entry_rooms($disabled=FALSE)
 {
   global $multiroom_allowed, $rooms, $area_id, $selected_rooms, $areas;
-  global $tbl_room, $tbl_area;
   
   // $selected_rooms will be populated if we've come from a drag selection
   if (empty($selected_rooms))
@@ -374,25 +411,6 @@ function create_field_entry_rooms($disabled=FALSE)
     $selected_rooms = $rooms;
   }
   
-  // Get the details of all the enabled rooms
-  $all_rooms = array();
-  $sql = "SELECT R.id, R.room_name, R.area_id
-            FROM $tbl_room R, $tbl_area A
-           WHERE R.area_id = A.id
-             AND R.disabled=0
-             AND A.disabled=0
-        ORDER BY R.area_id, R.sort_key";
-  $res = sql_query($sql);
-  if ($res === FALSE)
-  {
-    trigger_error(sql_error(), E_USER_WARNING);
-    fatal_error(FALSE, get_vocab("fatal_db_error"));
-  }
-  for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
-  {
-    $all_rooms[$row['area_id']][$row['id']] = $row['room_name'];
-  }
-
   echo "<div id=\"div_rooms\">\n";
   echo "<label for=\"rooms\">" . get_vocab("rooms") . ":</label>\n";
   echo "<div class=\"group\">\n";
@@ -400,7 +418,7 @@ function create_field_entry_rooms($disabled=FALSE)
   // First of all generate the rooms for this area
   $params = array('name'        => 'rooms[]',
                   'id'          => 'rooms',
-                  'options'     => $all_rooms[$area_id],
+                  'options'     => get_room_options($area_id),
                   'force_assoc' => TRUE,
                   'value'       => $selected_rooms,
                   'multiple'    => $multiroom_allowed,
@@ -411,7 +429,7 @@ function create_field_entry_rooms($disabled=FALSE)
   // Then generate templates for all the rooms
   $params['disabled']      = TRUE;
   $params['create_hidden'] = FALSE;
-  foreach ($all_rooms as $a => $enabled_rooms)
+  foreach ($areas as $a => $properties)
   {
     $attributes = array();
     $attributes[] = 'style="display: none"';
@@ -426,7 +444,7 @@ function create_field_entry_rooms($disabled=FALSE)
     $attributes[] = 'data-timezone="'            . htmlspecialchars($areas[$a]['timezone']) . '"';
     
     $params['id']         = 'rooms' . $a;
-    $params['options']    = $enabled_rooms;
+    $params['options']    = get_room_options($a);
     $params['attributes'] = $attributes;
     generate_select($params);
   }

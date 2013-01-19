@@ -983,6 +983,65 @@ function generate_checkbox_group($params)
 }
 
 
+// Generate the HTML for the options to go inside a <select> element
+// Generates a select box with an associated label
+//
+//   $params    an associative array holding the function parameters:
+//
+//      OPTIONAL
+//        'options'       An array of options for the select element.   Can be a simple
+//                        array or an associative array with value => text members for
+//                        each <option> in the <select> element.   Default is an empty array.
+//                        Can also be a two dimensional array where the first index is
+//                        the option group.
+//        'force_assoc'   Boolean.  Forces the options array to be treated as an
+//                        associative array.  Default FALSE, ie it is treated as whatever
+//                        it looks like.  (This parameter is necessary because if you
+//                        index an array with strings that look like integers then PHP
+//                        casts the keys to integers and the array becomes a simple array)
+//        'value'         The value of the input.  Default ''.   Can be a single value
+//                        or an array of values.
+//
+function generate_options($params)
+{
+  // some sanity checking on params
+  foreach (array('options', 'force_assoc', 'value') as $key)
+  {
+    if (!isset($params[$key]))
+    {
+      switch ($key)
+      {
+        case 'options':
+        case 'value':
+          $params[$key] = array();
+          break;
+        case 'force_assoc':
+          $params[$key] = FALSE;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  
+  $html = '';
+  
+  foreach ($params['options'] as $value => $text)
+  {
+    // We can cope with both associative and ordinary arrays
+    if (!$params['force_assoc'] && !is_assoc($params['options']))
+    {
+      $value = $text;
+    }
+    $html .= "<option value=\"" . htmlspecialchars($value) . "\"";
+    $html .= (in_array($value, $params['value'])) ? " selected=\"selected\"" : '';
+    $html .= ">".htmlspecialchars($text)."</option>\n";
+  }
+  
+  return $html;
+}
+
+
 // Generates a select box with an associated label
 //
 //   $params    an associative array holding the function parameters:
@@ -995,6 +1054,8 @@ function generate_checkbox_group($params)
 //        'options'       An array of options for the select element.   Can be a simple
 //                        array or an associative array with value => text members for
 //                        each <option> in the <select> element.   Default is an empty array.
+//                        Can also be a two dimensional array where the first index is
+//                        the option group.
 //        'force_assoc'   Boolean.  Forces the options array to be treated as an
 //                        associative array.  Default FALSE, ie it is treated as whatever
 //                        it looks like.  (This parameter is necessary because if you
@@ -1107,18 +1168,39 @@ function generate_select($params)
   $html .= (isset($params['attributes'])) ? " " . $params['attributes'] : "";
   $html .= ">\n";
 
-  foreach ($params['options'] as $value => $text)
+  if (count($params['options']) > 0)
   {
-    // We can cope with both associative and ordinary arrays
-    if (!$params['force_assoc'] && !is_assoc($params['options']))
+    $options_params = array('force_assoc' => $params['force_assoc'],
+                            'value'       => $params['value']);
+    // If it's a two dimensional array then we've got option groups,
+    // but don't bother displaying the option group if there's only
+    // one of them
+    if (is_array(current($params['options'])))
     {
-      $value = $text;
+      if (count($params['options'] == 1))
+      {
+        $options_params['options'] = current($params['options']);
+        $html .= generate_options($options_params);
+      }
+      else
+      {
+        foreach ($params['options'] as $optgroup => $options)
+        {
+          $html .= "<optgroup label=\"" . htmlspecialchars($optgroup) . "\">\n";
+          $options_params['options'] = $options;
+          $html .= generate_options($options_params);
+          $html .= "</optgroup>\n";
+        }
+      }
     }
-    $html .= "<option value=\"" . htmlspecialchars($value) . "\"";
-    $html .= (in_array($value, $params['value'])) ? " selected=\"selected\"" : '';
-    $html .= ">".htmlspecialchars($text)."</option>\n";
+    else
+    {
+      // It's just a one dimensional array
+      $options_params['options'] = $params['options'];
+      $html .= generate_options($options_params);
+    }
   }
-
+  
   $html .= "</select>\n";
   
   // and hidden inputs if the select box is disabled
