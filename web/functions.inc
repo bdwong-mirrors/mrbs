@@ -1177,7 +1177,7 @@ function generate_select($params)
     // one of them
     if (is_array(current($params['options'])))
     {
-      if (count($params['options'] == 1))
+      if (count($params['options']) == 1)
       {
         $options_params['options'] = current($params['options']);
         $html .= generate_options($options_params);

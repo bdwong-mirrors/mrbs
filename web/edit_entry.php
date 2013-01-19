@@ -368,7 +368,7 @@ function get_room_options($area_id)
 {
   global $tbl_room, $tbl_area, $areas;
   
-  static $all_rooms;
+  static $all_rooms, $area_sets;
   
   // Get the details of all the enabled rooms
   if (!isset($all_rooms))
@@ -392,11 +392,37 @@ function get_room_options($area_id)
     }
   }
   
+  // Build an array of areas with matching properties
+  if (!isset($area_sets))
+  {
+    $area_ids = array_keys($areas);
+    foreach ($area_ids as $a)
+    {
+      $area_sets[$a] = array();
+      foreach ($area_ids as $b)
+      {
+        if ($a == $b)
+        {
+          continue;
+        }
+        // $area_sets[$a][] = $b;
+      }
+    }
+  }
+
   $options = array();
   if (isset($all_rooms[$area_id]))
   {
-    $options = array($areas[$area_id]['area_name'] => $all_rooms[$area_id]);
+    $options[$areas[$area_id]['area_name']] = $all_rooms[$area_id];
   }
+  foreach ($area_sets[$area_id] as $matching)
+  {
+    if (isset($all_rooms[$matching]))
+    {
+      $options[$areas[$matching]['area_name']] = $all_rooms[$matching];
+    }
+  }
+
   return $options;
 }
 
