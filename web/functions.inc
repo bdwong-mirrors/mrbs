@@ -1705,7 +1705,10 @@ function clean_area_row($row)
     // and we're looking at the resolution field)
     if (($key != 'resolution') || empty($force_resolution))
     {
-      $row[$key] = (isset($row[$key])) ? $value : $area_defaults[$key];
+      if (!isset($row[$key]) && isset($area_defaults[$key]))
+      {
+        $row[$key] = $area_defaults[$key];
+      }
     }
     // Cast those fields which are booleans into booleans
     if (in_array($key, $boolean_fields['area']))

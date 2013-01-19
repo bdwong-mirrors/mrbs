@@ -366,10 +366,10 @@ function create_field_entry_areas($disabled=FALSE)
 // Return an array of room options for the area with $area_id
 function get_room_options($area_id)
 {
-  global $tbl_room, $tbl_area, $areas;
+  global $tbl_room, $tbl_area, $areas, $area_fields_to_match;
   
   static $all_rooms, $area_sets;
-  
+    
   // Get the details of all the enabled rooms
   if (!isset($all_rooms))
   {
@@ -405,7 +405,19 @@ function get_room_options($area_id)
         {
           continue;
         }
-        // $area_sets[$a][] = $b;
+        $similar = TRUE;
+        foreach ($area_fields_to_match as $field)
+        {
+          if ($areas[$a][$field] !== $areas[$b][$field])
+          {
+            $similar = FALSE;
+            break;
+          }
+        }
+        if ($similar)
+        {
+          $area_sets[$a][] = $b;
+        }
       }
     }
   }
@@ -1032,8 +1044,7 @@ print_header($day, $month, $year, $area, isset($room) ? $room : "");
 
 // Get the details of all the enabled areas
 $areas = array();
-$sql = "SELECT id, area_name, resolution, default_duration, enable_periods, timezone,
-               morningstarts, morningstarts_minutes, eveningends , eveningends_minutes
+$sql = "SELECT *
           FROM $tbl_area
          WHERE disabled=0
       ORDER BY area_name";

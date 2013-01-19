@@ -338,6 +338,35 @@ $area_defaults['enable_periods']           = $enable_periods;
 $area_defaults['confirmation_enabled']     = $confirmation_enabled;
 $area_defaults['confirmed_default']        = $confirmed_default;
 
+// The columns which must be identical in areas in order that a booking can be
+// linked across areas
+$area_fields_to_match = array('timezone',
+                              'resolution',
+                              'morningstarts',
+                              'morningstarts_minutes',
+                              'eveningends',
+                              'eveningends_minutes',
+                              'private_enabled',
+                              'private_mandatory',
+                              'private_override',
+                              'min_book_ahead_enabled',
+                              'max_book_ahead_enabled',
+                              'min_book_ahead_secs',
+                              'max_book_ahead_secs',
+                              'max_per_day_enabled',
+                              'max_per_day',
+                              'max_per_week_enabled',
+                              'max_per_week',
+                              'max_per_month_enabled',
+                              'max_per_month',
+                              'max_per_year_enabled',
+                              'max_per_year',
+                              'max_per_future_enabled',
+                              'max_per_future',
+                              'approval_enabled',
+                              'enable_periods',
+                              'confirmation_enabled');
+
 // We send Ajax requests to del_entry_ajax.php with data as an array of ids.
 // In order to stop the POST request getting too large and triggering a 406
 // error, we split the requests into batches with a maximum number of ids
