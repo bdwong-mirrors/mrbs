@@ -434,14 +434,14 @@ function create_field_entry_rooms($disabled=FALSE)
     $attributes = array();
     $attributes[] = 'style="display: none"';
     // Put in some data about the area for use by the JavaScript
-    $attributes[] = 'data-enable_periods='       . (($areas[$a]['enable_periods']) ? 1 : 0);
-    $attributes[] = 'data-default_duration='     . ((isset($areas[$a]['default_duration']) && ($areas[$a]['default_duration'] != 0)) ? $areas[$a]['default_duration'] : 60*60);
-    $attributes[] = 'data-max_duration_enabled=' . (($areas[$a]['max_duration_enabled']) ? 1 : 0);
-    $attributes[] = 'data-max_duration_secs='    . $areas[$a]['max_duration_secs'];
-    $attributes[] = 'data-max_duration_periods=' . $areas[$a]['max_duration_periods'];
-    $attributes[] = 'data-max_duration_qty='     . $areas[$a]['max_duration_qty'];
-    $attributes[] = 'data-max_duration_units="'  . htmlspecialchars($areas[$a]['max_duration_units']) . '"';
-    $attributes[] = 'data-timezone="'            . htmlspecialchars($areas[$a]['timezone']) . '"';
+    $attributes[] = 'data-enable_periods='       . (($properties['enable_periods']) ? 1 : 0);
+    $attributes[] = 'data-default_duration='     . ((isset($properties['default_duration']) && ($properties['default_duration'] != 0)) ? $properties['default_duration'] : 60*60);
+    $attributes[] = 'data-max_duration_enabled=' . (($properties['max_duration_enabled']) ? 1 : 0);
+    $attributes[] = 'data-max_duration_secs='    . $properties['max_duration_secs'];
+    $attributes[] = 'data-max_duration_periods=' . $properties['max_duration_periods'];
+    $attributes[] = 'data-max_duration_qty='     . $properties['max_duration_qty'];
+    $attributes[] = 'data-max_duration_units="'  . htmlspecialchars($properties['max_duration_units']) . '"';
+    $attributes[] = 'data-timezone="'            . htmlspecialchars($properties['timezone']) . '"';
     
     $params['id']         = 'rooms' . $a;
     $params['options']    = get_room_options($a);
