@@ -337,6 +337,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
       $is_multiday_end   = $cell[$n]["is_multiday_end"];
       $status      = $cell[$n]["status"];
       $color       = $cell[$n]["color"];
+      $room_id     = $cell[$n]["room_id"];
       $descr       = htmlspecialchars($cell[$n]["data"]);
       $long_descr  = htmlspecialchars($cell[$n]["long_descr"]);
       $class = $color;
@@ -398,6 +399,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
       $is_multiday_end   = $cell[$n]["is_multiday_end"];
       $status      = $cell[$n]["status"];
       $color       = $cell[$n]["color"];
+      $room_id     = $cell[$n]["room_id"];
       $descr       = htmlspecialchars($cell[$n]["start_time"] . " " . $cell[$n]["data"]);
       $long_descr  = htmlspecialchars($cell[$n]["long_descr"]);
       $class = $color;
@@ -428,7 +430,12 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
       $html .= "<div class=\"celldiv slots1\">\n";     // we want clipping of overflow
       $html .= "<a href=\"view_entry.php?id=$id&amp;". $query_strings['booking'] . "\" title=\"$long_descr\">";
       $html .= ($is_repeat) ? "<img class=\"repeat_symbol\" src=\"images/repeat.png\" alt=\"" . get_vocab("series") . "\" title=\"" . get_vocab("series") . "\" width=\"10\" height=\"10\">" : '';
-      $html .= (count($linked) > 1) ? "<img class=\"link_symbol $c\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
+      if (count($linked) > 1)
+      {
+        $html .= "<img class=\"link_symbol $c\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" .
+                 get_vocab("linked_with") . "\n" . implode("\n", get_full_room_names(array_diff($linked, array($room_id)))) .
+                 "\" width=\"16\" height=\"16\">";
+      }
       $html .= "$descr</a>\n";
       $html .= "</div>\n";
      
@@ -454,6 +461,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
       $is_multiday_end   = $cell[0]["is_multiday_end"];
       $status     = $cell[0]["status"];
       $color      = $cell[0]["color"];
+      $room_id    = $cell[0]["room_id"];
       $descr      = htmlspecialchars($cell[0]["data"]);
       $long_descr = htmlspecialchars($cell[0]["long_descr"]);
       $slots      = $cell[0]["slots"];
@@ -541,7 +549,12 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
                  "\">\n";
         $html .= "<a href=\"view_entry.php?id=$id&amp;". $query_strings['booking'] . "\" title=\"$long_descr\">";
         $html .= ($is_repeat) ? "<img class=\"repeat_symbol $c\" src=\"images/repeat.png\" alt=\"" . get_vocab("series") . "\" title=\"" . get_vocab("series") . "\" width=\"10\" height=\"10\">" : '';
-        $html .= (count($linked) > 1) ? "<img class=\"link_symbol $c\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
+        if (count($linked) > 1)
+        {
+          $html .= "<img class=\"link_symbol $c\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" .
+                   get_vocab("linked_with") . "\n" . implode("\n", get_full_room_names(array_diff($linked, array($room_id)))) .
+                   "\" width=\"16\" height=\"16\">";
+        }
         $html .= "$descr</a>\n";
         $html .= "</div>\n";
       }

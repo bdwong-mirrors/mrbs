@@ -493,7 +493,11 @@ for ($cday = 1; $cday <= $days_in_month; $cday++)
         }
         echo "<a href=\"$booking_link\" title=\"$full_text\">";
         echo ($d[$cday]['is_repeat'][$i]) ? "<img class=\"repeat_symbol\" src=\"images/repeat.png\" alt=\"" . get_vocab("series") . "\" title=\"" . get_vocab("series") . "\" width=\"10\" height=\"10\">" : '';
-        echo (count($d[$cday]['linked'][$i]) > 1) ? "<img class=\"link_symbol\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
+        if (count($d[$cday]['linked'][$i]) > 1)
+        {
+        echo "<img class=\"link_symbol\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" .
+             get_vocab("linked_with") . "\n" . implode("\n", get_full_room_names(array_diff($d[$cday]['linked'][$i], array($room)))) . "\" width=\"16\" height=\"16\">";
+        }
         echo "$display_text</a>\n";
         echo "</div>\n";
       }

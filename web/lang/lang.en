@@ -137,6 +137,7 @@ $vocab["more_info"]           = "More Info";
 $vocab["remind_admin"]        = "Remind Admin";
 $vocab["series"]              = "Series";
 $vocab["linked_entry"]        = "Linked entry";
+$vocab["linked_with"]         = "Linked with:";
 $vocab["request_more_info"]   = "Please list the extra information you require";
 $vocab["reject_reason"]       = "Please give a reason for your rejection of this reservation request";
 $vocab["send"]                = "Send";
