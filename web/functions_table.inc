@@ -30,7 +30,7 @@ function map_add_booking ($row, &$column, $am7, $pm7)
   // It looks like:
   //     $column[s][n][id]
   //                  [is_repeat]
-  //                  [n_linked]           the number of entries that are linked together
+  //                  [linked]             the room_ids of linked entries
   //                  [is_multiday_start]  a boolean indicating if the booking stretches
   //                                       beyond the day start
   //                  [is_multiday_end]    a boolean indicating if the booking stretches
@@ -120,7 +120,7 @@ function map_add_booking ($row, &$column, $am7, $pm7)
     // fill in the id, type and start time
     $column[$s][$n]["id"] = $row['entry_id'];
     $column[$s][$n]["is_repeat"] = !empty($row['repeat_id']);
-    $column[$s][$n]["n_linked"] = $row['n_linked'];
+    $column[$s][$n]["linked"] = $row['linked'];
     $column[$s][$n]["is_multiday_start"] = $is_multiday_start;
     $column[$s][$n]["is_multiday_end"] = $is_multiday_end;
     $column[$s][$n]["status"] = $row['status'];
@@ -265,7 +265,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
   // 
   // $cell[n][id]
   //         [is_repeat]
-  //         [n_linked]
+  //         [linked]
   //         [is_multiday_start]
   //         [is_multiday_end]
   //         [color]
@@ -332,7 +332,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
     {
       $id          = $cell[$n]["id"];
       $is_repeat   = $cell[$n]["is_repeat"];
-      $n_linked    = $cell[$n]["n_linked"];
+      $linked      = $cell[$n]["linked"];
       $is_multiday_start = $cell[$n]["is_multiday_start"];
       $is_multiday_end   = $cell[$n]["is_multiday_end"];
       $status      = $cell[$n]["status"];
@@ -393,7 +393,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
     {
       $id          = $cell[$n]["id"];
       $is_repeat   = $cell[$n]["is_repeat"];
-      $n_linked    = $cell[$n]["n_linked"];
+      $linked      = $cell[$n]["linked"];
       $is_multiday_start = $cell[$n]["is_multiday_start"];
       $is_multiday_end   = $cell[$n]["is_multiday_end"];
       $status      = $cell[$n]["status"];
@@ -428,7 +428,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
       $html .= "<div class=\"celldiv slots1\">\n";     // we want clipping of overflow
       $html .= "<a href=\"view_entry.php?id=$id&amp;". $query_strings['booking'] . "\" title=\"$long_descr\">";
       $html .= ($is_repeat) ? "<img class=\"repeat_symbol\" src=\"images/repeat.png\" alt=\"" . get_vocab("series") . "\" title=\"" . get_vocab("series") . "\" width=\"10\" height=\"10\">" : '';
-      $html .= ($n_linked > 1) ? "<img class=\"link_symbol $c\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
+      $html .= (count($linked) > 1) ? "<img class=\"link_symbol $c\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
       $html .= "$descr</a>\n";
       $html .= "</div>\n";
      
@@ -449,7 +449,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
     {       
       $id         = $cell[0]["id"];
       $is_repeat  = $cell[0]["is_repeat"];
-      $n_linked   = $cell[0]["n_linked"];
+      $linked     = $cell[0]["linked"];
       $is_multiday_start = $cell[0]["is_multiday_start"];
       $is_multiday_end   = $cell[0]["is_multiday_end"];
       $status     = $cell[0]["status"];
@@ -541,7 +541,7 @@ function cell_html($cell, $query_strings, $is_invalid = FALSE)
                  "\">\n";
         $html .= "<a href=\"view_entry.php?id=$id&amp;". $query_strings['booking'] . "\" title=\"$long_descr\">";
         $html .= ($is_repeat) ? "<img class=\"repeat_symbol $c\" src=\"images/repeat.png\" alt=\"" . get_vocab("series") . "\" title=\"" . get_vocab("series") . "\" width=\"10\" height=\"10\">" : '';
-        $html .= ($n_linked > 1) ? "<img class=\"link_symbol $c\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
+        $html .= (count($linked) > 1) ? "<img class=\"link_symbol $c\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
         $html .= "$descr</a>\n";
         $html .= "</div>\n";
       }
@@ -794,8 +794,8 @@ function day_table_innerhtml($day, $month, $year, $room, $area, $timetohighlight
     //  row['entry_create_by'] = Creator/owner of entry
     //  row['status'] = Status code of the entry
     
-    // Add in the number of entries that are linked
-    $row['n_linked'] = $linked_entries[$row['entry_id']];
+    // Add in the array of linked room_ids
+    $row['linked'] = $linked_entries[$row['entry_id']];
   
     map_add_booking($row, $today[$row['room_id']][$day], $am7, $pm7);
 
@@ -1116,8 +1116,8 @@ function week_table_innerhtml($day, $month, $year, $room, $area, $timetohighligh
     {
       for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
       {
-        // Add in the number of entries that are linked
-        $row['n_linked'] = $linked_entries[$row['entry_id']];
+        // Add in the array of linked room ids
+        $row['linked'] = $linked_entries[$row['entry_id']];
         map_add_booking($row, $week_map[$room][$j], $am7[$j], $pm7[$j]);
       }
     }

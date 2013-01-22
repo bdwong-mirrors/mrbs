@@ -219,7 +219,7 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++)
       $d[$day_num]['id'][] = $row['id'];
       $d[$day_num]['color'][] = $row['type'];
       $d[$day_num]['is_repeat'][] = !empty($row['repeat_id']);
-      $d[$day_num]['n_linked'][] = $linked_entries[$row['id']];
+      $d[$day_num]['linked'][] = $linked_entries[$row['id']];
       
       // Handle private events
       if (is_private_event($row['status'] & STATUS_PRIVATE)) 
@@ -493,7 +493,7 @@ for ($cday = 1; $cday <= $days_in_month; $cday++)
         }
         echo "<a href=\"$booking_link\" title=\"$full_text\">";
         echo ($d[$cday]['is_repeat'][$i]) ? "<img class=\"repeat_symbol\" src=\"images/repeat.png\" alt=\"" . get_vocab("series") . "\" title=\"" . get_vocab("series") . "\" width=\"10\" height=\"10\">" : '';
-        echo ($d[$cday]['n_linked'][$i] > 1) ? "<img class=\"link_symbol\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
+        echo (count($d[$cday]['linked'][$i]) > 1) ? "<img class=\"link_symbol\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" . get_vocab("linked_entry") . "\" width=\"16\" height=\"16\">" : '';
         echo "$display_text</a>\n";
         echo "</div>\n";
       }

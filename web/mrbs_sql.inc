@@ -1740,10 +1740,11 @@ function mrbsMakeBooking($booking, $id=NULL, $just_check=FALSE, $skip=FALSE, $se
 
 
 // Get all the linked entries in the system between $interval_start and $interval_end
-// Returns an array with index id and value the number of linked entries
+// Returns an array with index id and value an array of room_ids.
 function get_linked_entries($interval_start, $interval_end)
 {
   global $tbl_room_entry, $tbl_entry, $tbl_room, $tbl_area;
+  global $area_room_separator;
   
   $linked_entries = array();
   
@@ -1758,7 +1759,7 @@ function get_linked_entries($interval_start, $interval_end)
   // booking a new booking will be made leaving the rest of the linked booking in
   // the disabled room as a separate booking).
   
-  $sql = "SELECT entry_id, COUNT(*) AS n_linked
+  $sql = "SELECT entry_id, room_id
             FROM $tbl_room_entry RE, $tbl_entry E, $tbl_room R, $tbl_area A
            WHERE E.id = RE.entry_id
              AND RE.room_id = R.id
@@ -1766,7 +1767,7 @@ function get_linked_entries($interval_start, $interval_end)
              AND R.disabled = 0
              AND A.disabled = 0
              AND start_time <= $interval_end AND end_time > $interval_start
-        GROUP BY entry_id";
+        ORDER BY entry_id, area_name, R.sort_key";
   
   $res = sql_query($sql);
   if ($res === FALSE)
@@ -1777,7 +1778,11 @@ function get_linked_entries($interval_start, $interval_end)
 
   for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
   {
-    $linked_entries[$row['entry_id']] = $row['n_linked'];
+    if (!isset($linked_entries[$row['entry_id']]))
+    {
+      $linked_entries[$row['entry_id']] = array();
+    }
+    $linked_entries[$row['entry_id']][] = $row['room_id'];
   }
   
   return $linked_entries;
