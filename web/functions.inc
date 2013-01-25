@@ -1672,9 +1672,10 @@ function get_rooms($id, $series)
 function get_full_room_names($rooms)
 {
   global $tbl_room, $tbl_area;
+  global $area_room_separator;
   
   $strings = array("A.area_name",
-                   "'" . sql_escape(' - ') . "'",
+                   "'" . sql_escape($area_room_separator) . "'",
                    "R.room_name");
   $sql = "SELECT " . sql_syntax_concat($strings) . "
             FROM $tbl_room R, $tbl_area A
