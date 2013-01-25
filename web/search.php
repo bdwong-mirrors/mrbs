@@ -127,7 +127,7 @@ checkAuthorised();
 
 // Also need to know whether they have admin rights
 $user = getUserName();
-$is_admin =  (isset($user) && authGetUserLevel($user)>=2) ;
+$is_admin =  (isset($user) && getAuthorised($sys_caps['admin'])) ;
 
 // Set up for Ajax.   We need to know whether we're capable of dealing with Ajax
 // requests, which will only be if (a) the browser is using DataTables and (b)

@@ -1083,8 +1083,7 @@ else
   checkAuthorised();
   // Also need to know whether they have admin rights
   $user = getUserName();
-  $user_level = authGetUserLevel($user);
-  $is_admin =  ($user_level >= 2);
+  $is_admin = getAuthorised($sys_caps['admin']);
 }
 
 // If we're running in CLI mode we're passing the parameters in from the command line

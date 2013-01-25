@@ -29,8 +29,7 @@ checkAuthorised();
 
 // Check that the user has the highest level of admin rights
 $user = getUserName();
-$level = authGetUserLevel($user);
-if ($level < $max_level)
+if (!getAuthorised($sys_caps['admin']))
 {
   exit;
 }

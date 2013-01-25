@@ -20,7 +20,7 @@ function print_theme_header($day, $month, $year, $area, $room)
   
   $page = basename($PHP_SELF, ".php");
   $user = getUserName();
-  $is_admin = (authGetUserLevel($user) >= $max_level);
+  $is_admin = getAuthorised($sys_caps['admin']);
   
   // Need to set the timezone before we can use date()
   get_area_settings($area);
@@ -152,7 +152,7 @@ function print_theme_header($day, $month, $year, $area, $room)
         // (if there are any enabled areas where we require bookings to be approved)
 
         $approval_somewhere = some_area('approval_enabled', TRUE);
-        if ($approval_somewhere && (authGetUserLevel($user) >= 1))
+        if ($approval_somewhere && getAuthorised($sys_caps['regular']))
         {
           $sql_approval_enabled = some_area_predicate('approval_enabled');
           // Find out how many bookings are awaiting approval

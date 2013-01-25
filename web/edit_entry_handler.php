@@ -12,7 +12,7 @@ checkAuthorised();
 
 // Also need to know whether they have admin rights
 $user = getUserName();
-$is_admin = (authGetUserLevel($user) >= 2);
+$is_admin = getAuthorised($sys_caps['admin']);
 
 
 

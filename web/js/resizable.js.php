@@ -13,7 +13,7 @@ if ($use_strict)
 }
 
 $user = getUserName();
-$is_admin = (authGetUserLevel($user) >= $max_level);
+$is_admin = getAuthorised($sys_caps['admin']);
 
 
 // function to reverse a collection of jQuery objects

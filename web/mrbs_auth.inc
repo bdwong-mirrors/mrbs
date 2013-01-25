@@ -1,6 +1,9 @@
 <?php
 // $Id$
 
+// include ACL basic infrastructure
+require_once 'ECAPS.php';
+
 // include the authentification wrappers
 require_once "auth/auth_$auth[type].inc";
 
@@ -47,17 +50,17 @@ $page_level['import.php']                = 2;
  * 
  * Check to see if the current user has a certain level of rights
  * 
- * $level - The access level required
+ * $acl - The access control list to satisfy to access the page
  * 
  * Returns:
  *   0        - The user does not have the required access
  *   non-zero - The user has the required access
  */
-function getAuthorised($level)
+function getAuthorised($acl)
 {
-  // If the minimum level is zero (or not set) then they are
+  // If the acl is empty (or not set) then they are
   // authorised, whoever they are
-  if (empty($level))
+  if (empty($acl))
   {
     return TRUE;
   }
@@ -70,7 +73,8 @@ function getAuthorised($level)
     return 0;
   }
 
-  return authGetUserLevel($user) >= $level;
+  $req=new ECAPS($acl);
+  return $req->test(authGetUserCaps($user));
 }
 
 /* checkAuthorised()
@@ -84,26 +88,47 @@ function getAuthorised($level)
  */
 function checkAuthorised()
 {
-  global $page_level, $max_level;
+  global $page_level, $page_acl, $max_level, $sys_caps;
   global $day, $month, $year, $area, $room;
   global $PHP_SELF;
-  
+
+  $acl="";
+
+  $pagename=basename($PHP_SELF);
   // Get the minimum authorisation level for this page
-  if (isset($page_level[basename($PHP_SELF)]))
+  if (isset($page_acl[$pagename]))
   {
-    $required_level = $page_level[basename($PHP_SELF)];
+    $acl=$page_acl[$pagename];
   }
-  elseif (isset($max_level))
+  else {
+    if (isset($page_level[$pagename]))
+    {
+	// Need to map page level to an ACL
+	if($page_level[$pagename]) {
+	    $acl=($page_level[$pagename]>1)?$sys_caps['admin']:$sys_caps['regular'];
+	} else {
+	    $acl=""; // Always allowed
+	}
+    }
+    else
+    {
+      $acl=$sys_caps['admin'];
+    }
+  }
+
+  // Add to ACL area-/room- specific constraints
+  if (is_array($acl))
   {
-    $required_level = $max_level;
+    $newacl="";
+    if (isset($acl["a$area"]))
+      $newacl.=$acl["a$area"];
+    if (isset($acl["r$room"]))
+      $newacl.=$acl["r$room"];
+    $acl=$newacl;
   }
-  else
-  {
-    $required_level = 2;
-  }
-  
+
   // Check that the user has this level
-  if (!getAuthorised($required_level))
+  if (!getAuthorised($acl))
   {
     // If we dont know the right date then use today's
     if (!isset($day) or !isset($month) or !isset($year))
@@ -190,15 +215,15 @@ function showAccessDenied($day, $month, $year, $area, $room)
  */
 function auth_can_edit_user($user, $target)
 {
-  global $min_user_editing_level;
-  
+  global $sys_caps;
+
   // Always allowed to modify your own stuff
   if(strcasecmp($user, $target) == 0)
   {
     return 1;
   }
 
-  if(authGetUserLevel($user) >= $min_user_editing_level)
+  if(getAuthorised($sys_caps['edit_users']))
   {
     return 1;
   }
@@ -220,6 +245,8 @@ function auth_can_edit_user($user, $target)
 //           the room; otherwise FALSE
 function auth_book_admin($user, $room)
 {
-  return (authGetUserLevel($user) >= 2);
+  global $sys_caps;
+
+  return getAuthorised($sys_caps['admin']);
 }
 ?>

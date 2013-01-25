@@ -214,8 +214,7 @@ checkAuthorised();
 
 // Also need to know whether they have admin rights
 $user = getUserName();
-$required_level = (isset($max_level) ? $max_level : 2);
-$is_admin = (authGetUserLevel($user) >= $required_level);
+$is_admin = getAuthorised($sys_caps['admin']);
 
 // Done changing area or room information?
 if (isset($change_done))

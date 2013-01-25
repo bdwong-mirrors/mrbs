@@ -1083,4 +1083,14 @@ $default_type = "I";
 // Default description for new bookings
 $default_description = "";
 
+/****************
+ * Capabilities *
+ ***************/
+
+$sys_caps['admin']='level=2';
+$sys_caps['regular']='level=1';
+// Note that if you change $min_user_editing_level in config.inc.php, you have to
+// redefine the edit_users element!!!
+$sys_caps['edit_users']="level=$min_user_editing_level";
+
 ?>
