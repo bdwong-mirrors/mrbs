@@ -405,7 +405,7 @@ function create_body($data, $mail_previous, $compare, $series, $action, $as_html
   global $enable_periods, $approval_enabled, $confirmation_enabled;
   global $mail_settings, $standard_fields, $url_base;
   global $tbl_entry;
-  global $select_options;
+  global $select_options, $location_separator;
 
   // If we haven't got a previous entry just give it one.   It won't get used,
   // but will prevent a series if undefined index notices.
@@ -559,8 +559,8 @@ function create_body($data, $mail_previous, $compare, $series, $action, $as_html
                                
     // Room:
     $body .= create_body_table_row (get_mail_vocab("room"),
-                                    implode(', ', $data['room_names']),
-                                    implode(', ', $mail_previous['room_names']),
+                                    implode($location_separator, $data['room_names']),
+                                    implode($location_separator, $mail_previous['room_names']),
                                     $compare, $as_html);
         
     // Start time

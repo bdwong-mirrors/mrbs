@@ -440,6 +440,9 @@ $autocomplete_length_breaks = array(25, 250, 2500);
 // string.   For example, with the default setting of ' - ' the room 'Room 1' in
 // 'Area A' would become 'Area A - Room 1'.
 $area_room_separator = ' - ';
+// The string to use when listing multiple locations.    For example, with the
+// default setting of ',' one would get 'Area A - Room 1, Area A - Room 2'.
+$location_separator = ', ';
 
 
 /************************

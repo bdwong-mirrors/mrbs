@@ -6,8 +6,7 @@ require_once "functions_ical.inc";
 require_once "mrbs_sql.inc";
 
 
-// Gets the id of the area/room with the LOCATION property value of $location,
-// creating an area and room if allowed.
+// Gets the id of the area/room with $location, creating an area and room if allowed.
 // Returns FALSE if it can't find an id or create an id, with an error message in $error
 function get_room_id($location, &$error)
 {
@@ -149,6 +148,27 @@ function get_room_id($location, &$error)
 }
 
 
+function get_room_ids($locations, &$error)
+{
+  global $location_separator;
+  
+  $room_ids = array();
+  $locations = explode($location_separator, $locations);
+  if (count($locations) > 1)
+  {
+    trigger_error("Multiple locations not yet supported", E_USER_WARNING);
+    // Need to think about what to do about making sure area characteristics
+    // are similar (and also what to do in MRBS generally about a linked booking
+    // when area characteristics change after the booking is made)
+  }
+  foreach ($locations as $location)
+  {
+    $room_ids[] = get_room_id($location, $error);
+  }
+  return $room_ids;
+}
+
+
 // Add a VEVENT to MRBS.   Returns TRUE on success, FALSE on failure
 function process_event($vevent)
 {
@@ -219,8 +239,8 @@ function process_event($vevent)
         break;
       case 'LOCATION':
         $error = '';
-        $booking['room_id'] = get_room_id($details['value'], $error);
-        if ($booking['room_id'] === FALSE)
+        $booking['rooms'] = get_room_ids($details['value'], $error);
+        if ($booking['rooms'] === FALSE)
         {
           $problems[] = $error;
         }
@@ -297,38 +317,40 @@ function process_event($vevent)
   
   // LOCATION is optional in RFC 5545 but is obviously mandatory in MRBS.
   // We could maybe have a default room on the form and use that
-  if (!isset($booking['room_id']))
+  if (!isset($booking['rooms']) || empty($booking['rooms']))
   {
     $problems[] = get_vocab("no_LOCATION");
   }
   
   if (empty($problems))
   {
-    // Get the area settings for this room, if we haven't got them already
-    if (!isset($room_settings[$booking['room_id']]))
+    // Get the area settings for these rooms, if we haven't got them already
+    foreach ($booking['rooms'] as $room_id)
     {
-      get_area_settings(get_area($booking['room_id']));
-      $room_settings[$booking['room_id']]['morningstarts'] = $morningstarts;
-      $room_settings[$booking['room_id']]['morningstarts_minutes'] = $morningstarts_minutes;
-      $room_settings[$booking['room_id']]['resolution'] = $resolution;
+      if (!isset($room_settings[$room_id]))
+      {
+        get_area_settings(get_area($room_id));
+        $room_settings[$room_id]['morningstarts'] = $morningstarts;
+        $room_settings[$room_id]['morningstarts_minutes'] = $morningstarts_minutes;
+        $room_settings[$room_id]['resolution'] = $resolution;
+      }
     }
     // Round the start and end times to slot boundaries
     $date = getdate($booking['start_time']);
     $m = $date['mon'];
     $d = $date['mday'];
     $y = $date['year'];
-    $am7 = mktime($room_settings[$booking['room_id']]['morningstarts'],
-                  $room_settings[$booking['room_id']]['morningstarts_minutes'],
+    $am7 = mktime($room_settings[$room_id]['morningstarts'],
+                  $room_settings[$room_id]['morningstarts_minutes'],
                   0, $m, $d, $y);
     $booking['start_time'] = round_t_down($booking['start_time'],
-                                          $room_settings[$booking['room_id']]['resolution'],
+                                          $room_settings[$room_id]['resolution'],
                                           $am7);
     $booking['end_time'] = round_t_up($booking['end_time'],
-                                      $room_settings[$booking['room_id']]['resolution'],
+                                      $room_settings[$room_id]['resolution'],
                                       $am7);
-    // Make the bookings
-    $bookings = array($booking);
-    $result = mrbsMakeBookings($bookings, NULL, FALSE, $skip);
+    // Make the booking
+    $result = mrbsMakeBooking($booking, NULL, FALSE, $skip);
     if ($result['valid_booking'])
     {
       return TRUE;
