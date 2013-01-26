@@ -1669,10 +1669,18 @@ function get_rooms($id, $series)
 }
 
 
+
+// Gets the full room names for $rooms, which can be a single room_id or
+// an array of room_ids
 function get_full_room_names($rooms)
 {
   global $tbl_room, $tbl_area;
   global $area_room_separator;
+  
+  if (!is_array($rooms))
+  {
+    $rooms = array($rooms);
+  }
   
   $strings = array("A.area_name",
                    "'" . sql_escape($area_room_separator) . "'",

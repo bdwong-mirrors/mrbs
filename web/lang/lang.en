@@ -464,10 +464,13 @@ $vocab["area_room_order"]             = "Order";
 $vocab["area_room_order_note"]        = "The order of the area and room names in the LOCATION property";
 $vocab["area_room"]                   = "Area-Room";
 $vocab["room_area"]                   = "Room-Area";
-$vocab["area_room_delimiter"]         = "Delimiter";
+$vocab["area_room_delimiter"]         = "Area-room delimiter";
 $vocab["area_room_delimiter_note"]    = "The string separating the area and room names in the LOCATION property.  " .
                                         "If no delimiter is found MRBS will look for a unique room with the same " .
-                                        "name as the LOCATION";
+                                        "name as the LOCATION.";
+$vocab["location_delimiter"]          = "Location delimiter";
+$vocab["location_delimiter_note"]     = "The string separating multiple area-room names in the LOCATION property, " .
+                                        "used when a booking spans multiple rooms.";
 $vocab["area_room_create"]            = "Create rooms if necessary";
 $vocab["default_type"]                = "Default type";
 $vocab["room_does_not_exist_no_area"] = "room does not exist and cannot be added - no area given";
@@ -488,6 +491,8 @@ $vocab["unsupported_FREQ"]            = "MRBS does not support FREQ=";
 $vocab["unsupported_INTERVAL"]        = "MRBS does not support INTERVAL>1 with FREQ=";
 $vocab["unsupported_COUNT"]           = "COUNT not yet supported by MRBS";
 $vocab["no_indefinite_repeats"]       = "Indefinite repeats not yet supported by MRBS";
+$vocab["cannot_import_into_periods"]  = "Cannot import into rooms using periods";
+$vocab["area_settings_not_similar"]   = "Cannot import into areas with different settings";
 $vocab["events_imported"]             = "events imported";
 $vocab["events_not_imported"]         = "events not imported";
 

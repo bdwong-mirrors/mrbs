@@ -148,23 +148,27 @@ function get_room_id($location, &$error)
 }
 
 
-function get_room_ids($locations, &$error)
+function get_room_ids($locations, &$errors)
 {
-  global $location_separator;
+  global $location_delimiter;
   
   $room_ids = array();
-  $locations = explode($location_separator, $locations);
-  if (count($locations) > 1)
-  {
-    trigger_error("Multiple locations not yet supported", E_USER_WARNING);
-    // Need to think about what to do about making sure area characteristics
-    // are similar (and also what to do in MRBS generally about a linked booking
-    // when area characteristics change after the booking is made)
-  }
+  $locations = explode($location_delimiter, $locations);
+
   foreach ($locations as $location)
   {
-    $room_ids[] = get_room_id($location, $error);
+    $error = '';
+    $room_id = get_room_id($location, $error);
+    if ($room_id === FALSE)
+    {
+      $errors[] = $error;
+    }
+    else
+    {
+      $room_ids[] = $room_id;
+    }
   }
+  
   return $room_ids;
 }
 
@@ -173,7 +177,7 @@ function get_room_ids($locations, &$error)
 function process_event($vevent)
 {
   global $import_default_type, $skip;
-  global $morningstarts, $morningstarts_minutes, $resolution;
+  global $morningstarts, $morningstarts_minutes, $resolution, $enable_periods;
   
   // We are going to cache the settings ($resolution etc.) for the rooms
   // in order to avoid lots of database lookups
@@ -238,11 +242,11 @@ function process_event($vevent)
         $booking['description'] = $details['value'];
         break;
       case 'LOCATION':
-        $error = '';
-        $booking['rooms'] = get_room_ids($details['value'], $error);
-        if ($booking['rooms'] === FALSE)
+        $errors = array();
+        $booking['rooms'] = get_room_ids($details['value'], $errors);
+        if (!empty($errors))
         {
-          $problems[] = $error;
+          $problems = array_merge($problems, $errors);
         }
         break;
       case 'DTEND':
@@ -322,19 +326,37 @@ function process_event($vevent)
     $problems[] = get_vocab("no_LOCATION");
   }
   
+  // Get the area settings for these rooms, if we haven't got them already
+  foreach ($booking['rooms'] as $room_id)
+  {
+    if (!isset($room_settings[$room_id]))
+    {
+      get_area_settings(get_area($room_id));
+      $room_settings[$room_id]['enable_periods'] = $enable_periods;
+      $room_settings[$room_id]['morningstarts'] = $morningstarts;
+      $room_settings[$room_id]['morningstarts_minutes'] = $morningstarts_minutes;
+      $room_settings[$room_id]['resolution'] = $resolution;
+    }
+  }
+  // Check that the areas are suitable
+  foreach ($booking['rooms'] as $room_id)
+  {
+    // We don't know how to import into areas that use periods
+    if ($room_settings[$room_id]['enable_periods'])
+    {
+      $problems[] = get_vocab("cannot_import_into_periods") . " (" . get_full_room_names($room_id) . ")";
+    }
+    // All the areas for this linked booking must have the same key settings
+    if ($room_settings[$room_id] !== $room_settings[$booking['rooms'][0]])
+    {
+      $problems[] = get_vocab("area_settings_not_similar");
+    }
+  }
+  
   if (empty($problems))
   {
-    // Get the area settings for these rooms, if we haven't got them already
-    foreach ($booking['rooms'] as $room_id)
-    {
-      if (!isset($room_settings[$room_id]))
-      {
-        get_area_settings(get_area($room_id));
-        $room_settings[$room_id]['morningstarts'] = $morningstarts;
-        $room_settings[$room_id]['morningstarts_minutes'] = $morningstarts_minutes;
-        $room_settings[$room_id]['resolution'] = $resolution;
-      }
-    }
+    $room_id = $booking['rooms'][0];
+    
     // Round the start and end times to slot boundaries
     $date = getdate($booking['start_time']);
     $m = $date['mon'];
@@ -399,6 +421,7 @@ print_header($day, $month, $year, $area, $room);
 $import = get_form_var('import', 'string');
 $area_room_order = get_form_var('area_room_order', 'string', 'area_room');
 $area_room_delimiter = get_form_var('area_room_delimiter', 'string', $area_room_separator);
+$location_delimiter = get_form_var('location_delimiter', 'string', $location_separator);
 $area_room_create = get_form_var('area_room_create', 'string', '0');
 $import_default_type = get_form_var('import_default_type', 'string', $default_type);
 $skip = get_form_var('skip', 'string', ((empty($skip_default)) ? '0' : '1'));
@@ -538,6 +561,14 @@ $params = array('label'       => get_vocab("area_room_delimiter") . ':',
                 'label_title' => get_vocab("area_room_delimiter_note"),
                 'name'        => 'area_room_delimiter',
                 'value'       => $area_room_delimiter);
+generate_input($params);
+echo "</div>\n";
+
+echo "<div>\n";
+$params = array('label'       => get_vocab("location_delimiter") . ':',
+                'label_title' => get_vocab("location_delimiter_note"),
+                'name'        => 'location_delimiter',
+                'value'       => $location_delimiter);
 generate_input($params);
 echo "</div>\n";
 
