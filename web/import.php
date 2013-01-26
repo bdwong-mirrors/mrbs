@@ -512,39 +512,40 @@ echo "<legend>" . get_vocab("import_icalendar") . "</legend>\n";
 echo "<p>\n" . get_vocab("import_intro") . "</p>\n";
   
 echo "<div>\n";
-echo "<label for=\"ics_file\">" . get_vocab("file_name") . ":</label>\n";
-echo "<input type=\"file\" accept=\"text/calendar\" name=\"ics_file\" id=\"ics_file\">\n";
+$params = array('label' => get_vocab("file_name") . ':',
+                'name'  => 'ics_file',
+                'type'  => 'file',
+                'attributes' => 'accept="text/calendar"');
+generate_input($params);
 echo "</div>\n";
 
 echo "<fieldset>\n";
 echo "<legend>" . get_vocab("area_room_settings") . "</legend>\n";
 
 echo "<div>\n";
-echo "<label title=\"" . get_vocab("area_room_order_note") . "\">" . 
-     get_vocab("area_room_order") . ":</label>\n";
-echo "<div class=\"group\">\n";
-echo "<label><input type=\"radio\" name=\"area_room_order\" value=\"area_room\"" .
-     (($area_room_order == "area_room") ? " checked=\"checked\"" : "") . ">" .
-     get_vocab("area_room") . "</label>\n";
-echo "<label><input type=\"radio\" name=\"area_room_order\" value=\"room_area\"" .
-     (($area_room_order == "room_area") ? " checked=\"checked\"" : "") . ">" .
-     get_vocab("room_area") . "</label>\n";
-echo "</div>\n";
+$options = array('area_room' => get_vocab("area_room"),
+                 'room_area' => get_vocab("room_area"));
+$params = array('label'       => get_vocab("area_room_order") . ':',
+                'label_title' => get_vocab("area_room_order_note"),
+                'name'        => 'area_room_order',
+                'options'     => $options,
+                'value'       => $area_room_order);
+generate_radio_group($params);
 echo "</div>\n";
 
 echo "<div>\n";
-echo "<label for=\"area_room_delimiter\"" .
-     " title=\"" . get_vocab("area_room_delimiter_note") . "\">" . 
-     get_vocab("area_room_delimiter") . ":</label>\n";
-echo "<input type=\"text\" name=\"area_room_delimiter\" id=\"area_room_delimiter\"" .
-     " value=\"" . htmlspecialchars($area_room_delimiter) . "\">\n";
+$params = array('label'       => get_vocab("area_room_delimiter") . ':',
+                'label_title' => get_vocab("area_room_delimiter_note"),
+                'name'        => 'area_room_delimiter',
+                'value'       => $area_room_delimiter);
+generate_input($params);
 echo "</div>\n";
 
 echo "<div>\n";
-echo "<label for=\"area_room_create\">" . get_vocab("area_room_create") . ":</label>\n";
-echo "<input type=\"checkbox\" name=\"area_room_create\" id=\"area_room_create\" value=\"yes\"" .
-     (($area_room_create) ? " checked=\"checked\"" : "") . 
-     ">\n";
+$params = array('label' => get_vocab("area_room_create") . ':',
+                'name'  => 'area_room_create',
+                'value' => $area_room_create);
+generate_checkbox($params);
 echo "</div>\n";
 
 echo "</fieldset>\n";
@@ -553,23 +554,24 @@ echo "<fieldset>\n";
 echo "<legend>" . get_vocab("other_settings") . "</legend>\n";
 
 echo "<div>\n";
-echo "<label for=\"import_default_type\">" . get_vocab("default_type") . ":</label>\n";
-echo "<select name=\"import_default_type\" id=\"import_default_type\">\n";
+$options = array();
 foreach ($booking_types as $type)
 {
-  echo "<option value=\"$type\"" .
-       (($type == $import_default_type) ? " selected=\"selected\"" : '') .
-       ">" . get_vocab("type.$type") . "</option>\n";
+  $options[$type] = get_vocab("type.$type");
 }
-echo "</select>\n";
+$params = array('label'       => get_vocab("default_type") . ':',
+                'name'        => 'import_default_type',
+                'options'     => $options,
+                'force_assoc' => TRUE,
+                'value'       => $import_default_type);
+generate_select($params);
 echo "</div>\n";
 
 echo "<div>\n";
-echo "<label for=\"skip\">" . get_vocab("skip_conflicts") . ":</label>\n";
-echo "<input type=\"checkbox\" class=\"checkbox\" " .
-          "id=\"skip\" name=\"skip\" value=\"1\" " .
-          (($skip) ? " checked=\"checked\"" : "") .
-          ">\n";
+$params = array('label' => get_vocab("skip_conflicts") . ':',
+                'name'  => 'skip',
+                'value' => $skip);
+generate_checkbox($params);
 echo "</div>\n";
 
 echo "</fieldset>\n";
