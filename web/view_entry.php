@@ -391,50 +391,6 @@ echo create_details_body($row, TRUE, $keep_private, $room_disabled);
 </table>
 
 
-
-<?php
-$n_rows = 4;
-$n_cols = 7;
-echo "<table id=\"view_map\">\n";
-for ($i=0; $i<$n_rows; $i++)
-{
-  echo "<tr>";
-  for ($j=0; $j<$n_cols; $j++)
-  {
-    echo "<td>&bull;</td>\n";
-  }
-  if ($i==0)
-  {
-    echo "<td>";
-    $params = array('name'    => 'this_room',
-                    'options' => array('1' => get_vocab('this_room_only')));
-    generate_radio($params);
-    echo "</td>\n";
-  }
-  elseif ($i==1)
-  {
-    echo "<td rowspan=\"" . ($n_rows - 1) . "\">";
-    $params = array('name'    => 'this_room',
-                    'options' => array('0' => get_vocab('all_linked_rooms')));
-    generate_radio($params);
-    echo "</td>\n";
-  }
-  echo "</tr>\n";
-}
-echo "</table>\n";
-
-$options = array(0 => 'edit$$',
-                 1 => 'delete$$',
-                 2 => 'copy$$',
-                 3 => 'export$$');
-$params = array('name'    => 'action',
-                'label'   => '',
-                'options' => $options);
-generate_radio_group($params);
-?>
-
-
-
 <div id="view_entry_nav">
   <?php
   // Only show the links for Edit and Delete if the room is enabled.    We're
