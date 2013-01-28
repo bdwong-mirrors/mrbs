@@ -646,7 +646,7 @@ fieldset#rep_info {border-top: 1px solid <?php echo $site_faq_entry_border_color
 .edit_entry span#end_time_error {display: block; float: left; margin-left: 2em; font-weight: normal}
 .edit_area_room span.error {display: block; width: 100%; margin-bottom: 0.5em}
 
-.form_general label.secondary {font-weight: normal; width: auto}
+.form_general label.secondary {font-weight: normal; width: auto; max-width: none}
 
 div#conflict_check, div#policy_check {float: left; clear: none; width: 2em; padding: 1em 0.5em; cursor: pointer}
 div#conflict_check {margin-left: 3em}

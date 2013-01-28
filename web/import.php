@@ -6,6 +6,54 @@ require_once "functions_ical.inc";
 require_once "mrbs_sql.inc";
 
 
+function create_field_default_rooms($name, $value)
+{
+  global $tbl_room, $tbl_area;
+  global $use_default_rooms;
+  
+  echo "<div>\n";
+  // Get all rooms that aren't disabled and don't use periods
+  $sql = "SELECT R.id, R.room_name, A.area_name
+            FROM $tbl_room R, $tbl_area A
+           WHERE R.area_id = A.id
+             AND R.disabled=0
+             AND A.disabled=0
+             AND A.enable_periods=0
+        ORDER BY A.area_name, R.sort_key";
+  $res = sql_query($sql);
+  if ($res === FALSE)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(FALSE, get_vocab("fatal_db_error"));
+  }
+  $options = array();
+  for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
+  {
+    if (!isset($options[$row['area_name']]))
+    {
+      $options[$row['area_name']] = array();
+    }
+    $options[$row['area_name']][$row['id']] = $row['room_name'];
+  }
+  
+  $params = array('label'       => get_vocab("default_rooms") . ':',
+                  'label_title' => get_vocab("default_rooms_note"),
+                  'name'        => $name . '[]',
+                  'id'          => $name,
+                  'options'     => $options,
+                  'force_assoc' => TRUE,
+                  'multiple'    => TRUE,
+                  'value'       => $value);
+  generate_select($params);
+  $params = array('label'       => get_vocab("use_default_rooms"),
+                  'label_after' => TRUE,
+                  'name'        => 'use_default_rooms',
+                  'value'       => $use_default_rooms);
+  generate_checkbox($params);
+  echo "</div>\n";
+}
+
+
 // Gets the id of the area/room with $location, creating an area and room if allowed.
 // Returns FALSE if it can't find an id or create an id, with an error message in $error
 function get_room_id($location, &$error)
@@ -176,7 +224,7 @@ function get_room_ids($locations, &$errors)
 // Add a VEVENT to MRBS.   Returns TRUE on success, FALSE on failure
 function process_event($vevent)
 {
-  global $import_default_type, $skip;
+  global $import_default_type, $skip, $default_rooms, $use_default_rooms;
   global $morningstarts, $morningstarts_minutes, $resolution, $enable_periods;
   
   // We are going to cache the settings ($resolution etc.) for the rooms
@@ -319,37 +367,47 @@ function process_event($vevent)
     $booking['sequence'] = 0;  // and we'll start the sequence from 0
   }
   
-  // LOCATION is optional in RFC 5545 but is obviously mandatory in MRBS.
-  // We could maybe have a default room on the form and use that
+  // If we haven't got any rooms, then use the default rooms if we've been
+  // told to, otherwise report an error
   if (!isset($booking['rooms']) || empty($booking['rooms']))
   {
-    $problems[] = get_vocab("no_LOCATION");
+    if ($use_default_rooms)
+    {
+      $booking['rooms'] = $default_rooms;
+    }
+    else
+    {
+      $problems[] = get_vocab("no_LOCATION");
+    }
   }
   
   // Get the area settings for these rooms, if we haven't got them already
-  foreach ($booking['rooms'] as $room_id)
+  if (isset($booking['rooms']))
   {
-    if (!isset($room_settings[$room_id]))
+    foreach ($booking['rooms'] as $room_id)
     {
-      get_area_settings(get_area($room_id));
-      $room_settings[$room_id]['enable_periods'] = $enable_periods;
-      $room_settings[$room_id]['morningstarts'] = $morningstarts;
-      $room_settings[$room_id]['morningstarts_minutes'] = $morningstarts_minutes;
-      $room_settings[$room_id]['resolution'] = $resolution;
+      if (!isset($room_settings[$room_id]))
+      {
+        get_area_settings(get_area($room_id));
+        $room_settings[$room_id]['enable_periods'] = $enable_periods;
+        $room_settings[$room_id]['morningstarts'] = $morningstarts;
+        $room_settings[$room_id]['morningstarts_minutes'] = $morningstarts_minutes;
+        $room_settings[$room_id]['resolution'] = $resolution;
+      }
     }
-  }
-  // Check that the areas are suitable
-  foreach ($booking['rooms'] as $room_id)
-  {
-    // We don't know how to import into areas that use periods
-    if ($room_settings[$room_id]['enable_periods'])
+    // Check that the areas are suitable
+    foreach ($booking['rooms'] as $room_id)
     {
-      $problems[] = get_vocab("cannot_import_into_periods") . " (" . get_full_room_names($room_id) . ")";
-    }
-    // All the areas for this linked booking must have the same key settings
-    if ($room_settings[$room_id] !== $room_settings[$booking['rooms'][0]])
-    {
-      $problems[] = get_vocab("area_settings_not_similar");
+      // We don't know how to import into areas that use periods
+      if ($room_settings[$room_id]['enable_periods'])
+      {
+        $problems[] = get_vocab("cannot_import_into_periods") . " (" . get_full_room_names($room_id) . ")";
+      }
+      // All the areas for this linked booking must have the same key settings
+      if ($room_settings[$room_id] !== $room_settings[$booking['rooms'][0]])
+      {
+        $problems[] = get_vocab("area_settings_not_similar");
+      }
     }
   }
   
@@ -421,6 +479,8 @@ print_header($day, $month, $year, $area, $room);
 $import = get_form_var('import', 'string');
 $area_room_order = get_form_var('area_room_order', 'string', 'area_room');
 $area_room_delimiter = get_form_var('area_room_delimiter', 'string', $area_room_separator);
+$default_rooms = get_form_var('default_rooms', 'array');
+$use_default_rooms = get_form_var('use_default_rooms', 'string', 0);
 $location_delimiter = get_form_var('location_delimiter', 'string', $location_separator);
 $area_room_create = get_form_var('area_room_create', 'string', '0');
 $import_default_type = get_form_var('import_default_type', 'string', $default_type);
@@ -571,6 +631,8 @@ $params = array('label'       => get_vocab("location_delimiter") . ':',
                 'value'       => $location_delimiter);
 generate_input($params);
 echo "</div>\n";
+
+create_field_default_rooms('default_rooms', $default_rooms);
 
 echo "<div>\n";
 $params = array('label' => get_vocab("area_room_create") . ':',

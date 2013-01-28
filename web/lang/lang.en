@@ -472,6 +472,9 @@ $vocab["location_delimiter"]          = "Location delimiter";
 $vocab["location_delimiter_note"]     = "The string separating multiple area-room names in the LOCATION property, " .
                                         "used when a booking spans multiple rooms.";
 $vocab["area_room_create"]            = "Create rooms if necessary";
+$vocab["default_rooms"]               = "Default room(s)";
+$vocab["default_rooms_note"]          = "The room or rooms to be used if no LOCATION is given.";
+$vocab["use_default_rooms"]           = "Use default rooms if necessary";
 $vocab["default_type"]                = "Default type";
 $vocab["room_does_not_exist_no_area"] = "room does not exist and cannot be added - no area given";
 $vocab["room_not_unique_no_area"]     = "room name is not unique.  Cannot choose which one without an area.";
