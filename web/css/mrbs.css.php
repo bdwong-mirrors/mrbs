@@ -78,6 +78,8 @@ table.admin_table {border-spacing: 0px; border-collapse: collapse; border-color:
 
 select.room_area_select {margin-right: 0.5em}
 
+select[multiple] {resize: vertical}
+
 <?php
 // Don't display anything with a class of js_none (used for example for hiding Submit
 // buttons when we're submitting onchange).  The .js class is added to the <body> by JavaScript
