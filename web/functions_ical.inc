@@ -370,16 +370,16 @@ function get_rep_opt($byday_days)
 
 // Given an RFC 5545 recurrence rule, returns an array giving the MRBS repeat
 // details.   Indexed by rep_type, rep_num_weeks, rep_opt, end_date
-// Returns FALSE on failure with error messahes being returned in the array $errors
+// Returns FALSE on failure with error messages being returned in the array $errors
 function get_repeat_details($rrule, $start_time, &$errors)
 {
   global $RFC_5545_days;
   
   // Set up the result array with safe defaults
-  $result = array('rep_type' => REP_NONE,
-                  'rep_opt' => '0000000',
+  $result = array('rep_type'      => REP_NONE,
+                  'rep_opt'       => '0000000',
                   'rep_num_weeks' => 0,
-                  'end_date' => 0);
+                  'end_date'      => 0);
   $rules = array();
   $recur_rule_parts = explode(';', $rrule);
   foreach ($recur_rule_parts as $recur_rule_part)
@@ -415,7 +415,7 @@ function get_repeat_details($rrule, $start_time, &$errors)
       else
       {
         // If there's no repeat day specified in the RRULE then
-        // 'the day is gotten from "DTSTART"'
+        // the day is obtained from "DTSTART"'
         $byday_days = array($RFC_5545_days[date('w', $start_time)]);
       }
       $result['rep_opt'] = get_rep_opt($byday_days);
@@ -452,7 +452,7 @@ function get_repeat_details($rrule, $start_time, &$errors)
           }
           else
           {
-            $result['relative'] = $byday_day;
+            $result['month_relative'] = $byday_day;
           }
         }
       }
