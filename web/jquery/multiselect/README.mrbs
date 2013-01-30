@@ -1,0 +1,7 @@
+This directory contains the jquery-multiselect library.
+It is dual licensed under the MIT and GPL licenses.
+
+The code was taken unmodified from
+git://github.com/ehynds/jquery-ui-multiselect-widget.git
+(revision f7819a765754678240d4650d109f7b1d33468599)
+

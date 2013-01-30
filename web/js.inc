@@ -5,7 +5,7 @@
 
 // We need to construct a standard query string that can be passed to the *.js.php
 // pages.  That's because some of the settings they use are area dependent.
-// We also want the area to be in the queey string so that the JavaScript page is
+// We also want the area to be in the query string so that the JavaScript page is
 // cached if the area is the same and not otherwise.
 $standard_query_string = "area=$area";
   
@@ -36,6 +36,15 @@ $standard_query_string = "area=$area";
 // Extra regional settings for the jQuery UI datepicker
 ?>
 <script type="text/javascript" src="jquery/ui/jquery-ui-i18n.MRBS.js"></script>
+
+<script type="text/javascript" src="jquery/multiselect/js/jquery.multiselect.min.js"></script>
+<script type="text/javascript" src="jquery/multiselect/js/jquery.multiselect.filter.min.js"></script>
+<?php
+$multiselect_lang_files = get_multiselect_langs();
+foreach( $multiselect_lang_files as $lang_file ) {
+  echo '<script type="text/javascript" src="'.$lang_file.'"></script>';
+}
+?>
 
 <?php // Work out if we're using IE6 or below ?>
 <script type="text/javascript">

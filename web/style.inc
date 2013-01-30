@@ -11,6 +11,8 @@ global $using_rtl, $refresh_rate, $PHP_SELF;
     <link href="jquery/datatables/css/mrbs-table.css" rel="stylesheet" type="text/css">
     <link href="jquery/datatables/css/ColReorder.css" rel="stylesheet" type="text/css">
     <link href="jquery/datatables/css/ColVis.css" rel="stylesheet" type="text/css">
+    <link href="jquery/multiselect/css/jquery.multiselect.css" rel="stylesheet" type="text/css">
+    <link href="jquery/multiselect/css/jquery.multiselect.filter.css" rel="stylesheet" type="text/css">
     
     <link rel="stylesheet" href="css/mrbs.css.php" type="text/css">
     <?php

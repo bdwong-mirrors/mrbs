@@ -1319,4 +1319,14 @@ init = function() {
     
   $('input[name="rep_type"]').change(changeRepTypeDetails);
   changeRepTypeDetails();
+
+  <?php
+  // selectedList:3 means that a maximum of three rooms is displayed when the select box is not open
+  ?>
+  $("#rooms").multiselect({selectedList:3}).multiselectfilter({autoReset:true});
+  <?php
+  // hide the description for the multi-select box - not needed when using the multiselect plugin
+  ?>
+  $("#rooms_multiselect_help").hide();
 };
+

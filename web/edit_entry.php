@@ -492,7 +492,7 @@ function create_field_entry_rooms($disabled=FALSE)
   // is disabled
   if ($multiroom_allowed && !$disabled)
   {
-    echo "<span>" . get_vocab("ctrl_click") . "</span>\n";
+    echo "<span id='rooms_multiselect_help'>" . get_vocab("ctrl_click") . "</span>\n";
   }
   echo "</div>\n";
 

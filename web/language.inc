@@ -707,16 +707,14 @@ function get_language_qualifiers()
   return $qualifiers;
 }
 
-
-// Returns the pathname of the language file to use for the dataTables
-// jQuery plugin.    If no suitable language file exists then returns FALSE
-function get_datatable_lang()
+// Returns an array of language codes for the current user, 
+// starting with the most desirable one.
+function get_preferred_langs()
 {
   global $default_language_tokens, $disable_automatic_language_changing, $override_locale;
   global $langs, $lang_map_windows, $server_os;
-  
-  $found_lang = FALSE;
-  $language_dir = "../jquery/datatables/language";  // location of dataTables language files
+
+  $result = array(); 
   
   // If automatic language changing is disabled, then use the $override_locale
   // as the first choice of language, and then second the default language tokens
@@ -752,35 +750,60 @@ function get_datatable_lang()
   // for en-gb.txt
   foreach ($preferred_langs as $lang => $qual)
   {
-    $lang_file = strtolower(locale_format($lang, '-'));
-    $lang_file = "$language_dir/$lang_file.txt";
+    $result[] = strtolower(locale_format($lang, '-'));
+  }
+  // If none of the user's preferred languages was available, try to
+  // find a lang file for one of the base languages, e.g. look for
+  // lang.en if "en-ca" was specified.
+  foreach ($preferred_langs as $lang => $qual)
+  {
+    $result[] = strtolower(substr($lang,0,2));
+  }
+
+  return array_unique($result);
+}
+
+// Returns the pathname of the language file to use for the dataTables
+// jQuery plugin.    If no suitable language file exists then returns FALSE
+function get_datatable_lang()
+{
+  $language_dir = "../jquery/datatables/language";  // location of dataTables language files
+  
+  $preferred_langs = get_preferred_langs();
+  
+  foreach ($preferred_langs as $lang)
+  {
+    $lang_file = "$language_dir/$lang.txt";
     if (file_exists($lang_file))
     {
-      $found_lang = TRUE;
-      break;
-    }
-  }
-  if (!$found_lang)
-  {
-    // None of the user's preferred languages was available, so try to
-    // find a lang file for one of the base languages, e.g. look for
-    // lang.en if "en-ca" was specified.
-    foreach ($preferred_langs as $lang => $qual)
-    {
-      $lang_file = strtolower(substr($lang,0,2));
-      $lang_file = "$language_dir/$lang_file.txt";
-      if (file_exists($lang_file))
-      {
-        $found_lang = TRUE;
-        break;
-      }
+      // We need to strip the "../" off the start of the $lang_file, hence 3
+      return substr($lang_file, 3);
     }
   }
   
-  // We need to strip the "../" off the start of the $lang_file, hence 3
-  return ($found_lang) ? substr($lang_file, 3) : FALSE;
+  return FALSE;
 }
 
+// Returns the pathnames of the language file to use for the multiselect
+// jQuery plugin. If no suitable language file exists then returns an empty array
+function get_multiselect_langs()
+{
+  $language_dir = "jquery/multiselect/i18n";  // location of multiselect language files
+  
+  $preferred_langs = get_preferred_langs();
+
+  foreach ($preferred_langs as $lang)
+  {
+    $lang_file1 = "$language_dir/jquery.multiselect.$lang.js";
+    $lang_file2 = "$language_dir/jquery.multiselect.filter.$lang.js";
+    if (file_exists($lang_file1) && file_exists($lang_file2))
+    {
+      return array($lang_file1, $lang_file2);
+    }
+  }
+  
+  return array();
+}
 
 // Set $vocab.   Returns TRUE if a lang file is found, otherwise FALSE
 function set_vocab($lang)
