@@ -56,7 +56,7 @@ function mrbsCheckFree(&$entry, $ignore, $repignore)
     return "";
   }
   // Get the room's area ID for linking to day, week, and month views:
-  $area = mrbsGetRoomArea($room_id);
+  $area = mrbsGetRoomArea($entry['room_id']);
 
   // Build an listing all the conflicts:
   $err = array();
