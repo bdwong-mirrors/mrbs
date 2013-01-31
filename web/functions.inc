@@ -624,6 +624,7 @@ function generate_checkbox($params)
 //      OPTIONAL
 //        'label'         The text to be used for the field label.
 //        'label_title'   The text to be used for the title attribute for the field label
+//        'id'            The id of the element.  Defaults to the same as the name.
 //        'value'         The value of the input.  Default ''
 //        'type'          The type of input, eg 'text', 'number', etc.  Default NULL
 //        'step'          The value of the 'step' attribute.  Default NULL
@@ -650,6 +651,9 @@ function generate_simple_input($params)
       {
         case 'name':
           trigger_error('Missing mandatory parameters', E_USER_NOTICE);
+          break;
+        case 'id':
+          $params[$key] = $params['name'];
           break;
         case 'value':
         case 'label_title':
@@ -678,7 +682,7 @@ function generate_simple_input($params)
   if (isset($params['label']))
   {
     // no HTML escaping for the label - it is trusted
-    $html .= "<label for=\"" . $params['name'] . "\"";
+    $html .= "<label for=\"" . $params['id'] . "\"";
     $html .= (empty($params['label_title'])) ? '' : ' title="' . htmlspecialchars($params['label_title']) . '"';
     $html .= ">" . $params['label'] . "</label>\n";
   }
@@ -689,7 +693,7 @@ function generate_simple_input($params)
   $html .= (isset($params['max'])) ? " max=\"" . $params['max'] . "\"" : "";
   $html .= (isset($params['pattern'])) ? " pattern=\"" . htmlspecialchars($params['pattern']) . "\"" : "";
   $html .= (isset($params['attributes'])) ? " " . $params['attributes'] : "";
-  $html .= " id=\"" . $params['name'] . "\" name=\"" . $params['name'] . "\"";
+  $html .= " id=\"" . $params['id'] . "\" name=\"" . $params['name'] . "\"";
   $html .= ($params['disabled']) ? " disabled=\"disabled\"" : '';
   $html .= ($params['mandatory']) ? " required aria-required=\"true\"" : '';
   $html .= (isset($params['maxlength'])) ? " maxlength=\"" . $params['maxlength'] . "\"" : '';
@@ -1421,6 +1425,62 @@ function generate_textarea($params)
   }
   echo $html;
 }
+
+
+function generate_submit($params)
+{
+  // some sanity checking on params
+  foreach (array('name', 'value', 'title', 'class', 'disabled', 'formnovalidate') as $key)
+  {
+    if (!isset($params[$key]))
+    {
+      switch ($key)
+      {
+        case 'value':
+          trigger_error('Missing mandatory parameters', E_USER_NOTICE);
+          break;
+        case 'class':
+          $params[$key] = array();
+          break;
+        case 'disabled':
+        case 'formnovalidate':
+          $params[$key] = FALSE;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  
+  if (!is_array($params['class']))
+  {
+    $params['class'] = array($params['class']);
+  }
+  $params['class'][] = 'submit';
+  
+  $html  = "<input type=\"submit\"";
+  if (count($params['class']) > 0)
+  {
+    $html .= " class=\"" . implode(' ', $params['class']) . "\"";
+  }
+  if (isset($params['name']))
+  {
+    $html .= " name=\"" . $params['name'] . "\"";
+  }
+  if (isset($params['title']))
+  {
+    $html .= " title=\"" . $params['title'] . "\"";
+  }
+  $html .= " value=\"" . htmlspecialchars($params['value']) . "\"";
+  if ($params['formnovalidate'])
+  {
+    $html .= " formnovalidate";
+  }
+  $html .= ">\n";
+  
+  echo $html;
+}
+
 
 // Generates a date selector for use on a form.   If JavaScript is enabled
 // then it will generate a calendar picker using jQuery UI datepicker.   If not,

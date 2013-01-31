@@ -706,7 +706,7 @@ echo "<div id=\"submit_buttons\">\n";
 // Back button
 echo "<form method=\"post\" action=\"" . htmlspecialchars($returl) . "\">\n";
 echo "<fieldset><legend></legend>\n";
-echo "<input type=\"submit\" value=\"" . get_vocab("back") . "\">\n";
+generate_submit(array('value' => get_vocab("back")));
 echo "</fieldset>\n";
 echo "</form>\n";
 
@@ -747,9 +747,9 @@ if (empty($result['rules_broken'])  &&
     }
   }
   // Submit button
-  echo "<input type=\"submit\"" .
-              " value=\"" . get_vocab("skip_and_book") . "\"" .
-              " title=\"" . get_vocab("skip_and_book_note") . "\">\n";
+  $params = array('value' => get_vocab("skip_and_book"),
+                  'title' => get_vocab("skip_and_book_note"));
+  generate_submit($params);
   echo "</fieldset>\n";
   echo "</form>\n";
 }

@@ -1381,13 +1381,18 @@ if (($edit_type == "series") && $repeats_allowed)
     echo "<legend></legend>\n";
     // The Back button
     echo "<div id=\"edit_entry_submit_back\">\n";
-    echo "<input class=\"submit\" type=\"submit\" name=\"back_button\" value=\"" . get_vocab("back") . "\" formnovalidate>\n";
+    $params = array('name'           => 'back_button',
+                    'value'          => get_vocab("back"),
+                    'formnovalidate' => TRUE);
+    generate_submit($params);
     echo "</div>\n";
     
     // The Submit button
     echo "<div id=\"edit_entry_submit_save\">\n";
-    echo "<input class=\"submit default_action\" type=\"submit\" name=\"save_button\" value=\"" .
-      get_vocab("save") . "\">\n";
+    $params = array('name'  => 'save_button',
+                    'value' => get_vocab("save"),
+                    'class' => 'default_action');
+    generate_submit($params);
     echo "</div>\n";
     
     // divs to hold the results of the Ajax checking of the booking

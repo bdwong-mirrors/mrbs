@@ -166,25 +166,26 @@ else
 if ($is_admin)
 {
   // New area form
-  ?>
-  <form id="add_area" class="form_admin" action="add.php" method="post">
-    <fieldset>
-    <legend><?php echo get_vocab("addarea") ?></legend>
+  echo "<form id=\"add_area\" class=\"form_admin\" action=\"add.php\" method=\"post\">\n";
+  echo "<fieldset>\n";
+  echo "<legend>" . get_vocab("addarea") . "</legend>\n";
         
-      <input type="hidden" name="type" value="area">
+  echo "<input type=\"hidden\" name=\"type\" value=\"area\">\n";
 
-      <div>
-        <label for="area_name"><?php echo get_vocab("name") ?>:</label>
-        <input type="text" id="area_name" name="name" maxlength="<?php echo $maxlength['area.area_name'] ?>">
-      </div>
-          
-      <div>
-        <input type="submit" class="submit" value="<?php echo get_vocab("addarea") ?>">
-      </div>
+  echo "<div>\n";
+  $params = array('label'      => get_vocab("name") . ':',
+                  'name'       => 'name',
+                  'id'         => 'area_name',
+                  'attributes' => 'maxlength="' . $maxlength['area.area_name'] . '"');
+  generate_input($params);
+  echo "</div>\n";
 
-    </fieldset>
-  </form>
-  <?php
+  echo "<div>\n";
+  generate_submit(array('value' => get_vocab("addarea")));
+  echo "</div>\n";
+
+  echo "</fieldset>\n";
+  echo "</form>\n";
 }
 echo "</div>";  // area_form
 
@@ -398,36 +399,42 @@ if ($is_admin || ($n_displayable_areas > 0))
   // there's an area selected
   if ($is_admin && $areas_defined && !empty($area))
   {
-  ?>
-    <form id="add_room" class="form_admin" action="add.php" method="post">
-      <fieldset>
-      <legend><?php echo get_vocab("addroom") ?></legend>
+    echo "<form id=\"add_room\" class=\"form_admin\" action=\"add.php\" method=\"post\">\n";
+    echo "<fieldset>\n";
+    echo "<legend>" . get_vocab("addroom") . "</legend>\n";
         
-        <input type="hidden" name="type" value="room">
-        <input type="hidden" name="area" value="<?php echo $area; ?>">
+    echo "<input type=\"hidden\" name=\"type\" value=\"room\">\n";
+    echo "<input type=\"hidden\" name=\"area\" value=\"$area\">\n";
         
-        <div>
-          <label for="room_name"><?php echo get_vocab("name") ?>:</label>
-          <input type="text" id="room_name" name="name" maxlength="<?php echo $maxlength['room.room_name'] ?>">
-        </div>
+    echo "<div>\n";
+    $params = array('label' => get_vocab("name") . ':',
+                    'name'  => 'name',
+                    'id'    => 'room_name',
+                    'attributes' => 'maxlength="' . $maxlength['room.room_name'] . '"');
+    generate_input($params);
+    echo "</div>\n";
+    
+    echo "<div>\n";
+    $params = array('label' => get_vocab("description") . ':',
+                    'name'  => 'description',
+                    'id'    => 'room_description',
+                    'attributes' => 'maxlength="' . $maxlength['room.description'] . '"');
+    generate_input($params);
+    echo "</div>\n";
         
-        <div>
-          <label for="room_description"><?php echo get_vocab("description") ?>:</label>
-          <input type="text" id="room_description" name="description" maxlength="<?php echo $maxlength['room.description'] ?>">
-        </div>
-        
-        <div>
-          <label for="room_capacity"><?php echo get_vocab("capacity") ?>:</label>
-          <input type="text" id="room_capacity" name="capacity">
-        </div>
+    echo "<div>\n";
+    $params = array('label' => get_vocab("capacity") . ':',
+                    'name'  => 'capacity',
+                    'id'    => 'room_capacity');
+    generate_input($params);
+    echo "</div>\n";
        
-        <div>
-          <input type="submit" class="submit" value="<?php echo get_vocab("addroom") ?>">
-        </div>
+    echo "<div>\n";
+    generate_submit(array('value' => get_vocab("addroom")));
+    echo "</div>\n";
         
-      </fieldset>
-    </form>
-  <?php
+    echo "</fieldset>\n";
+    echo "</form>\n";
   }
   echo "</div>\n";
 }
