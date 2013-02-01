@@ -481,8 +481,10 @@ function create_field_entry_rooms($disabled=FALSE)
     $attributes[] = 'data-max_duration_units="'  . htmlspecialchars($properties['max_duration_units']) . '"';
     $attributes[] = 'data-timezone="'            . htmlspecialchars($properties['timezone']) . '"';
     
+    $room_ids = array_keys($rooms);
     $params['id']         = 'rooms' . $a;
     $params['options']    = get_room_options($a);
+    $params['value']      = $room_ids[0];
     $params['attributes'] = $attributes;
     generate_select($params);
   }
