@@ -642,7 +642,7 @@ function generate_checkbox($params)
 function generate_simple_input($params)
 {
   // some sanity checking on params
-  foreach (array('label', 'label_title', 'name', 'value', 'type', 'step', 'disabled',
+  foreach (array('label', 'label_title', 'name', 'id', 'value', 'type', 'step', 'disabled',
                  'create_hidden', 'mandatory', 'maxlength', 'attributes', 'suffix') as $key)
   {
     if (!isset($params[$key]))
