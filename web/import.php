@@ -595,9 +595,10 @@ echo "<legend>" . get_vocab("import_icalendar") . "</legend>\n";
 echo "<p>\n" . get_vocab("import_intro") . "</p>\n";
   
 echo "<div>\n";
-$params = array('label' => get_vocab("file_name") . ':',
-                'name'  => 'ics_file',
-                'type'  => 'file',
+$params = array('label'      => get_vocab("file_name") . ':',
+                'name'       => 'ics_file',
+                'type'       => 'file',
+                'mandatory'  => TRUE,
                 'attributes' => 'accept="text/calendar"');
 generate_input($params);
 echo "</div>\n";
