@@ -32,7 +32,7 @@ echo "<div id=\"dwm_header\" class=\"screenonly\">\n";
 // Show all available areas
 echo make_area_select_html('week.php', $area, $year, $month, $day);   
 // Show all available rooms in the current area:
-echo make_room_select_html('week.php', $area, $room, $year, $month, $day);
+echo make_room_select_html('week.php', $area, $room, $year, $month, $day, false);
 
 // Draw the three month calendars
 if (!$display_calendar_bottom)

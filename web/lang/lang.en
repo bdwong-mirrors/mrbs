@@ -20,6 +20,7 @@ $vocab["help"]               = "Help";
 $vocab["search"]             = "Search";
 $vocab["not_php3"]           = "WARNING: This probably doesn't work with PHP3";
 $vocab["outstanding"]        = "pending bookings";
+$vocab["all_rooms"]          = "All rooms";
 
 // Used in day.php
 $vocab["bookingsfor"]        = "Bookings for";

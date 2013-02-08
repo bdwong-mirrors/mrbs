@@ -21,6 +21,7 @@ $vocab["help"]               = "Hilfe";
 $vocab["search"]             = "Suche";
 $vocab["not_php3"]           = "WARNUNG: Funktioniert warscheinlich nicht mit PHP3";
 $vocab["outstanding"]        = "ausstehende Einträge";
+$vocab["all_rooms"]          = "Alle Räume";
 
 // Used in day.php
 $vocab["bookingsfor"]        = "Einträge für";
@@ -137,6 +138,8 @@ $vocab["reject"]             = "Ablehnen";
 $vocab["more_info"]          = "Weitere Informationen";
 $vocab["remind_admin"]       = "Administrator erinnern";
 $vocab["series"]             = "Serie";
+$vocab["linked_entry"]       = "Verknüpfter Eintrag";
+$vocab["linked_with"]        = "Verknüpft mit:";
 $vocab["request_more_info"]  = "Bitte listen Sie die benötigten Informationen auf";
 $vocab["reject_reason"]      = "Bitte geben Sie den Grund für das Ablehnen der Reservierungsanfrage an";
 $vocab["send"]               = "Abschicken";

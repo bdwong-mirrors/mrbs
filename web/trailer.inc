@@ -4,7 +4,7 @@
 
 function generate_trailer()
 {
-  global $year, $month, $day, $area, $room;
+  global $year, $month, $day, $area, $room, $room_selected;
   global $strftime_format, $weekstarts, $simple_trailer, $view_week_number;
 
   $output = "";
@@ -32,7 +32,7 @@ function generate_trailer()
   {
     $params = "&amp;area=$area";
   }
-  if (!empty($room))
+  if (!empty($room) && $room_selected)
   {
     $params .= "&amp;room=$room";
   }

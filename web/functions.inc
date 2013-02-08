@@ -2245,10 +2245,10 @@ function make_area_select_html($link, $current, $year, $month, $day)
 } // end make_area_select_html
 
 
-function make_room_select_html ($link, $area, $current, $year, $month, $day)
+function make_room_select_html ($link, $area, $current, $year, $month, $day, $all_rooms_select)
 {
   global $tbl_room, $tbl_area, $area_list_format;
-  
+
   $out_html = '';
   $sql = "SELECT R.id, R.room_name, R.description
             FROM $tbl_room R, $tbl_area A
@@ -2269,7 +2269,13 @@ function make_room_select_html ($link, $area, $current, $year, $month, $day)
       $out_html .= "<form id=\"roomChangeForm\" method=\"get\" action=\"$link\">\n" .
                    "<div>\n" .
                    "<select class=\"room_area_select\" name=\"room\" onchange=\"this.form.submit()\">\n";
-  
+
+      if( $all_rooms_select )
+      {
+	$selected = empty($current) ? "selected=\"selected\"" : "";
+	$out_html .= "<option $selected value=\"\">".get_vocab("all_rooms")."</option>\n";
+      }
+
       for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
       {
         $selected = ($row['id'] == $current) ? "selected=\"selected\"" : "";
@@ -2288,6 +2294,12 @@ function make_room_select_html ($link, $area, $current, $year, $month, $day)
     else  // list format
     {
       $out_html .= "<ul>\n";
+      if( $all_rooms_select )
+      {
+        $out_html .= "<li><a href=\"$link?year=$year&amp;month=$month&amp;day=$day&amp;area=$area\">";
+        $out_html .= "<span" . (empty($current) ? ' class="current"' : '') . ">";
+        $out_html .= get_vocab("all_rooms") . "</span></a></li>\n";
+      }
       for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
       {
         $out_html .= "<li><a href=\"$link?year=$year&amp;month=$month&amp;day=$day&amp;area=$area&amp;room=".$row['id']."\" title=\"". htmlspecialchars($row['description'])."\">";

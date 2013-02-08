@@ -17,9 +17,11 @@ if (empty($area))
   $area = get_default_area();
 }
 
+$room_selected = true;
 if (empty($room))
 {
   $room = get_default_room($area);
+  $room_selected = false;
 }
 
 // Get the settings (resolution, etc.) for this area

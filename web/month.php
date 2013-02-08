@@ -85,12 +85,12 @@ $room_invalid = ($this_area_name === -1) || ($this_room_name === -1);
 // Show all available areas
 echo make_area_select_html('month.php', $area, $year, $month, $day);  
 // Show all available rooms in the current area:
-echo make_room_select_html('month.php', $area, $room, $year, $month, $day);
+echo make_room_select_html('month.php', $area, $room_selected ? $room : "", $year, $month, $day, true);
     
 // Draw the three month calendars
 if (!$display_calendar_bottom)
 {
-  minicals($year, $month, $day, $area, $room, 'month');
+  minicals($year, $month, $day, $area, $room_selected ? $room : "", 'month');
 }
 
 echo "</div>\n";
@@ -106,9 +106,10 @@ if ($room_invalid)
 }
 
 // Show Month, Year, Area, Room header:
+$this_page_title = $room_selected ? $this_area_name . $area_room_separator . $this_room_name : $this_area_name;
 echo "<div id=\"dwm\">\n";
 echo "<h2>" . utf8_strftime($strftime_format['monthyear'], $month_start)
-  . " - " . htmlspecialchars($this_area_name . $area_room_separator . $this_room_name) . "</h2>\n";
+  . " - " . htmlspecialchars($this_page_title) . "</h2>\n";
 echo "</div>\n";
 
 // Show Go to month before and after links
@@ -143,20 +144,21 @@ while (!checkdate($cm, $cd, $cy) && ($cd > 1))
 }
 
 
+$room_link = $room_selected ? "&amp;room=$room" : "";
 $before_after_links_html = "<div class=\"screenonly\">
   <div class=\"date_nav\">
     <div class=\"date_before\">
-      <a href=\"month.php?year=$yy&amp;month=$ym&amp;day=$yd&amp;area=$area&amp;room=$room\">
+      <a href=\"month.php?year=$yy&amp;month=$ym&amp;day=$yd&amp;area=$area$room_link\">
           &lt;&lt;&nbsp;".get_vocab("monthbefore")."
         </a>
     </div>
     <div class=\"date_now\">
-      <a href=\"month.php?year=$cy&amp;month=$cm&amp;day=$cd&amp;area=$area&amp;room=$room\">
+      <a href=\"month.php?year=$cy&amp;month=$cm&amp;day=$cd&amp;area=$area$room_link\">
           ".get_vocab("gotothismonth")."
         </a>
     </div>
     <div class=\"date_after\">
-       <a href=\"month.php?year=$ty&amp;month=$tm&amp;day=$td&amp;area=$area&amp;room=$room\">
+       <a href=\"month.php?year=$ty&amp;month=$tm&amp;day=$td&amp;area=$area$room_link\">
           ".get_vocab("monthafter")."&nbsp;&gt;&gt;
         </a>
     </div>
@@ -184,13 +186,23 @@ $linked_entries = get_linked_entries($am7[1], $pm7[$days_in_month]);
 
 for ($day_num = 1; $day_num<=$days_in_month; $day_num++)
 {
-  $sql = "SELECT start_time, end_time, E.id, name, type,
-                 repeat_id, status, create_by
-            FROM $tbl_entry E, $tbl_room_entry RE
-           WHERE E.id = RE.entry_id
-             AND RE.room_id=$room
-             AND start_time <= $pm7[$day_num] AND end_time > $am7[$day_num]
-        ORDER BY start_time";
+  if( $room_selected ) {
+    $sql = "SELECT start_time, end_time, E.id, name, type,
+                   repeat_id, status, create_by, \"dummy\" AS room_name, room_id
+              FROM $tbl_entry E, $tbl_room_entry RE
+             WHERE E.id = RE.entry_id
+               AND RE.room_id=$room
+               AND start_time <= $pm7[$day_num] AND end_time > $am7[$day_num]
+               ORDER BY start_time";
+  } else {
+    $sql = "SELECT start_time, end_time, E.id, name, type,
+                   repeat_id, status, create_by, room_name, room_id
+              FROM $tbl_entry E, $tbl_room_entry RE, $tbl_room R
+             WHERE E.id = RE.entry_id
+               AND R.area_id=$area AND RE.room_id=R.id
+               AND start_time <= $pm7[$day_num] AND end_time > $am7[$day_num]
+          ORDER BY start_time, end_time, type, status, name, E.id, R.sort_key";
+  }
 
   // Build an array of information about each day in the month.
   // The information is stored as:
@@ -210,10 +222,6 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++)
       if ($debug_flag)
       {
         echo "<br>DEBUG: result $i, id ".$row['id'].", starts ".$row['start_time'].", ends ".$row['end_time']."\n";
-      }
-
-      if ($debug_flag)
-      {
         echo "<br>DEBUG: Entry ".$row['id']." day $day_num\n";
       }
       $d[$day_num]['id'][] = $row['id'];
@@ -248,6 +256,9 @@ for ($day_num = 1; $day_num<=$days_in_month; $day_num++)
         $d[$day_num]['status'][] = $row['status'] & ~STATUS_PRIVATE;  // Clear the private bit
         $d[$day_num]['shortdescrip'][] = htmlspecialchars($row['name']);
       }
+
+      $d[$day_num]["room"][] = htmlspecialchars($row['room_name']);
+      $d[$day_num]["room_id"][] = $row['room_id'];
       
 
       // Describe the start and end time, accounting for "all day"
@@ -413,7 +424,7 @@ for ($cday = 1; $cday <= $days_in_month; $cday++)
     // If it's a Monday (the start of the ISO week), show the week number
     if ($view_week_number && (($weekcol + $weekstarts)%7 == 1))
     {
-      echo "<a class=\"week_number\" href=\"week.php?year=$year&amp;month=$month&amp;day=$cday&amp;area=$area&amp;room=$room\">";
+      echo "<a class=\"week_number\" href=\"week.php?year=$year&amp;month=$month&amp;day=$cday&amp;area=$area$room_link\">";
       echo date("W", gmmktime(12, 0, 0, $month, $cday, $year));
       echo "</a>\n";
     }
@@ -423,7 +434,7 @@ for ($cday = 1; $cday <= $days_in_month; $cday++)
     echo "</div>\n";
     
     // then the link to make a new booking
-    $query_string = "room=$room&amp;area=$area&amp;year=$year&amp;month=$month&amp;day=$cday";
+    $query_string = "area=$area$room_link&amp;year=$year&amp;month=$month&amp;day=$cday";
     if ($enable_periods)
     {
       $query_string .= "&amp;period=0";
@@ -444,10 +455,36 @@ for ($cday = 1; $cday <= $days_in_month; $cday++)
     if (isset($d[$cday]["id"][0]))
     {
       echo "<div class=\"booking_list\">\n";
+      $accumulate=false;
       $n = count($d[$cday]["id"]);
       // Show the start/stop times, 1 or 2 per line, linked to view_entry.
       for ($i = 0; $i < $n; $i++)
       {
+        if( !$accumulate ) {
+          // new booking
+          $rooms="";
+          $rooms_for_entry=array();
+        }
+        $rooms_for_entry[] = $d[$cday]["room_id"][$i];
+
+        if( !$room_selected ) {
+          // if no room was selected by the user, show an area overview.
+          if( $rooms != "" )
+            $rooms .= ", ";
+          $rooms .= $d[$cday]["room"][$i];
+
+          if(    $i < $n-1
+              && $d[$cday]["id"][$i] === $d[$cday]["id"][$i+1] ) {
+            // next booking has same id as the current booking, so it is 
+            // actually the same booking, just for another room. Simply 
+            // accumulate the parameters.
+            $accumulate=true;
+            continue;
+          } else {
+            $accumulate=false;
+          }
+        }
+
         // give the enclosing div the appropriate width: full width if both,
         // otherwise half-width (but use 49.9% to avoid rounding problems in some browsers)
         $class = $d[$cday]["color"][$i]; 
@@ -491,12 +528,21 @@ for ($cday = 1; $cday <= $days_in_month; $cday++)
             echo "error: unknown parameter";
           }
         }
+        if( !$room_selected ) {
+          $display_text .= " (" . $rooms . ")";
+          $full_text .= " (" . $rooms . ")";
+        }
         echo "<a href=\"$booking_link\" title=\"$full_text\">";
         echo ($d[$cday]['is_repeat'][$i]) ? "<img class=\"repeat_symbol\" src=\"images/repeat.png\" alt=\"" . get_vocab("series") . "\" title=\"" . get_vocab("series") . "\" width=\"10\" height=\"10\">" : '';
         if (count($d[$cday]['linked'][$i]) > 1)
         {
-        echo "<img class=\"link_symbol\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" .
-             get_vocab("linked_with") . "\n" . implode("\n", get_full_room_names(array_diff($d[$cday]['linked'][$i], array($room)))) . "\" width=\"16\" height=\"16\">";
+          $rooms_not_shown = array_diff($d[$cday]['linked'][$i], $rooms_for_entry);
+          if( !empty($rooms_not_shown) )
+          {
+            // if the entry is linked to rooms not currently shown, display the link icon
+            echo "<img class=\"link_symbol\" src=\"images/link.png\" alt=\"" . get_vocab("linked_entry") . "\" title=\"" .
+               get_vocab("linked_with") . "\n" . implode("\n", get_full_room_names($rooms_not_shown)) . "\" width=\"16\" height=\"16\">";
+          }
         }
         echo "$display_text</a>\n";
         echo "</div>\n";
@@ -539,7 +585,7 @@ show_colour_key();
 // Draw the three month calendars
 if ($display_calendar_bottom)
 {
-  minicals($year, $month, $day, $area, $room, 'month');
+  minicals($year, $month, $day, $area, $room_selected ? $room : "", 'month');
 }
 
 output_trailer();

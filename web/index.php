@@ -22,7 +22,9 @@ switch ($default_view)
     $redirect_str = "day.php";
 }
 
-$redirect_str .= "?year=$year&month=$month&day=$day&area=$area&room=$room";
+$redirect_str .= "?year=$year&month=$month&day=$day&area=$area";
+if( $room_selected )
+  $redirect_str .= "&room=$room";
 
 header("Location: $redirect_str");
 

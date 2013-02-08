@@ -16,7 +16,7 @@ function print_theme_header($day, $month, $year, $area, $room)
   global $select_options;
   global $ajax_refresh_rate;
   global $main_table_cell_border_width, $main_cell_height;
-  global $timetohighlight;
+  global $timetohighlight, $room_selected;
   
   $page = basename($PHP_SELF, ".php");
   $user = getUserName();
@@ -135,7 +135,7 @@ function print_theme_header($day, $month, $year, $area, $room)
             {
               echo "<input type=\"hidden\" name=\"area\" value=\"$area\">\n";
             }
-            if (!empty($room))
+            if (!empty($room) && $room_selected)
             {
               echo "<input type=\"hidden\" name=\"room\" value=\"$room\">\n";
             }
@@ -193,7 +193,7 @@ function print_theme_header($day, $month, $year, $area, $room)
       {
         $query_str .= "&amp;area=$area";
       }
-      if (!empty($room))
+      if (!empty($room) && $room_selected)
       {
         $query_str .= "&amp;room=$room";
       }
