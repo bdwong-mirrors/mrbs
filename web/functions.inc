@@ -296,14 +296,13 @@ function toPeriodString($start_period, &$dur, &$units, $translate=TRUE)
 
   $max_periods = count($periods);
   $dur /= 60;  // duration now in minutes
-  $mins_in_day = 24*60;
-  $days = $dur / $mins_in_day;
-  $remainder = $dur % $mins_in_day;
+  $days = $dur / MINUTES_PER_DAY;
+  $remainder = $dur % MINUTES_PER_DAY;
   // strip out any gap between the end of the last period on one day
   // and the beginning of the first on the next
   if ($remainder > $max_periods)
   {
-    $remainder += $max_periods - $mins_in_day;
+    $remainder += $max_periods - MINUTES_PER_DAY;
   }
   
   // We'll express the duration as an integer, in days if possible, otherwise periods
@@ -342,18 +341,18 @@ function fromPeriodString($start_period, &$units, $dur_units)
     $end_period = $start_period + $units;
     if ($end_period > $max_periods)
     {
-      $units = (24*60*floor($end_period/$max_periods)) + ($end_period%$max_periods) - $start_period;
+      $units = (MINUTES_PER_DAY * floor($end_period/$max_periods)) + ($end_period%$max_periods) - $start_period;
     }
   }
   if ($dur_units == "days")
   {
     if ($start_period == 0)
     {
-      $units = $max_periods + ($units-1)*60*24;
+      $units = $max_periods + ($units-1)*MINUTES_PER_DAY;
     }
     else
     {
-      $units = $units * 60 * 24;
+      $units = $units * MINUTES_PER_DAY;
     }
   }
   
@@ -453,13 +452,17 @@ function hm_before($hm1, $hm2)
 }
 
 
-// Returns TRUE if $evening_ends is on the day after $morning_starts
+// Returns TRUE if the end of the last slot is on the day after the beginning
+// of the first slot
 function day_past_midnight()
 {
-  global $morningstarts, $morningstarts_minutes, $eveningends, $eveningends_minutes;
+  global $morningstarts, $morningstarts_minutes, $eveningends, $eveningends_minutes, $resolution;
   
-  return hm_before(array('hours' => $eveningends, 'minutes' => $eveningends_minutes),
-                   array('hours' => $morningstarts, 'minutes' => $morningstarts_minutes));
+  $start_first_slot = (($morningstarts * 60) + $morningstarts_minutes) * 60;
+  $end_last_slot = ((($eveningends * 60) + $eveningends_minutes) * 60) + $resolution;
+  $end_last_slot = $end_last_slot % SECONDS_PER_DAY;
+  
+  return ($end_last_slot <= $start_first_slot);
 }
 
 
@@ -477,10 +480,11 @@ function get_start_first_slot($month, $day, $year)
 // Gets the UNIX timestamp for the start of the last slot on the given day
 function get_start_last_slot($month, $day, $year)
 {
-  global $eveningends, $eveningends_minutes;
+  global $morningstarts, $morningstarts_minutes, $eveningends, $eveningends_minutes;
   
   // Work out if $evening_ends is really on the next day
-  if (day_past_midnight())
+  if (hm_before(array('hours' => $eveningends, 'minutes' => $eveningends_minutes),
+                array('hours' => $morningstarts, 'minutes' => $morningstarts_minutes)))
   {
     $day++;
   }
@@ -1873,7 +1877,7 @@ function get_area_settings($area)
     $max_per_interval_area[$interval_type] = $$var;
   }
   
-  // If we're using periods then set the rsolution to 60 seconds
+  // If we're using periods then set the resolution to 60 seconds
   if ($enable_periods)
   {
     $resolution = 60;
@@ -1965,9 +1969,8 @@ function hour_min_format()
 // seconds since the start of the day, $s
 function hour_min($s)
 {
-  $seconds_per_day = 24*60*60;
-  $following_day = ($s >= $seconds_per_day);
-  $s = $s % $seconds_per_day;  // in case $s is on the next day
+  $following_day = ($s >= SECONDS_PER_DAY);
+  $s = $s % SECONDS_PER_DAY;  // in case $s is on the next day
   // Choose a day that doesn't have any DST transitions in any timezone
   $t = mktime(0, 0, $s, 1, 1, 2000);
   $result = utf8_strftime(hour_min_format(), $t);
@@ -2499,7 +2502,7 @@ function is_dst_first_duplicate($t)
 {
   if (date('I', $t))
   {
-    $change = cross_dst($t, $t+(24*60*60));
+    $change = cross_dst($t, $t+SECONDS_PER_DAY);
     return !date('I', $t + $change);
   }
   return false;
@@ -2543,12 +2546,12 @@ function cross_dst($start, $end)
     // entering DST
     if (!date( "I", $start) &&  date( "I", $end))
     {
-      $modification = -3600;
+      $modification = -SECONDS_PER_HOUR;
     }
     // leaving DST
     else if (date( "I", $start) && !date( "I", $end))
     {
-      $modification = 3600;
+      $modification = SECONDS_PER_HOUR;
     }
     else
     {
@@ -2630,7 +2633,7 @@ function working_time_diff($now, $then)
   // First let's calculate (a)
   $last = mktime(12, 0, 0, date('n', $last), date('j', $last), date('Y', $last));
   $first = mktime(12, 0, 0, date('n', $first), date('j', $first), date('Y', $first));
-  $days_diff = (int) round(($last - $first)/(60*60*24));  // the difference in days
+  $days_diff = (int) round(($last - $first)/SECONDS_PER_DAY);  // the difference in days
   $whole_weeks = (int) floor($days_diff/7);  // the number of whole weeks between the two
   $non_working_days = $whole_weeks * (7 - $n_working_days);
   // Now (b), ie we just have to calculate how many non-working days there are between the two
@@ -2648,7 +2651,7 @@ function working_time_diff($now, $then)
   }
 
   // So now subtract the number of weekend seconds
-  $diff = $diff - ($non_working_days * 60*60*24);
+  $diff = $diff - ($non_working_days * SECONDS_PER_DAY);
   
   // Finally reverse the difference if $now was in fact before $then
   if ($now < $then)

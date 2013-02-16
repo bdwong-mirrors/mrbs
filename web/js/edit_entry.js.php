@@ -697,24 +697,24 @@ function getDuration(from, to, days)
   var text = '';
   var currentArea = $('#area').data('current');
   var enablePeriods = areaConfig('enable_periods');
+  var durDays;
+  var minutesPerDay = <?php echo MINUTES_PER_DAY ?>;
 
   durUnits = (enablePeriods) ? '<?php echo "periods" ?>' : '<?php echo "minutes" ?>';
   duration = to - from;
   duration = Math.floor((to - from) / 60);
-    
-  if (duration < 0)
+  
+  <?php
+  // Adjust the days and duration so that 0 <= duration < minutesPerDay.    If we're using
+  // periods then if necessary add/subtract multiples of the number of periods in a day
+  ?>
+  durDays = Math.floor(duration/minutesPerDay);
+  if (durDays !== 0)
   {
-    days--;
-    if (enablePeriods)
-    {
-      duration += $('#rooms' + currentArea).find('option').length;  <?php // add a day's worth of periods ?>
-    }
-    else
-    {
-      duration += 24*60;  <?php // add 24 hours (duration is now in minutes)  ?>
-    }
+    days += durDays;
+    duration -= durDays * ((enablePeriods) ? $('#rooms' + currentArea).find('option').length : minutesPerDay);
   }
-      
+  
   if (enablePeriods)
   {
     duration++;  <?php // a period is a period rather than a point ?>
@@ -732,7 +732,7 @@ function getDuration(from, to, days)
   // a number or a string, so convert it to a string so that we
   // know what we are dealing with
   ?>
-  duration.toString();
+  duration = duration.toString();
   
   if (days !== 0)
   {
@@ -757,7 +757,8 @@ function getDuration(from, to, days)
 ?>
 function getDateDifference()
 {
-  var diff;
+  var diff,
+      secondsPerDay = <?php echo SECONDS_PER_DAY ?>;
 
   <?php
   if (!$is_admin && $auth['only_admin_can_book_multiday'])
@@ -781,7 +782,7 @@ function getDateDifference()
                            parseInt(end[2], 10),
                            12);
 
-    diff = (endDate - startDate)/(24 * 60 * 60 * 1000);
+    diff = (endDate - startDate)/(secondsPerDay * 1000);
     diff = Math.round(diff);
     <?php
   }
@@ -1031,6 +1032,7 @@ function adjustSlotSelectors()
           maxDurationPeriods = areaConfig('max_duration_periods'),
           maxDurationQty     = areaConfig('max_duration_qty'),
           maxDurationUnits   = areaConfig('max_duration_units'),
+          secondsPerDay      = <?php echo SECONDS_PER_DAY ?>,
           duration,
           maxDuration;
      
@@ -1053,7 +1055,7 @@ function adjustSlotSelectors()
           }
           else
           {
-            duration += dateDifference * 60 * 60 *24;
+            duration += dateDifference * secondsPerDay;
           }
           maxDuration = (enablePeriods) ? maxDurationPeriods : maxDurationSecs;
           if (duration > maxDuration)
@@ -1126,14 +1128,24 @@ var editEntryVisChanged = function editEntryVisChanged() {
 ?>
 
 var oldInitEditEntry = init;
-init = function() {
-  oldInitEditEntry.apply(this);
+init = function(args) {
+  oldInitEditEntry.apply(this, [args]);
+  
+  <?php
+  // If there's only one enabled area in the database there won't be an area
+  // select input, so we'll have to create a dummy input because the code
+  // relies on it.
+  ?>
+  if ($('#area').length === 0)
+  {
+    $('#div_rooms').before('<input id="area" type="hidden" value="' + args.area + '">');
+  }
   
   var areaSelect = $('#area'),
       startSelect,
       endSelect,
       allDay;
-      
+
   $('#div_areas').show();
   
   $('#start_seconds, #end_seconds')
@@ -1172,7 +1184,6 @@ init = function() {
           
           adjustSlotSelectors(); 
         });
-        
         
   $('input[name="all_day"]').click(function() {
       onAllDayClick();
@@ -1374,6 +1385,11 @@ init = function() {
   $('input[name="rep_type"]').change(changeRepTypeDetails);
   changeRepTypeDetails();
   
+  <?php
+  // Add an event listener to detect a change in the visibility
+  // state.  We can then suspend Ajax checking when the page is
+  // hidden to save on server, client and network load.
+  ?>
   var prefix = visibilityPrefix();
   if (document.addEventListener &&
       (prefix !== null))

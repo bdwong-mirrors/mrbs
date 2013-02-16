@@ -19,7 +19,7 @@ $is_admin = (authGetUserLevel($user) >= $max_level);
 // function to reverse a collection of jQuery objects
 ?>
 $.fn.reverse = [].reverse;
-      
+
 
 <?php
 // Get the sides of the rectangle represented by the jQuery object jqObject
@@ -244,7 +244,7 @@ function outsideTable(tableData, p)
 ?>
 function snapToGrid(tableData, div, side, force)
 {
-  var snapGap = (force) ? 100000: 20; <?php // px ?>
+  var snapGap = (force) ? 100000: 30; <?php // px ?>
   var tolerance = 2; <?php //px ?>
   var isLR = (side==='left') || (side==='right');
  
@@ -252,30 +252,32 @@ function snapToGrid(tableData, div, side, force)
   
   var topLeft, bottomRight, divTop, divLeft, divWidth, divHeight, thisCoord,
       gap, gapTopLeft, gapBottomRight;
+      
+  divTop = div.offset().top;
+  divLeft = div.offset().left;
+  divWidth = div.outerWidth();
+  divHeight = div.outerHeight();
+  switch (side)
+  {
+    case 'top':
+      thisCoord = divTop;
+      break;
+    case 'bottom':
+      thisCoord = divTop + divHeight;
+      break;
+    case 'left':
+      thisCoord = divLeft;
+      break;
+    case 'right':
+      thisCoord = divLeft + divWidth;
+      break;
+  }
 
   for (var i=0; i<(data.length -1); i++)
   {
     topLeft = data[i].coord + <?php echo $main_table_cell_border_width ?>;
     bottomRight = data[i+1].coord;
-    divTop = div.offset().top;
-    divLeft = div.offset().left;
-    divWidth = div.outerWidth();
-    divHeight = div.outerHeight();
-    switch (side)
-    {
-      case 'top':
-        thisCoord = divTop;
-        break;
-      case 'bottom':
-        thisCoord = divTop + divHeight;
-        break;
-      case 'left':
-        thisCoord = divLeft;
-        break;
-      case 'right':
-        thisCoord = divLeft + divWidth;
-        break;
-    }
+    
     gapTopLeft = thisCoord - topLeft;
     gapBottomRight = bottomRight - thisCoord;
             
@@ -549,8 +551,11 @@ init = function(args) {
       // resized.
       ?>
       var bookedMap = [];
-
+      var mouseDown = false; 
+      
       var downHandler = function(e) {
+          mouseDown = true;
+          turnOffPageRefresh();
           <?php // Build the map of booked cells ?>
           table.find('td').not('td.new, td.row_labels').each(function() {
               bookedMap.push(getSides($(this)));
@@ -690,6 +695,7 @@ init = function(args) {
  
                
       var upHandler = function(e) {
+          mouseDown = false;
           e.preventDefault();
           var tolerance = 2; <?php // px ?>
           var box = downHandler.box;
@@ -705,6 +711,7 @@ init = function(args) {
           if (outsideTable(tableData, {x: e.pageX, y: e.pageY}))
           {
             box.remove();
+            turnOnPageRefresh();
             return;
           }
           <?php
@@ -724,6 +731,7 @@ init = function(args) {
             {
               box.remove();
             }
+            turnOnPageRefresh();
             return;
           }
           <?php
@@ -749,6 +757,7 @@ init = function(args) {
             queryString += '&start_date=' + params.date[0];
             queryString += '&end_date=' + params.date[params.date.length - 1];
           }
+          turnOnPageRefresh();
           window.location = 'edit_entry.php?' + queryString;
           return;
         };
@@ -844,6 +853,7 @@ init = function(args) {
             ?>
             var divResizeStart = function (event, ui)
             {
+              turnOffPageRefresh();
               <?php
               // Add a wrapper so that we can disable the highlighting when we are
               // resizing (the flickering is a bit annoying)
@@ -913,7 +923,11 @@ init = function(args) {
               
               var r1 = getSides(divBooking);
               var r2 = getSides(divClone);
-              if (!rectanglesIdentical(r1, r2))
+              if (rectanglesIdentical(r1, r2))
+              {
+                turnOnPageRefresh();
+              }
+              else
               {
                 <?php 
                 // We've got a change to the booking, so we need to send an Ajax
@@ -991,10 +1005,7 @@ init = function(args) {
                 data.end_day = data.start_day;
                 data.end_month = data.start_month;
                 data.end_year = data.start_year;
-                if (newParams.room !== undefined)
-                {
-                  data.rooms = newParams.room;
-                }
+                data.rooms = (typeof newParams.room === 'undefined') ? args.room : newParams.room;
                 <?php
                 if (isset($timetohighlight))
                 {
@@ -1059,9 +1070,11 @@ init = function(args) {
                             }
                             window.alert(alertMessage);
                           }
+                          turnOnPageRefresh();
                         },
                        'json');
-              }
+              }   <?php // if (rectanglesIdentical(r1, r2)) ?>
+              
             };  <?php // divResizeStop ?>
             
             <?php
@@ -1185,7 +1198,7 @@ init = function(args) {
             $(this).css('background-color', 'transparent')
                    .wrapInner('<div style="position: relative"><\/div>');
           });
-
+                                  
       $(window).resize(function(event) {
           if (event.target === this)  <?php // don't want the ui-resizable event bubbling up ?>
           {
@@ -1197,7 +1210,53 @@ init = function(args) {
             getTableData(table, tableData);
           }
         });
-
+      
+      <?php
+      // We want to disable page refresh if the user is hovering over
+      // the resizable handles.   We trigger a mouseenter event on page
+      // load so we can work out whether the mouse is over the handle
+      // on page load (but we only need to trigger one event).
+      //
+      // mouseDown will also be set by the event handlers for drag selection
+      // of new bookings, so that we don't turn on page refresh while in the
+      // middle of a drag selection when we pass over a resizable handle
+      ?>   
+      $('div.clone .ui-resizable-handle')
+        .mouseenter(function(e) {
+            if (!mouseDown)
+            {
+              if ($(this).is(':hover'))
+              {
+                turnOffPageRefresh();
+              }
+              else
+              {
+                turnOnPageRefresh();
+              }
+            }
+          })
+        .mouseleave(function() {
+            if (!mouseDown)
+            {
+              turnOnPageRefresh();
+            }
+          })
+        .mousedown(function() {
+            mouseDown = true;
+            if ($(this).is(':hover'))
+            {
+              turnOffPageRefresh();
+            }
+          })
+        .mouseup(function() {
+            mouseDown = false;
+            if (!$(this).is(':hover'))
+            {
+              turnOnPageRefresh();
+            }
+          })
+        .first().trigger('mouseenter');
+        
       <?php // also need to redraw and recalibrate if the multiple bookings are clicked ?>
       table.find('div.multiple_control')
           .click(function() {

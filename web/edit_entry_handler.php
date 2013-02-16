@@ -317,7 +317,7 @@ if (!empty($all_day))
 {
   if ($enable_periods)
   {
-    $start_seconds = 12 * 60 * 60;
+    $start_seconds = 12 * SECONDS_PER_HOUR;
     // This is actually the start of the last period, which is what the form would
     // have returned.   It will get corrected in a moment.
     $end_seconds = $start_seconds + ((count($periods) - 1) * 60);
@@ -335,9 +335,10 @@ if (!empty($all_day))
 // $returl will end up taking us back to the day we started on
 if (day_past_midnight())
 {
-  if ($start_seconds < (((($eveningends * 60) + $eveningends_minutes) *60) + $resolution))
+  $end_last = (((($eveningends * 60) + $eveningends_minutes) *60) + $resolution) % SECONDS_PER_DAY;
+  if ($start_seconds < $end_last)
   {
-    $start_seconds += 24*60*60;
+    $start_seconds += SECONDS_PER_DAY;
     $day_before = getdate(mktime(0, 0, 0, $start_month, $start_day-1, $start_year));
     $start_day = $day_before['mday'];
     $start_month = $day_before['mon'];
@@ -419,7 +420,9 @@ if (isset($rep_type) && ($rep_type != REP_NONE) &&
     isset($rep_end_month) && isset($rep_end_day) && isset($rep_end_year))
 {
   // Get the repeat entry settings
-  $end_date = mktime(intval($start_seconds/3600), intval(($start_seconds%3600)/60), 0,
+  $end_date = mktime(intval($start_seconds/SECONDS_PER_HOUR),
+                     intval(($start_seconds%SECONDS_PER_HOUR)/60),
+                     0,
                      $rep_end_month, $rep_end_day, $rep_end_year);
 }
 else

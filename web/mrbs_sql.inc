@@ -253,7 +253,6 @@ function mrbsCheckPolicy(&$entry, $ignore, $repignore, $delete=FALSE)
   global $interval_types, $strftime_format;
 
   $errors = array();
-  $secs_in_day = 60*60*24;
   
   // The booking policies don't apply to booking admins for this room
   $user = getUserName();
@@ -272,7 +271,7 @@ function mrbsCheckPolicy(&$entry, $ignore, $repignore, $delete=FALSE)
   {
     if ($enable_periods)
     {
-      $min_book_ahead_secs -=  $min_book_ahead_secs%$secs_in_day;
+      $min_book_ahead_secs -=  $min_book_ahead_secs % SECONDS_PER_DAY;
     }
     $min_book_ahead = $min_book_ahead_secs;
     if (($entry['start_time'] - $now) < $min_book_ahead)
@@ -292,7 +291,7 @@ function mrbsCheckPolicy(&$entry, $ignore, $repignore, $delete=FALSE)
   {
     if ($enable_periods)
     {
-      $max_book_ahead_secs -=  $max_book_ahead_secs%$secs_in_day;
+      $max_book_ahead_secs -=  $max_book_ahead_secs % SECONDS_PER_DAY;
     }
     $max_book_ahead = $max_book_ahead_secs;
     if (($entry['end_time'] - $now) > $max_book_ahead)
@@ -381,7 +380,8 @@ function mrbsCheckPolicy(&$entry, $ignore, $repignore, $delete=FALSE)
 
 /** mrbsDelEntry()
  * 
- * Delete an entry, or optionally all entries.
+ * Delete an entry, or optionally all entries.   Will also delete any newly
+ * orphaned rows in the repeat table.
  * 
  * $user   - Who's making the request
  * $id     - The entry to delete
@@ -389,7 +389,7 @@ function mrbsCheckPolicy(&$entry, $ignore, $repignore, $delete=FALSE)
  * $all    - If set, include user modified entries in the series delete
  *
  * Returns FALSE if an error occured, otherwise an array of start_times that
- * have been deleted
+ * have been deleted.
  *
  */
 function mrbsDelEntry($user, $id, $series, $all)
@@ -455,8 +455,9 @@ function mrbsDelEntry($user, $id, $series, $all)
     }
   }
 
+  // Get rid of any orphaned rows in the repeat table
   if ($repeat_id > 0 &&
-      sql_query1("SELECT count(*) FROM $tbl_entry WHERE repeat_id=$repeat_id") == 0)
+      sql_query1("SELECT COUNT(*) FROM $tbl_entry WHERE repeat_id=$repeat_id") == 0)
   {
     // No need to delete the room_repeat row as the delete will cascade through
     sql_command("DELETE FROM $tbl_repeat WHERE id=$repeat_id");
@@ -465,6 +466,7 @@ function mrbsDelEntry($user, $id, $series, $all)
   asort($start_times);
   return $start_times;
 }
+
 
 /** mrbsCreateEntry()
  * 
