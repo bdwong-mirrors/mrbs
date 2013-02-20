@@ -1009,11 +1009,13 @@ function generate_checkbox_group($params)
 //                        casts the keys to integers and the array becomes a simple array)
 //        'value'         The value of the input.  Default ''.   Can be a single value
 //                        or an array of values.
+//        'text_escaped'  Boolean. If TRUE, the text given is treated as already escaped, 
+//                        and not escaped again. Default is FALSE.
 //
 function generate_options($params)
 {
   // some sanity checking on params
-  foreach (array('options', 'force_assoc', 'value') as $key)
+  foreach (array('options', 'force_assoc', 'value', 'text_escaped') as $key)
   {
     if (!isset($params[$key]))
     {
@@ -1024,6 +1026,7 @@ function generate_options($params)
           $params[$key] = array();
           break;
         case 'force_assoc':
+        case 'text_escaped':
           $params[$key] = FALSE;
           break;
         default:
@@ -1043,7 +1046,10 @@ function generate_options($params)
     }
     $html .= "<option value=\"" . htmlspecialchars($value) . "\"";
     $html .= (in_array($value, $params['value'])) ? " selected=\"selected\"" : '';
-    $html .= ">".htmlspecialchars($text)."</option>\n";
+    if ($params['text_escaped'])
+      $html .= ">".$text."</option>\n";
+    else
+      $html .= ">".htmlspecialchars($text)."</option>\n";
   }
   
   return $html;
@@ -1079,11 +1085,14 @@ function generate_options($params)
 //        'multiple'      Whether multiple selections are allowed.  Default FALSE
 //        'attributes'    Additional attributes not covered explicitly above.  Default NULL.
 //                        Can be either a simple string or an array of attributes.
+//        'text_escaped'  Boolean. If TRUE, the text given for inside the select
+//                        is treated as already escaped, and not escaped again. Default is 
+//                        FALSE.
 //
 function generate_select($params)
 {
   // some sanity checking on params
-  foreach (array('label', 'label_title', 'name', 'id', 'options', 'force_assoc',
+  foreach (array('label', 'label_title', 'name', 'id', 'options', 'force_assoc', 'text_escaped',
                  'value', 'size', 'disabled', 'create_hidden', 'mandatory',
                  'multiple', 'attributes') as $key)
   {
@@ -1110,6 +1119,7 @@ function generate_select($params)
         case 'disabled':
         case 'mandatory':
         case 'multiple':
+        case 'text_escaped':
           $params[$key] = FALSE;
           break;
         case 'create_hidden':
@@ -1179,6 +1189,7 @@ function generate_select($params)
   if (count($params['options']) > 0)
   {
     $options_params = array('force_assoc' => $params['force_assoc'],
+                            'text_escaped' => $params['text_escaped'],
                             'value'       => $params['value']);
     // If it's a two dimensional array then we've got option groups,
     // but don't bother displaying the option group if there's only

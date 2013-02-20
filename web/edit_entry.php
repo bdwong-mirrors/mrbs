@@ -523,6 +523,7 @@ function create_field_entry_type($disabled=FALSE)
                   'disabled'    => $disabled,
                   'options'     => array(),
                   'force_assoc' => TRUE,  // in case the type keys happen to be digits
+                  'text_escaped' => TRUE, // text comes from get_type_vocab and is trusted and pre-escaped
                   'value'       => $type);
                   
   foreach ($booking_types as $key)

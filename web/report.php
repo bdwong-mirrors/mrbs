@@ -85,6 +85,7 @@ function generate_search_criteria(&$vars)
                         'id'           => 'typematch',
                         'options'      => $options,
                         'force_assoc'  => TRUE,  // in case the type keys happen to be digits
+                        'text_escaped' => TRUE,  // text comes from get_type_vocab and is trusted and pre-escaped
                         'value'        => $vars['typematch'],
                         'multiple'     => TRUE,
                         'attributes'   => 'size="5"');
@@ -348,16 +349,20 @@ function csv_conv($string)
 
 
 // Escape a string for output
-function escape($string)
+function escape($string, $already_html_encoded = FALSE)
 {
   global $output_format;
   
   switch ($output_format)
   {
     case OUTPUT_HTML:
-      $string = mrbs_nl2br(htmlspecialchars($string));
+      if (!$already_html_encoded)
+        $string = htmlspecialchars($string);
+      $string = mrbs_nl2br($string);
       break;
     case OUTPUT_CSV:
+      if ($already_html_encoded)
+        $string = html_entity_decode($string, ENT_QUOTES|ENT_HTML5, 'UTF-8');
       $string = str_replace('"', '""', $string);
       break;
     default:  // do nothing
@@ -659,6 +664,7 @@ function report_row(&$rows, &$data)
   foreach ($field_order_list as $field)
   {
     $value = $data[$field];
+    $html_encoded = FALSE;
     
     // Some fields need some special processing to turn the raw value into something
     // more meaningful
@@ -687,6 +693,7 @@ function report_row(&$rows, &$data)
         break;
       case 'type':
         $value = get_type_vocab($value);
+        $html_encoded = TRUE;
         break;
       case 'confirmation_enabled':
         // Translate the status field bit into meaningful text
@@ -745,7 +752,7 @@ function report_row(&$rows, &$data)
         }
         break;
     }
-    $value = escape($value);
+    $value = escape($value, $html_encoded);
     
     // For HTML output we take special action for some fields
     if ($output_format == OUTPUT_HTML)
@@ -796,6 +803,7 @@ function report_row(&$rows, &$data)
 function get_sumby_name_from_row(&$row)
 {
   global $sumby;
+  $html_encoded = FALSE;
   
   // Use brief description, created by or type as the name:
   switch( $sumby )
@@ -805,13 +813,14 @@ function get_sumby_name_from_row(&$row)
       break;
     case 't':
       $name = get_type_vocab($row['type']);
+      $html_encoded = TRUE;
       break;
     case 'c':
     default:
       $name = $row['create_by'];
       break;
   }
-  return escape($name);
+  return escape($name, $html_encoded);
 }
 
 
