@@ -362,7 +362,7 @@ function escape($string, $already_html_encoded = FALSE)
       break;
     case OUTPUT_CSV:
       if ($already_html_encoded)
-        $string = html_entity_decode($string, ENT_QUOTES|ENT_HTML5, 'UTF-8');
+        $string = mrbs_entity_decode($string, ENT_QUOTES);
       $string = str_replace('"', '""', $string);
       break;
     default:  // do nothing
