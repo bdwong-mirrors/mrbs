@@ -84,20 +84,25 @@ else
  * DOCTYPE - internal use, do not change
  ***************************************/
 
- define('DOCTYPE', '<!DOCTYPE html>');
+define('DOCTYPE', '<!DOCTYPE html>');
  
- // Records which DOCTYPE is being used.    Do not change - it will not change the DOCTYPE
- // that is used;  it is merely used when the code needs to know the DOCTYPE, for example
- // in calls to nl2br.   TRUE means XHTML, FALSE means HTML.
- define('IS_XHTML', FALSE);
+// Records which DOCTYPE is being used.    Do not change - it will not change the DOCTYPE
+// that is used;  it is merely used when the code needs to know the DOCTYPE, for example
+// in calls to nl2br.   TRUE means XHTML, FALSE means HTML.
+define('IS_XHTML', FALSE);
 
 
 /*************************************************
  * General constants - internal use, do not change
  *************************************************/
- define('MINUTES_PER_DAY',  24*60);
- define('SECONDS_PER_DAY',  MINUTES_PER_DAY * 60);
- define('SECONDS_PER_HOUR', 3600);
+define('MINUTES_PER_DAY',  24*60);
+define('SECONDS_PER_DAY',  MINUTES_PER_DAY * 60);
+define('SECONDS_PER_HOUR', 3600);
+ 
+define('NBSP', '\a0');    // non-breaking space
+define('LARR', '\2190');  // left arrow
+define('RARR', '\2192');  // right arrow
+ 
  
 /*************************************************
  * REPORT constants - internal use, do not change
@@ -194,6 +199,17 @@ define('REP_YEARLY',          4);
 
 define('REP_MONTH_ABSOLUTE', 0);
 define('REP_MONTH_RELATIVE', 1);
+
+
+/*************************************************
+ * VIEW_ENTRY CODES - internal use, do not change
+ *************************************************/
+
+// Values for the time_subset form field
+define('NO_ENTRIES',      0);
+define('THIS_ENTRY',      1);
+define('THIS_AND_FUTURE', 2);
+define('WHOLE_SERIES',    3);
 
 
 /*************************************************

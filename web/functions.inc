@@ -1344,6 +1344,62 @@ function generate_textarea($params)
   echo $html;
 }
 
+
+function generate_submit($params)
+{
+  // some sanity checking on params
+  foreach (array('name', 'value', 'title', 'class', 'disabled', 'formnovalidate') as $key)
+  {
+    if (!isset($params[$key]))
+    {
+      switch ($key)
+      {
+        case 'value':
+          trigger_error('Missing mandatory parameters', E_USER_NOTICE);
+          break;
+        case 'class':
+          $params[$key] = array();
+          break;
+        case 'disabled':
+        case 'formnovalidate':
+          $params[$key] = FALSE;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  
+  if (!is_array($params['class']))
+  {
+    $params['class'] = array($params['class']);
+  }
+  $params['class'][] = 'submit';
+  
+  $html  = "<input type=\"submit\"";
+  if (count($params['class']) > 0)
+  {
+    $html .= " class=\"" . implode(' ', $params['class']) . "\"";
+  }
+  if (isset($params['name']))
+  {
+    $html .= " name=\"" . $params['name'] . "\"";
+  }
+  if (isset($params['title']))
+  {
+    $html .= " title=\"" . $params['title'] . "\"";
+  }
+  $html .= " value=\"" . htmlspecialchars($params['value']) . "\"";
+  if ($params['formnovalidate'])
+  {
+    $html .= " formnovalidate";
+  }
+  $html .= ">\n";
+  
+  echo $html;
+}
+
+
 // Generates a date selector for use on a form.   If JavaScript is enabled
 // then it will generate a calendar picker using jQuery UI datepicker.   If not,
 // it will generate three separate select boxes, one each for day, month and year.

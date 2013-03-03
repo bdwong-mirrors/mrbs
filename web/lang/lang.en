@@ -42,6 +42,13 @@ $vocab["ppreview"]           = "Print Preview";
 // Used in edit_entry.php
 $vocab["addentry"]           = "Add Entry";
 $vocab["editentry"]          = "Edit Entry";
+$vocab["copy"]               = "Copy";
+$vocab["export"]             = "Export";
+$vocab["past"]               = "past";
+$vocab["future"]             = "future";
+$vocab["this_entry"]         = "This entry";
+$vocab["this_and_future"]    = "This and future";
+$vocab["whole_series"]       = "Whole series";
 $vocab["copyentry"]          = "Copy Entry";
 $vocab["editseries"]         = "Edit Series";
 $vocab["copyseries"]         = "Copy Series";

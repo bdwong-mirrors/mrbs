@@ -4,6 +4,7 @@
 
 require_once "../systemdefaults.inc.php";
 require_once "../config.inc.php";
+require_once "../internalconfig.inc.php";
 require_once "../functions.inc";
 require_once "../theme.inc";
 
@@ -844,10 +845,43 @@ div#simple_trailer {clear: both; text-align: center; padding-top: 1.0em; padding
 
 /* ------------ VIEW_ENTRY.PHP ------------------*/
 .view_entry #entry td:first-child {text-align: right; font-weight: bold; padding-right: 1.0em}
-.view_entry div#view_entry_nav {margin-top: 1.0em}
+.view_entry div#returl {margin-top: 1.0em}
 .view_entry #approve_buttons form {float: left; margin-right: 2em}
 .view_entry #approve_buttons legend {font-size: 0}
-.view_entry div#returl {margin-top: 1em}
+.view_entry div#returl {float:left; clear: left; margin-top: 1em}
+.view_entry form#view_nav {margin-top: 1em; float: left}
+.view_entry form#view_nav input.submit {margin-right: 1em}
+.view_entry #view_nav fieldset {display: inline-block; width: auto; padding: 10px; border: 1px solid <?php echo $admin_table_border_color ?>}
+.view_entry #view_nav fieldset fieldset {border: 0; float: left; clear: left}
+.view_entry #view_nav table {float: left; clear: left; padding: 10px 10px 10px 20px}
+.view_entry #view_nav div.group {display: inline-block; float: left; width: auto}
+.view_entry #view_nav th {text-align: left; padding: 2px 6px; font-weight: normal; font-style: italic}
+.view_entry #view_nav th:first-child {text-align: right}
+.view_entry #view_nav td.now, .view_entry table#view_map th.now {border-left: 1px dashed <?php echo $table_now_color?>}
+.view_entry #view_nav td {vertical-align: middle}
+.view_entry #view_nav td.event {padding: 0; width: 30px; height: 2em}
+.view_entry #view_nav td.event div {
+    text-align: center;
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    background-color: <?php echo $event_gradient2_color?>;
+    background: -moz-radial-gradient(circle, <?php echo "$event_gradient1_color, $event_gradient2_color"?>);
+    background: -ms-radial-gradient(circle, <?php echo "$event_gradient1_color, $event_gradient2_color"?>);
+    background: -webkit-radial-gradient(circle, <?php echo "$event_gradient1_color, $event_gradient2_color"?>);
+    background: radial-gradient(circle, <?php echo "$event_gradient1_color, $event_gradient2_color"?>);
+    margin-left: -5px;
+  }
+.view_entry #view_nav td.event.selected div {
+    background-color: <?php echo $selected_gradient2_color?>;
+    background: -moz-radial-gradient(circle, <?php echo "$selected_gradient1_color, $selected_gradient2_color"?>);
+    background: -ms-radial-gradient(circle, <?php echo "$selected_gradient1_color, $selected_gradient2_color"?>);
+    background: -webkit-radial-gradient(circle, <?php echo "$selected_gradient1_color, $selected_gradient2_color"?>);
+    background: radial-gradient(circle, <?php echo "$selected_gradient1_color, $selected_gradient2_color"?>);
+  }
+.view_entry span#future:after {content: '<?php echo NBSP . ' ' . RARR?>';}
+.view_entry span#past:before {content: '<?php echo LARR . ' ' . NBSP?>';}
+
 #approve_buttons td {vertical-align: middle; padding-top: 1em}
 #approve_buttons td#caption {text-align: left}
 #approve_buttons td#note {padding-top: 0}

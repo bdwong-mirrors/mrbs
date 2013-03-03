@@ -5,12 +5,13 @@ require "defaultincludes.inc";
 require_once "mrbs_sql.inc";
 require_once "functions_view.inc";
 
+
 // Generates a single button
 function generateButton($form_action, $id, $series, $action_type, $returl, $submit_value, $title='')
 {
   global $room_id;
   
-  echo "<form action=\"".htmlspecialchars($form_action).
+  echo "<form action=\"" . htmlspecialchars($form_action).
     "?id=$id&amp;series=$series\" method=\"post\">\n";
   echo "<fieldset>\n";
   echo "<legend></legend>\n";
@@ -109,9 +110,73 @@ $series = get_form_var('series', 'int');
 $action = get_form_var('action', 'string');
 $returl = get_form_var('returl', 'string');
 $error = get_form_var('error', 'string');
+$time_subset = get_form_var('time_subset', 'int', NO_ENTRIES);
+$edit_button = get_form_var('edit_button', 'string');
+$delete_button = get_form_var('delete_button', 'string');
+$copy_button = get_form_var('copy_button', 'string');
+$export_button = get_form_var('export_button', 'string');
 
 // Check the user is authorised for this page
 checkAuthorised();
+
+// PHASE 2
+if (isset($edit_button))
+{
+  switch ($time_subset)
+  {
+    case THIS_ENTRY:
+      header("Location: edit_entry.php?id=$id&returl=$returl");
+      break;
+    case THIS_AND_FUTURE:
+      echo "Not yet implemented";
+      exit;
+      break;
+    case WHOLE_SERIES:
+      header("Location: edit_entry.php?id=$id&edit_type=series&day=$day&month=$month&year=$year&returl=$returl");
+      break;
+    default:
+      break;
+  }
+}
+
+if (isset($delete_button))
+{
+  switch ($time_subset)
+  {
+    case THIS_ENTRY:
+      header("Location: del_entry.php?id=$id&series=0&returl=$returl");
+      break;
+    case THIS_AND_FUTURE:
+      echo "Not yet implemented";
+      exit;
+      break;
+    case WHOLE_SERIES:
+      header("Location: del_entry.php?id=$id&series=1&day=$day&month=$month&year=$year&returl=$returl");
+      break;
+    default:
+      break;
+  }
+}
+
+if (isset($copy_button))
+{
+  switch ($time_subset)
+  {
+    case THIS_ENTRY:
+      header("Location: edit_entry.php?id=$id&copy=1&returl=$returl");
+      break;
+    case THIS_AND_FUTURE:
+      echo "Not yet implemented";
+      exit;
+      break;
+    case WHOLE_SERIES:
+      header("Location: edit_entry.php?id=$id&copy=1&edit_type=series&day=$day&month=$month&year=$year&returl=$returl");
+      break;
+    default:
+      break;
+  }
+}
+
 
 // Also need to know whether they have admin rights
 $user = getUserName();
@@ -187,7 +252,7 @@ else
 // PHASE 2 - EXPORTING ICALENDAR FILES
 // -------------------------------------
 
-if (isset($action) && ($action == "export"))
+if (isset($export_button))
 {
   if ($keep_private  || $enable_periods)
   {
@@ -275,7 +340,6 @@ if (!isset($returl))
     $returl .= "?year=$year&month=$month&day=$day&area=$area";
   }
 }
-$link_returl = urlencode($returl);  // for use in links
 
 if (empty($series))
 {
@@ -388,95 +452,155 @@ echo create_details_body($row, TRUE, $keep_private, $room_disabled);
 ?>
 </table>
 
-<div id="view_entry_nav">
-  <?php
-  // Only show the links for Edit and Delete if the room is enabled.    We're
+
+<?php
+
+echo "<form id=\"view_nav\" method=\"post\" action=\"" . htmlspecialchars(basename($PHP_SELF)) . "\">\n";
+echo "<fieldset>\n";
+echo "<legend></legend>\n";
+
+if ((empty($repeat_id) && !$series) || !$repeats_allowed)
+{
+  $time_subset = THIS_ENTRY;
+  echo "<input type=\"hidden\" name=\"time_subset\" value=\"$time_subset\">\n";
+}
+else
+{
+  $time_subset = ($repeats_allowed) ? WHOLE_SERIES : THIS_ENTRY;
+  $options = array(THIS_ENTRY      => get_vocab("this_entry"),
+                   THIS_AND_FUTURE => get_vocab("this_and_future"),
+                   WHOLE_SERIES    => get_vocab("whole_series"));
+  $params = array('name'    => 'time_subset',
+                  'value'   => $time_subset,
+                  'label'   => '',
+                  'options' => $options);
+  generate_radio_group($params);
+
+  // Don't display the table, but leave the JavaScript to display it.  (The table
+  // is only useful if JavaScript is enabled)
+  $n_rows = 1;  // ready for when we support linked bookings
+  $n_cols = 9;
+  $n_past_cols = 3;
+  $n_future_cols = $n_cols - ($n_past_cols + 1);
+  echo "<table style=\"display: none\">\n";
+  echo "<thead>\n";
+  echo "<tr>\n";
+  // We'll put the left and right arrows in using CSS as this makes it easier to
+  // cope with RTL languages such as Hebrew.   If browsers don't support :before
+  // and :after then the absence of the arrows isn't a major problem
+  echo "<th colspan=\"$n_past_cols\"><span id=\"past\">" . get_vocab("past") . "</span></th>\n";
+  echo "<th colspan=\"" . ($n_future_cols + 1) . "\" class=\"now\"><span id=\"future\">" . get_vocab("future") . "</span></th>\n";
+  if ($n_rows > 1)  // linked bookings
+  {
+    echo "<th></th>\n";
+  }
+  echo "</tr>\n";
+  echo "</thead>\n";
+
+  echo "<tbody>\n";
+  for ($i=0; $i<$n_rows; $i++)
+  {
+    echo "<tr>";
+    for ($j=0; $j<$n_cols; $j++)
+    {
+      echo "<td class=\"event ";
+      if ($j < $n_past_cols)
+      {
+        echo "past";
+      }
+      elseif ($j == $n_past_cols)
+      {
+        echo "now";
+      }
+      else
+      {
+        echo "future";
+      }
+      echo "\"><div></div></td>\n";
+    }
+    if ($n_rows > 1)  // ie when we have linked bookings
+    {
+      echo "<td>";
+      if ($i==0)
+      {
+        $params = array('name'    => 'this_room',
+                        'options' => array('1' => get_vocab('this_room_only')));
+        generate_radio($params);
+      }
+      elseif ($i==1)
+      {
+        $params = array('name'    => 'this_room',
+                        'options' => array('0' => get_vocab('all_linked_rooms')));
+        generate_radio($params);
+      }
+      echo "</td>\n";
+    }
+    echo "</tr>\n";
+  }
+  echo "</tbody>\n";
+
+  echo "</table>\n";
+}
+
+echo "<input type=\"hidden\" name=\"returl\" value=\"" . htmlspecialchars($returl) . "\">\n";
+echo "<input type=\"hidden\" name=\"day\" value=\"$day\">\n";
+echo "<input type=\"hidden\" name=\"month\" value=\"$month\">\n";
+echo "<input type=\"hidden\" name=\"year\" value=\"$year\">\n";
+echo "<input type=\"hidden\" name=\"id\" value=\"$id\">\n";
+
+echo "<fieldset>\n";
+echo "<legend></legend>\n";
+$params = array();
+$buttons = array();
+
+// If we're looking at a series and repeats are not allowed then we can't edit,
+// delete or copy this booking, so don't show the buttons
+if (!$series || $repeats_allowed)
+{
+  // Only show the buttons for Edit and Delete if the room is enabled.    We're
   // allowed to view and copy existing bookings in disabled rooms, but not to
   // modify or delete them.
   if (!$room_disabled)
   {
-    // Edit and Edit Series
-    echo "<div>\n";
-    if (!$series)
-    {
-      echo "<a href=\"edit_entry.php?id=$id&amp;returl=$link_returl\">". get_vocab("editentry") ."</a>";
-    } 
-    if (!empty($repeat_id)  && !$series && $repeats_allowed)
-    {
-      echo " - ";
-    }  
-    if ((!empty($repeat_id) || $series) && $repeats_allowed)
-    {
-      echo "<a href=\"edit_entry.php?id=$id&amp;edit_type=series&amp;day=$day&amp;month=$month&amp;year=$year&amp;returl=$link_returl\">".get_vocab("editseries")."</a>";
-    }
-    echo "</div>\n";
-    
-    // Delete and Delete Series
-    echo "<div>\n";
-    if (!$series)
-    {
-      echo "<a href=\"del_entry.php?id=$id&amp;series=0&amp;returl=$link_returl\" onclick=\"return confirm('".get_vocab("confirmdel")."');\">".get_vocab("deleteentry")."</a>";
-    }
-    if (!empty($repeat_id) && !$series && $repeats_allowed)
-    {
-      echo " - ";
-    }
-    if ((!empty($repeat_id) || $series) && $repeats_allowed)
-    {
-      echo "<a href=\"del_entry.php?id=$id&amp;series=1&amp;day=$day&amp;month=$month&amp;year=$year&amp;returl=$link_returl\" onClick=\"return confirm('".get_vocab("confirmdel")."');\">".get_vocab("deleteseries")."</a>";
-    }
-    echo "</div>\n";
+    $buttons['edit_button'] = get_vocab("edit");
+    $buttons['delete_button'] = get_vocab("delete");
   }
-  
-  // Copy and Copy Series
-  echo "<div>\n";
-  if (!$series)
+  $buttons['copy_button'] = get_vocab("copy");
+}
+
+// The iCalendar information has the full booking details in it, so we will not allow
+// it to be exported if it is private and the user is not authorised to see it.
+// iCalendar information doesn't work with periods at the moment (no periods to times mapping)
+if (!$keep_private && !$enable_periods)
+{
+  $buttons['export_button'] = get_vocab("export");
+}
+
+foreach($buttons as $name => $value)
+{
+  $params['name'] = $name;
+  $params['value'] = $value;
+  generate_submit($params);
+}
+echo "</fieldset>\n";
+
+echo "</fieldset>\n";
+echo "</form>\n";
+
+?>
+
+
+<div id="returl">
+  <?php
+  if (isset($HTTP_REFERER)) //remove the link if displayed from an email
   {
-    echo "<a href=\"edit_entry.php?id=$id&amp;copy=1&amp;returl=$link_returl\">". get_vocab("copyentry") ."</a>";
-  }      
-  if (!empty($repeat_id) && !$series && $repeats_allowed)
-  {
-    echo " - ";
-  }     
-  if ((!empty($repeat_id) || $series) && $repeats_allowed) 
-  {
-    echo "<a href=\"edit_entry.php?id=$id&amp;edit_type=series&amp;day=$day&amp;month=$month&amp;year=$year&amp;copy=1&amp;returl=$link_returl\">".get_vocab("copyseries")."</a>";
-  }
-  echo "</div>\n";
-  
-  // Export and Export Series
-  if (!$keep_private && !$enable_periods)
-  {
-    // The iCalendar information has the full booking details in it, so we will not allow
-    // it to be exported if it is private and the user is not authorised to see it.
-    // iCalendar information doesn't work with periods at the moment (no periods to times mapping)
-    echo "<div>\n";
-    if (!$series)
-    {
-      echo "<a href=\"view_entry.php?action=export&amp;id=$id&amp;returl=$link_returl\">". get_vocab("exportentry") ."</a>";
-    } 
-    if (!empty($repeat_id)  && !$series)
-    {
-      echo " - ";
-    }  
-    if (!empty($repeat_id) || $series)
-    {
-      echo "<a href=\"view_entry.php?action=export&amp;id=$repeat_id&amp;series=1&amp;day=$day&amp;month=$month&amp;year=$year&amp;returl=$link_returl\">".get_vocab("exportseries")."</a>";
-    }
-    echo "</div>\n";
+  ?>
+  <a href="<?php echo htmlspecialchars($HTTP_REFERER) ?>"><?php echo get_vocab("returnprev") ?></a>
+  <?php
   }
   ?>
-  <div id="returl">
-    <?php
-    if (isset($HTTP_REFERER)) //remove the link if displayed from an email
-    {
-    ?>
-    <a href="<?php echo htmlspecialchars($HTTP_REFERER) ?>"><?php echo get_vocab("returnprev") ?></a>
-    <?php
-    }
-    ?>
-  </div>
 </div>
+
 
 <?php
 output_trailer();

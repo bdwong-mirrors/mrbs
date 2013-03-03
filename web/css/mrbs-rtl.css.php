@@ -6,6 +6,7 @@
 
 require_once "../systemdefaults.inc.php";
 require_once "../config.inc.php";
+require_once "../internalconfig.inc.php";
 require_once "../functions.inc";
 require_once "../theme.inc";
 
@@ -227,8 +228,42 @@ div#trailer {
 
 /* ------------ VIEW_ENTRY.PHP ------------------*/
 
-.view_entry div#view_entry_nav {
+.view_entry form#view_nav {
   direction: rtl;
+}
+
+.view_entry #view_nav td.now, .view_entry table#view_map th.now {
+  border-left: 0;
+  border-right: 1px dashed <?php echo $table_now_color?>
+}
+
+.view_entry #view_nav td.event div {
+  margin-left: 0;
+  margin-right: -5px;
+}
+
+.view_entry #view_nav th {
+  text-align: right;
+}
+
+.view_entry #view_nav th:first-child {
+  text-align: left;
+}
+
+.view_entry span#future:after {
+  content: '<?php echo NBSP . ' ' . LARR?>';
+}
+
+.view_entry span#future:before {
+  content: '';
+}
+
+.view_entry span#past:after {
+  content: '';
+}
+
+.view_entry span#past:before {
+  content: '<?php echo RARR . ' ' . NBSP?>';
 }
 
 .view_entry #approve_buttons form {

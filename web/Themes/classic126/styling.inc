@@ -92,6 +92,14 @@ $pending_header_back_color = $header_back_color; // background colour for series
 $series_entry_back_color   = "#FFFBC2"; // background colour for entries in a series
 $pending_control_color     = "#FFF36C"; // background colour for the series +/- controls in pending.php
 
+// colours used in the view_entry.php table
+$table_now_color = "#879AA8";
+$selected_gradient1_color = "#1a82f7";
+$selected_gradient2_color = "#2f2727";
+$event_gradient1_color = "#e7ebee";
+$event_gradient2_color = "#879AA8";
+
+
 // ***** DIMENSIONS *******************
 $banner_border_width          = '1';  // (px)  border width for the outside of the banner
 $banner_border_cell_width     = '1';  // (px)  border width for the cells of the banner
