@@ -122,21 +122,8 @@ checkAuthorised();
 // PHASE 2
 if (isset($edit_button))
 {
-  switch ($time_subset)
-  {
-    case THIS_ENTRY:
-      header("Location: edit_entry.php?id=$id&returl=$returl");
-      break;
-    case THIS_AND_FUTURE:
-      echo "Not yet implemented";
-      exit;
-      break;
-    case WHOLE_SERIES:
-      header("Location: edit_entry.php?id=$id&edit_type=series&day=$day&month=$month&year=$year&returl=$returl");
-      break;
-    default:
-      break;
-  }
+  header("Location: edit_entry.php?id=$id&time_subset=$time_subset&day=$day&month=$month&year=$year&returl=$returl");
+  exit;
 }
 
 if (isset($delete_button))
@@ -160,21 +147,8 @@ if (isset($delete_button))
 
 if (isset($copy_button))
 {
-  switch ($time_subset)
-  {
-    case THIS_ENTRY:
-      header("Location: edit_entry.php?id=$id&copy=1&returl=$returl");
-      break;
-    case THIS_AND_FUTURE:
-      echo "Not yet implemented";
-      exit;
-      break;
-    case WHOLE_SERIES:
-      header("Location: edit_entry.php?id=$id&copy=1&edit_type=series&day=$day&month=$month&year=$year&returl=$returl");
-      break;
-    default:
-      break;
-  }
+  header("Location: edit_entry.php?id=$id&copy=1&time_subset=$time_subset&day=$day&month=$month&year=$year&returl=$returl");
+  exit;
 }
 
 

@@ -69,7 +69,7 @@ $formvars = array('create_by'          => 'string',
                   'returl'             => 'string',
                   'id'                 => 'int',
                   'rep_id'             => 'int',
-                  'edit_type'          => 'string',
+                  'time_subset'        => 'int',
                   'rep_type'           => 'int',
                   'rep_end_day'        => 'int',
                   'rep_end_month'      => 'int',
@@ -228,6 +228,7 @@ if (!$is_admin && $auth['only_admin_can_book_multiday'])
   $end_year = $start_year;
 }
 
+
 // If this is an Ajax request and we're being asked to commit the booking, then
 // we'll only have been supplied with parameters that need to be changed.  Fill in
 // the rest from the existing boking information.
@@ -237,6 +238,7 @@ if (!$is_admin && $auth['only_admin_can_book_multiday'])
 if ($ajax && $commit)
 {
   $old_booking = mrbsGetBookingInfo($id, FALSE);
+  
   foreach ($formvars as $var => $var_type)
   {
     if (!isset($$var) || (($var_type == 'array') && empty($$var)))
@@ -641,13 +643,26 @@ foreach ($rooms as $room_id)
 
 $just_check = $ajax && function_exists('json_encode') && !$commit;
 $this_id = (isset($id)) ? $id : NULL;
-$result = mrbsMakeBookings($bookings, $this_id, $just_check, $skip, $original_room_id, $need_to_send_mail, $edit_type);
+$result = mrbsMakeBookings($bookings, $this_id, $just_check, $skip, $original_room_id, $need_to_send_mail, $time_subset);
 
 // If we weren't just checking and this was a succesful booking and
 // we were editing an existing booking, then delete the old booking
 if (!$just_check && $result['valid_booking'] && isset($id))
 {
-  mrbsDelEntry($user, $id, ($edit_type == "series"), 1);
+  switch ($time_subset)
+  {
+    case THIS_ENTRY:
+      mrbsDelEntry($user, $id, FALSE);
+      break;
+    case THIS_AND_FUTURE:
+      mrbsDelEntry($user, $id, TRUE, TRUE, $booking['start_time']);
+      break;
+    case WHOLE_SERIES:
+      mrbsDelEntry($user, $id, TRUE, TRUE);
+      break;
+    default:
+      break;
+  }
 }
 
 // If this is an Ajax request, output the result and finish

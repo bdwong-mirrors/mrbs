@@ -386,12 +386,13 @@ function mrbsCheckPolicy(&$booking, $ignore, $repignore, $delete=FALSE)
  * $id     - The entry to delete
  * $series - If set, delete the series, except user modified entries
  * $all    - If set, include user modified entries in the series delete
+ * $from   - If set, delete all entries from and including this start_time
  *
  * Returns FALSE if an error occured, otherwise an array of start_times that
  * have been deleted.
  *
  */
-function mrbsDelEntry($user, $id, $series, $all)
+function mrbsDelEntry($user, $id, $series, $all=FALSE, $from=NULL)
 {
   global $tbl_entry, $tbl_repeat;
   
@@ -422,6 +423,11 @@ function mrbsDelEntry($user, $id, $series, $all)
 
   for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
   {
+    if (isset($from) && ($row['start_time'] < $from))
+    {
+      continue;
+    }
+    
     if(!getWritable($row['create_by'], $user, $room_id))
     {
       continue;

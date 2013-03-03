@@ -588,7 +588,7 @@ $minute = get_form_var('minute', 'int');
 $period = get_form_var('period', 'int');
 $id = get_form_var('id', 'int');
 $copy = get_form_var('copy', 'int');
-$edit_type = get_form_var('edit_type', 'string', '');
+$time_subset = get_form_var('time_subset', 'int', THIS_ENTRY);
 $returl = get_form_var('returl', 'string');
 // The following variables are used when coming via a JavaScript drag select
 $drag = get_form_var('drag', 'int');
@@ -832,7 +832,7 @@ if (isset($id))
     {
       // If we're editing the series we want the start_time and end_time to be the
       // start and of the first entry of the series, not the start of this entry
-      if ($edit_type == "series")
+      if ($time_subset == WHOLE_SERIES)
       {
         $start_time = $row['start_time'];
         $end_time = $row['end_time'];
@@ -882,7 +882,7 @@ if (isset($id))
 else
 {
   // It is a new booking. The data comes from whichever button the user clicked
-  $edit_type     = "series";
+  $time_subset   = THIS_ENTRY;
   $name          = "";
   $create_by     = $user;
   $description   = $default_description;
@@ -1088,26 +1088,26 @@ if ($res)
 
 if (isset($id) && !isset($copy))
 {
-  if ($edit_type == "series")
+  if ($time_subset == THIS_ENTRY)
   {
-    $token = "editseries";
+    $token = "editentry";
   }
   else
   {
-    $token = "editentry";
+    $token = "editseries";
   }
 }
 else
 {
   if (isset($copy))
   {
-    if ($edit_type == "series")
+    if ($time_subset == THIS_ENTRY)
     {
-      $token = "copyseries";
+      $token = "copyentry";
     }
     else
     {
-      $token = "copyentry";
+      $token = "copyseries";
     }
   }
   else
@@ -1172,19 +1172,19 @@ foreach ($edit_entry_field_order as $key)
 
 
 // Show the repeat fields if (a) it's a new booking and repeats are allowed,
-// or else if it's an existing booking and it's a series.  (It's not particularly obvious but
-// if edit_type is "series" then it means that either you're editing an existing
-// series or else you're making a new booking.  This should be tidied up sometime!)
-if (($edit_type == "series") && $repeats_allowed)
+// or (b) it's an existing booking and it's a series.
+if ( (!isset($id) && $repeats_allowed) ||
+     (isset($id) && ($rep_type != REP_NONE)) )
 {
-  // If repeats aren't allowed or this is not a series then disable
-  // the repeat fields - they're for information only
+  // If repeats aren't allowed then disable the repeat fields - they're for
+  // information only.
+  //
   // (NOTE: when repeat bookings are restricted to admins, an ordinary user
   // would not normally be able to get to the stage of trying to edit a series.
   // But we have to cater for the possibility because it could happen if (a) the
   // series was created before the policy was introduced or (b) the user has
   // been demoted since the series was created).
-  $disabled = ($edit_type != "series") || !$repeats_allowed;
+  $disabled = !$repeats_allowed;
   
   echo "<fieldset id=\"rep_info\">\n";
   echo "<legend></legend>\n";
@@ -1342,7 +1342,7 @@ if (($edit_type == "series") && $repeats_allowed)
     <input type="hidden" name="returl" value="<?php echo htmlspecialchars($returl) ?>">
     <input type="hidden" name="create_by" value="<?php echo htmlspecialchars($create_by)?>">
     <input type="hidden" name="rep_id" value="<?php echo $rep_id?>">
-    <input type="hidden" name="edit_type" value="<?php echo $edit_type?>">
+    <input type="hidden" name="time_subset" value="<?php echo $time_subset?>">
     <?php
     // The original_room_id will only be set if this was an existing booking.
     // If it is an existing booking then edit_entry_handler needs to know the
