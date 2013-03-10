@@ -386,13 +386,12 @@ function mrbsCheckPolicy(&$booking, $ignore, $repignore, $delete=FALSE)
  * $id     - The entry to delete
  * $series - If set, delete the series, except user modified entries
  * $all    - If set, include user modified entries in the series delete
- * $from   - If set, delete all entries from and including this start_time
  *
  * Returns FALSE if an error occured, otherwise an array of start_times that
  * have been deleted.
  *
  */
-function mrbsDelEntry($user, $id, $series, $all=FALSE, $from=NULL)
+function mrbsDelEntry($user, $id, $series, $all=FALSE)
 {
   global $tbl_entry, $tbl_repeat;
   
@@ -423,11 +422,6 @@ function mrbsDelEntry($user, $id, $series, $all=FALSE, $from=NULL)
 
   for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
   {
-    if (isset($from) && ($row['start_time'] < $from))
-    {
-      continue;
-    }
-    
     if(!getWritable($row['create_by'], $user, $room_id))
     {
       continue;
@@ -491,19 +485,27 @@ function mrbsCreateEntry($table, $data)
     {
       switch ($key)
       {
-        // integers
+        // integers (not null)
         case 'start_time':
         case 'end_time':
         case 'entry_type':
         case 'repeat_id':
         case 'rep_type':
-        case 'month_absolute':
         case 'end_date':
         case 'room_id':
         case 'status':
         case 'ical_sequence':
           $sql_col[] = $key;
           $sql_val[] = $data[$key];
+          break;
+          
+        // integers (nullable)
+        case 'month_absolute':
+          if (isset($data[$key]))
+          {
+            $sql_col[] = $key;
+            $sql_val[] = $data[$key];
+          }
           break;
         
         // strings  
@@ -673,6 +675,7 @@ function trimToEndOfMonth(&$month, &$day, &$year)
  *                                  repeat day must be set)
  *                  rep_num_weeks   The repeat frequency for weekly repeats
  *                  month_absolute  The repeat day of the month for monthly repeats
+ *                  month_relative  The relative day of the month for monthly repeats
  * $n             Maximum number of entries to find
  *
  * Returns:
@@ -680,7 +683,7 @@ function trimToEndOfMonth(&$month, &$day, &$year)
  *   an array  - This is a list of start times of each of the repeat entrys
  */
 
-function mrbsGetRepeatEntryList($time, $enddate, $rep_details, $n)
+function mrbsGetRepeatEntryList($time, $enddate, $rep_details, $n=PHP_INT_MAX)
 {
   $entries = array();
   
@@ -1106,8 +1109,7 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
                  "A.area_admin_email",
                  "M.disabled AS room_disabled",
                  "A.disabled AS area_disabled",
-                 "A.enable_periods",
-                 "(end_time - start_time) AS duration");
+                 "A.enable_periods");
                  
   foreach ($table_fields as $field)
   {
@@ -1158,7 +1160,7 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
            WHERE T.room_id = M.id
              AND M.area_id = A.id
              AND T.id=$id";
-
+  
   $res = sql_query($sql);
   if (! $res)
   {
@@ -1249,6 +1251,53 @@ function mrbsGetBookingInfo($id, $series, $silent=FALSE)
   
   return $row;
 }
+
+
+// Gets the booking data for an entry in the entry table with id $id.
+// If the entry is part of a series it will also return the repeat details/
+// The start and end times will be those for the series as a whole (not this
+// particular member)
+function mrbsGetBooking($id)
+{
+  global $tbl_entry, $tbl_repeat;
+  
+  $sql = "SELECT *
+            FROM $tbl_entry
+           WHERE id=$id
+           LIMIT 1";
+  $res = sql_query($sql);
+  if ($res === FALSE)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(FALSE, get_vocab("fatal_db_error"));
+  }
+  if (sql_count($res) == 0)
+  {
+    trigger_error("Id $id does not exist", E_USER_NOTICE);
+    return NULL;
+  }
+  else
+  {
+    $row = sql_row_keyed($res, 0);
+    if (!empty($row['repeat_id']))
+    {
+      $sql = "SELECT start_time, end_time, rep_type, end_date, rep_opt, month_absolute, month_relative
+                FROM $tbl_repeat
+               WHERE id=" . $row['repeat_id'] . "
+               LIMIT 1";
+      $res = sql_query($sql);
+      if ($res === FALSE)
+      {
+        trigger_error(sql_error(), E_USER_WARNING);
+        fatal_error(FALSE, get_vocab("fatal_db_error"));
+      }
+      $repeat_row = sql_row_keyed($res, 0);
+      $row = array_merge($row, $repeat_row);
+    }
+  }
+  return $row;
+}
+
 
 function mrbsGetRoomArea($id)
 {
@@ -1397,17 +1446,17 @@ function mrbsAddRoom($name, $area, &$error, $description='', $capacity='')
 // Makes bookings
 //    $bookings     an array of bookings
 //    $id           the id of the current booking when editing an existing entry
-function mrbsMakeBookings($bookings, $id=NULL, $just_check=FALSE, $skip=FALSE, $original_room_id=NULL, $send_mail=FALSE, $edit_type='')
+function mrbsMakeBookings($bookings, $id=NULL, $just_check=FALSE, $skip=FALSE, $original_room_id=NULL, $send_mail=FALSE, $time_subset=THIS_ENTRY)
 {
   global $max_rep_entrys, $enable_periods, $resolution, $mail_settings;
   global $tbl_entry, $tbl_room, $tbl_area;
-
+  
   // All the data, except for the status and room id, will be common
   // across the bookings
   $common = $bookings[0];
   // Work out the duration in seconds, but adjust it for DST changes so that
   // the user will still see, for example, "24 hours" when a booking goes from
-  // 1200 one day to 1200 the next, crosing a DST boundary.
+  // 1200 one day to 1200 the next, crossing a DST boundary.
   $duration_seconds = $common['end_time'] - $common['start_time'];
   $duration_seconds -= cross_dst($common['start_time'], $common['end_time']);
   // Now get the duration, which will be needed for email notifications
@@ -1564,7 +1613,7 @@ function mrbsMakeBookings($bookings, $id=NULL, $just_check=FALSE, $skip=FALSE, $
   $result['valid_booking'] = $valid_booking;
   $result['rules_broken'] = $rules_broken;
   $result['conflicts'] = $conflicts;
-  
+
   // If we've just been asked to check the bookings, or if it wasn't a valid
   // booking, then stop here and return the results
   if ($just_check || !$valid_booking)
@@ -1584,20 +1633,27 @@ function mrbsMakeBookings($bookings, $id=NULL, $just_check=FALSE, $skip=FALSE, $
   }
   foreach ($bookings as $booking)
   { 
-    // We need to work out whether this is the original booking being modified,
-    // because, if it is, we keep the ical_uid and increment the ical_sequence.
-    // We consider this to be the original booking if there was an original
-    // booking in the first place (in which case the original room id will be set) and
+    // If this is a "this_and_future" booking, it's always going to be a new
+    // booking.
+    if ($time_subset == THIS_AND_FUTURE)
+    {
+      $booking['ical_uid'] = generate_global_uid($booking['name']);
+      $booking['ical_sequence'] = 0;
+    }
+    // Otherwise we need to work out whether this is the original booking being
+    // modified, because, if it is, we keep the ical_uid and increment the
+    // ical_sequence.   We consider this to be the original booking if there was
+    // an original booking in the first place (in which case the original room id
+    // will be set) AND
     //      (a) this is the same room as the original booking
-    //   or (b) there is only one room in the new set of bookings, in which case
+    //   OR (b) there is only one room in the new set of bookings, in which case
     //          what has happened is that the booking has been changed to be in
     //          a new room
-    //   or (c) the new set of rooms does not include the original room, in which
+    //   OR (c) the new set of rooms does not include the original room, in which
     //          case we will make the arbitrary assumption that the original booking
     //          has been moved to the first room in the list and the bookings in the
     //          other rooms are clones and will be treated as new bookings.
-    
-    if (isset($original_room_id) && 
+    elseif (isset($original_room_id) &&
         (($original_room_id == $booking['room_id']) ||
          (count($rooms) == 1) ||
          (($rooms[0] == $booking['room_id']) && !in_array($original_room_id, $rooms))))
@@ -1680,13 +1736,13 @@ function mrbsMakeBookings($bookings, $id=NULL, $just_check=FALSE, $skip=FALSE, $
         // so that we can highlight the changes
         if (isset($id))
         {
-          if ($edit_type == "series")
+          if ($time_subset == THIS_ENTRY)
           {
-            $mail_previous = mrbsGetBookingInfo($repeat_id, TRUE);
+            $mail_previous = mrbsGetBookingInfo($id, FALSE);
           }
           else
           {
-            $mail_previous = mrbsGetBookingInfo($id, FALSE);
+            $mail_previous = mrbsGetBookingInfo($repeat_id, TRUE);
           }
         }
         else
@@ -1694,7 +1750,8 @@ function mrbsMakeBookings($bookings, $id=NULL, $just_check=FALSE, $skip=FALSE, $
           $mail_previous = array();
         }
         // Send the email
-        notifyAdminOnBooking($booking, $mail_previous, !isset($id), $is_repeat_table, $result['start_times']);
+        $is_new = !isset($id) || ($time_subset == THIS_AND_FUTURE);
+        notifyAdminOnBooking($booking, $mail_previous, $is_new, $is_repeat_table, $result['start_times']);
       }
     }   
   } // end foreach $bookings

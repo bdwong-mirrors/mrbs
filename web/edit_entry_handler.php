@@ -33,7 +33,7 @@ $is_admin = (authGetUserLevel($user) >= 2);
 
 // NOTE:  the code on this page assumes that array form variables are passed
 // as an array of values, rather than an array indexed by value.   This is
-// particularly important for checkbox arrays whicgh should be formed like this:
+// particularly important for checkbox arrays which should be formed like this:
 //
 //    <input type="checkbox" name="foo[]" value="n">
 //    <input type="checkbox" name="foo[]" value="m">
@@ -231,7 +231,7 @@ if (!$is_admin && $auth['only_admin_can_book_multiday'])
 
 // If this is an Ajax request and we're being asked to commit the booking, then
 // we'll only have been supplied with parameters that need to be changed.  Fill in
-// the rest from the existing boking information.
+// the rest from the existing booking information.
 // Note: we assume that 
 // (1) this is not a series (we can't cope with them yet)
 // (2) we always get passed start_seconds and end_seconds in the Ajax data
@@ -642,27 +642,38 @@ foreach ($rooms as $room_id)
 }
 
 $just_check = $ajax && function_exists('json_encode') && !$commit;
-$this_id = (isset($id)) ? $id : NULL;
+
+// If this a "this and future" booking then we have to make two bookings,
+// a new one for the "this and future" part and a modified one for the "past"
+// part.   Otherwise just make the new booking.  And then we delete the original
+// booking.
+
+// Check to see whether this is the special case of a "this and future" booking
+// where this entry is at the start of the series, in which case it's really
+// the whole series we're dealing with
+if ($time_subset == THIS_AND_FUTURE)
+{
+  $original_booking = mrbsGetBooking($id);
+  if ($original_booking['start_time'] == $bookings[0]['start_time'])
+  {
+    $time_subset = WHOLE_SERIES;
+  }
+}
+
+$this_id = isset($id) ? $id : NULL;
 $result = mrbsMakeBookings($bookings, $this_id, $just_check, $skip, $original_room_id, $need_to_send_mail, $time_subset);
+
+if ($result['valid_booking'] && ($time_subset == THIS_AND_FUTURE))
+{
+  $original_booking['end_date'] = $bookings[0]['start_time'] - 1;  // Truncate the booking
+  $result = mrbsMakeBookings(array($original_booking), $id, $just_check, $skip, $original_room_id, $need_to_send_mail, WHOLE_SERIES);
+}
 
 // If we weren't just checking and this was a succesful booking and
 // we were editing an existing booking, then delete the old booking
 if (!$just_check && $result['valid_booking'] && isset($id))
 {
-  switch ($time_subset)
-  {
-    case THIS_ENTRY:
-      mrbsDelEntry($user, $id, FALSE);
-      break;
-    case THIS_AND_FUTURE:
-      mrbsDelEntry($user, $id, TRUE, TRUE, $booking['start_time']);
-      break;
-    case WHOLE_SERIES:
-      mrbsDelEntry($user, $id, TRUE, TRUE);
-      break;
-    default:
-      break;
-  }
+  mrbsDelEntry($user, $id, ($time_subset != THIS_ENTRY));
 }
 
 // If this is an Ajax request, output the result and finish
