@@ -2,18 +2,14 @@
 // $Id$
 
 // Deletes an entry, or a series.    The $id is always the id of
-// an individual entry.   If $series is set then the entire series
-// of wich $id is a member should be deleted. [Note - this use of
-// $series is inconsistent with use in the rest of MRBS where it
-// means that $id is the id of an entry in the repeat table.   This
-// should be fixed sometime.]
+// an individual entry.
 
 require "defaultincludes.inc";
 require_once "mrbs_sql.inc";
 
 // Get non-standard form variables
 $id = get_form_var('id', 'int');
-$series = get_form_var('series', 'int');
+$time_subset = get_form_var('time_subset', 'int');
 $returl = get_form_var('returl', 'string');
 $action = get_form_var('action', 'string');
 $note = get_form_var('note', 'string', '');
@@ -36,6 +32,7 @@ if (empty($returl))
   }
   $returl .= "?year=$year&month=$month&day=$day&area=$area";
 }
+
 
 if ($info = mrbsGetBookingInfo($id, FALSE, TRUE))
 {
@@ -68,13 +65,39 @@ if ($info = mrbsGetBookingInfo($id, FALSE, TRUE))
       // If this is an individual entry of a series then force the entry_type
       // to be a changed entry, so that when we create the iCalendar object we know that
       // we only want to delete the individual entry
-      if (!$series && ($mail_previous['rep_type'] != REP_NONE))
+      if (($time_subset == THIS_ENTRY) && ($mail_previous['rep_type'] != REP_NONE))
       {
         $mail_previous['entry_type'] = ENTRY_RPT_CHANGED;
       }
     }
+    
+    // Check to see whether this is the special case of a "this and future" booking
+    // where this entry is at the start of the series, in which case it's really
+    // the whole series we're dealing with
+    if ($time_subset == THIS_AND_FUTURE)
+    {
+      $original_booking = mrbsGetBooking($id);
+      if ($original_booking['start_time'] == $info['start_time'])
+      {
+        $time_subset = WHOLE_SERIES;
+      }
+    }
+    
+    // If it's a genuine this_and_future operation then it's really a modification
+    // of san existing booking.
+    if ($time_subset == THIS_AND_FUTURE)
+    {
+      $original_booking['end_date'] = $info['start_time'] - 1;  // Truncate the booking
+      $result = mrbsMakeBookings(array($original_booking), $id, FALSE, FALSE, $info['room_id'], $notify_by_email, WHOLE_SERIES);
+      mrbsDelEntry($user, $id, TRUE);
+      Header("Location: $returl");
+      exit();
+    }
+    
+    // Otherwise we go ahead and delete the entry/series
+    $whole_series = ($time_subset == WHOLE_SERIES);
     sql_begin();
-    $start_times = mrbsDelEntry(getUserName(), $id, $series, 1);
+    $start_times = mrbsDelEntry(getUserName(), $id, $whole_series, 1);
     sql_commit();
     // [At the moment MRBS does not inform the user if it was only able to
     // delete some members of a series but not all.    This could happen for
@@ -87,20 +110,18 @@ if ($info = mrbsGetBookingInfo($id, FALSE, TRUE))
       if ($notify_by_email)
       {
         // Now that we've finished with mrbsDelEntry, change the id so that it's
-        // the repeat_id if we're looking at a series.   (This is a complete hack, 
-        // but brings us back into line with the rest of MRBS until the anomaly
-        // of del_entry is fixed) 
-        if ($series)
+        // the repeat_id if we're looking at a series.
+        if ($whole_series)
         {
           $mail_previous['id'] = $mail_previous['repeat_id'];
         }
         if (isset($action) && ($action == "reject"))
         {
-          $result = notifyAdminOnDelete($mail_previous, $series, $start_times, $action, $note);
+          $result = notifyAdminOnDelete($mail_previous, $whole_series, $start_times, $action, $note);
         }
         else
         {
-          $result = notifyAdminOnDelete($mail_previous, $series, $start_times);
+          $result = notifyAdminOnDelete($mail_previous, $whole_series, $start_times);
         }
       }
       Header("Location: $returl");

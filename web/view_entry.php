@@ -128,21 +128,8 @@ if (isset($edit_button))
 
 if (isset($delete_button))
 {
-  switch ($time_subset)
-  {
-    case THIS_ENTRY:
-      header("Location: del_entry.php?id=$id&series=0&returl=$returl");
-      break;
-    case THIS_AND_FUTURE:
-      echo "Not yet implemented";
-      exit;
-      break;
-    case WHOLE_SERIES:
-      header("Location: del_entry.php?id=$id&series=1&day=$day&month=$month&year=$year&returl=$returl");
-      break;
-    default:
-      break;
-  }
+  header("Location: del_entry.php?id=$id&time_subset=$time_subset&day=$day&month=$month&year=$year&returl=$returl");
+  exit;
 }
 
 if (isset($copy_button))
