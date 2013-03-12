@@ -229,13 +229,13 @@ if (isset($export_button))
          .  sql_syntax_timestamp_to_unix("E.timestamp") . " AS last_updated, "
          . "A.area_name, R.room_name, "
          . "A.approval_enabled, A.confirmation_enabled";
-    if ($series)
+    if ($time_subset != THIS_ENTRY)
     {
       // If it's a series we want the repeat information
       $sql .= ", T.rep_type, T.end_date, T.rep_opt, T.rep_num_weeks";
     }
     $sql .= " FROM $tbl_area A, $tbl_room R, $tbl_entry E";
-    if ($series)
+    if ($time_subset != THIS_ENTRY)
     {
       $sql .= ", $tbl_repeat T"
             . " WHERE E.repeat_id=$repeat_id"
@@ -249,7 +249,7 @@ if (isset($export_button))
     $sql .= " AND E.room_id=R.id
               AND R.area_id=A.id";
               
-    if ($series)
+    if ($time_subset != THIS_ENTRY)
     {
       $sql .= " ORDER BY E.ical_recur_id";
     }
