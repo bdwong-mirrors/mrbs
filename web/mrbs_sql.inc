@@ -717,7 +717,7 @@ function mrbsGetRepeatEntryList($time, $enddate, $rep_details, $n=PHP_INT_MAX)
           $month++;
         }
       }
-      else
+      elseif (isset($rep_details['month_relative']))
       {
         $day = byday_to_day($year, $month, $rep_details['month_relative']);
         while (($day === FALSE) || (($day < $start_dom) && ($month == $start_month)))
@@ -725,6 +725,10 @@ function mrbsGetRepeatEntryList($time, $enddate, $rep_details, $n=PHP_INT_MAX)
           $month++;
           $day = byday_to_day($year, $month, $rep_details['month_relative']);
         }
+      }
+      else
+      {
+        trigger_error("No monthly repeat type, E_USER_WARNING");
       }
       trimToEndOfMonth($month, $day, $year);
       break;
