@@ -162,6 +162,7 @@ $create_by = $row['create_by'];
 $private = $row['status'] & STATUS_PRIVATE;
 $writeable = getWritable($row['create_by'], $user, $row['room_id']);
 $keep_private = (is_private_event($private) && !$writeable);
+$start_time = $row['start_time'];
 
 // Work out when the last reminder was sent
 $last_reminded = (empty($row['reminded'])) ? $row['last_updated'] : $row['reminded'];
@@ -248,6 +249,11 @@ if (isset($export_button))
     
     $sql .= " AND E.room_id=R.id
               AND R.area_id=A.id";
+              
+    if ($time_subset == THIS_AND_FUTURE)
+    {
+      $sql .= " AND E.start_time>=$start_time";
+    }          
               
     if ($time_subset != THIS_ENTRY)
     {
