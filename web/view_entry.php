@@ -122,19 +122,19 @@ checkAuthorised();
 // PHASE 2
 if (isset($edit_button))
 {
-  header("Location: edit_entry.php?id=$id&time_subset=$time_subset&day=$day&month=$month&year=$year&returl=$returl");
+  header("Location: edit_entry.php?id=$id&time_subset=$time_subset&day=$day&month=$month&year=$year&returl=" . urlencode($returl));
   exit;
 }
 
 if (isset($delete_button))
 {
-  header("Location: del_entry.php?id=$id&time_subset=$time_subset&day=$day&month=$month&year=$year&returl=$returl");
+  header("Location: del_entry.php?id=$id&time_subset=$time_subset&day=$day&month=$month&year=$year&returl=" . urlencode($returl));
   exit;
 }
 
 if (isset($copy_button))
 {
-  header("Location: edit_entry.php?id=$id&copy=1&time_subset=$time_subset&day=$day&month=$month&year=$year&returl=$returl");
+  header("Location: edit_entry.php?id=$id&copy=1&time_subset=$time_subset&day=$day&month=$month&year=$year&returl=" . urlencode($returl));
   exit;
 }
 
