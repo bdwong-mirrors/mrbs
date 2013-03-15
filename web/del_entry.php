@@ -84,11 +84,11 @@ if ($info = mrbsGetBookingInfo($id, FALSE, TRUE))
     }
     
     // If it's a genuine this_and_future operation then it's really a modification
-    // of san existing booking.
+    // of an existing booking.
     if ($time_subset == THIS_AND_FUTURE)
     {
       $original_booking['end_date'] = $info['start_time'] - 1;  // Truncate the booking
-      $result = mrbsMakeBookings(array($original_booking), $id, FALSE, FALSE, $info['room_id'], $notify_by_email, WHOLE_SERIES);
+      $result = mrbsMakeBookings(array($original_booking), $id, FALSE, FALSE, $info['room_id'], $notify_by_email, WHOLE_SERIES, $note);
       mrbsDelEntry($user, $id, TRUE);
       Header("Location: $returl");
       exit();

@@ -1390,6 +1390,10 @@ function generate_submit($params)
     $html .= " title=\"" . $params['title'] . "\"";
   }
   $html .= " value=\"" . htmlspecialchars($params['value']) . "\"";
+  if ($params['disabled'])
+  {
+    $html .= " disabled";
+  }
   if ($params['formnovalidate'])
   {
     $html .= " formnovalidate";
@@ -1552,6 +1556,25 @@ function unslashes($s)
     return $s;
   }
 }
+
+
+// Returns the repeat_id for a row in the entry table with id $id
+function get_repeat_id($id)
+{
+  global $tbl_entry;
+  
+  $sql = "SELECT repeat_id FROM $tbl_entry WHERE id=$id LIMIT 1";
+  $repeat_id = sql_query1($sql);
+  if ($repeat_id <= 0)
+  {
+    return NULL;
+  }
+  else
+  {
+    return $repeat_id;
+  }
+}
+
 
 // Return a default area; used if no area is already known. This returns the
 // area that contains the default room (if it is set, valid and enabled) otherwise the
@@ -2410,31 +2433,33 @@ function cross_dst($start, $end)
   return $modification;
 }
 
-// If $time falls on a non-working day, shift it back to the end of the last 
-// working day before that
-function shift_to_workday($time)
+// If $time falls on a non-working day, shift it forward (back) to the
+// start (end) of the (next) last working day after (before) that
+function shift_to_workday($time, $backwards=FALSE)
 {
   global $working_days;
   
   $dow = date('w', $time);  // get the day of the week
-  $skip_back = 0;           // number of days to skip back
-  // work out how many days to skip back to get to a working day
+  $skip = 0;           // number of days to skip
+  // work out how many days to skip to get to a working day
   while (!in_array($dow, $working_days))
   {
-    if ($skip_back == 7)
+    if ($skip == 7)
     {
       break;
     }
-    $skip_back++;
-    $dow = ($dow + 6) % 7;  // equivalent to skipping back a day
+    $skip++;
+    $dow += ($backwards) ? 6 : 1;  // going forward by 6 is equivalent to back by 1
+    $dow = $dow % 7;
   }
-  if ($skip_back != 0)
+  if ($skip != 0)
   {
-    // set the time to the end of the working day
+    // set the time to the start (end) of the next (last) working day
     $d = date('j', $time) - $skip_back;
     $m = date('n', $time);
     $y  = date('Y', $time);
-    $time = mktime(23, 59, 59, $m, $d, $y);
+    $d += ($backwards) ? 1 - $skip : $skip;
+    $time = mktime(0, 0, 0, $m, $d, $y);
   }
   return $time;
 }
@@ -2470,8 +2495,8 @@ function working_time_diff($now, $then)
   
   // first of all, if $last or $first fall on a non-working day, shift
   // them back to the end of the last working day
-  $last = shift_to_workday($last);
-  $first = shift_to_workday($first);
+  $last = shift_to_workday($last, TRUE);
+  $first = shift_to_workday($first, TRUE);
   // So calculate the difference
   $diff = $last - $first;
   // Then we have to deduct all the non-working days in between.   This will be
@@ -2509,6 +2534,67 @@ function working_time_diff($now, $then)
   
   return (int) $diff;
 }
+
+
+// Adds $diff to $time and returns a $timestamp that takes into account
+// non-working days.
+function working_time_add($time, $diff)
+{
+  global $working_days;
+  
+  $result = $time;
+  
+  // Deal with the easy case
+  if ($diff == 0)
+  {
+    return $result;
+  }
+  
+  // Sanitise the $working_days array in case it was malformed
+  $working_week = array_unique(array_intersect(array(0,1,2,3,4,5,6), $working_days));
+  $n_working_days = count($working_week);
+  
+  // Deal with the special case where there are no working days
+  if ($n_working_days == 0)
+  {
+    // There must be at least one working day otherwise the result will be
+    // +/- infinity
+    trigger_error('There are no working days in $working_days', E_USER_WARNING);
+    return FALSE;
+  }
+  
+  // and the special case where there are no holidays
+  if ($n_working_days == 7)
+  {
+    return ($time + $diff);
+  }
+  
+  // If we're on a non-working day, shift forward/back to the start/end of
+  // the first working day.
+  $backwards = ($diff < 0);
+  $sign = ($backwards) ? -1 : 1;
+  $result = shift_to_workday($result, $backwards);
+  
+  // Get rid of any whole weeks in $diff
+  $weeks = abs($diff) % $n_working_days;
+  $remainder = abs($diff) - ($weeks * $n_working_days * SECONDS_PER_DAY);
+  $result += $sign * $weeks * SECONDS_PER_WEEK;
+
+  // Now get rid of the remainder
+  while ($remainder > SECONDS_PER_DAY)
+  {
+    $remainder -= SECONDS_PER_DAY;
+    $result += $sign * SECONDS_PER_DAY;
+    while (!in_array(date('w', $result), $working_week))
+    {
+      $result += $sign * SECONDS_PER_DAY;
+    }
+  }
+  $result += $sign * $remainder;
+  
+  return $result;
+}
+
 
 // checks whether a given day of the week is supposed to be hidden in the display
 function is_hidden_day ($dow)

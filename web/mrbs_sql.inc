@@ -935,130 +935,303 @@ function mrbsCreateRepeatingEntrys($data)
 // prevent users bombarding admins with reminder emails)
 //
 // Returns the number of tuples affected if OK (a number >= 0).
-// Returns -1 on error; use sql_error to get the error message.
-function mrbsUpdateLastReminded($id, $series)
+function mrbsUpdateLastReminded($id, $time_subset)
 {
   global $tbl_entry, $tbl_repeat;
   
+  // If it's some kind of series we need to get the repeat_id, the start_time
+  // of this entry and also work out in the case of THIS_AND_FUTURE whether
+  // we're really looking at a WHOLE_SERIES
+  if ($time_subset != THIS_ENTRY)
+  {
+    $row = get_start_times($id);
+    if (!empty($row))
+    {
+      $repeat_id = $row['repeat_id'];
+      $entry_start_time = $row['entry_start_time'];
+      $repeat_start_time = $row['repeat_start_time'];
+      // If the start_time of this entry is the same as the start_time of
+      // the whole series then it's really a special case of THIS_AND_FUTURE
+      //and we'll treat it as a WHOLE_SERIES
+      if ($entry_start_time == $repeat_start_time)
+      {
+        $time_subset == WHOLE_SERIES;
+      }
+    }
+  }
+  
   $now = time();
-  if ($series)
+  
+  sql_begin();
+  // Update the repeat table if we're doing the whole series
+  if ($time_subset == WHOLE_SERIES)
   {
     $sql = "UPDATE $tbl_repeat
                SET reminded=$now,
                    ical_sequence=ical_sequence+1
-             WHERE id=$id";
-    if (sql_command($sql) >= 0)
+             WHERE id=$repeat_id";
+    $result = sql_command($sql);
+    if ($result < 0)
     {
-      $sql = "UPDATE $tbl_entry
-                 SET reminded=$now,
-                     ical_sequence=ical_sequence+1
-               WHERE repeat_id=$id";
-      return sql_command($sql);
+      trigger_error(sql_error(), E_USER_WARNING);
+      fatal_error(FALSE, get_vocab("fatal_db_error"));
+    }
+    elseif ($result == 0)
+    {
+      trigger_error("Unexpected error: no rows returned", E_USER_NOTICE);
+      return 0;
     }
   }
-  else
+  
+  // Then update the entry table
+  switch ($time_subset)
   {
-    $sql = "UPDATE $tbl_entry
-               SET reminded=$now,
-                   ical_sequence=ical_sequence+1
-             WHERE id=$id";
-    if (sql_command($sql) > 0)
-    {
-      $repeat_id = sql_query1("SELECT repeat_id FROM $tbl_entry WHERE id=$id LIMIT 1");
-      if ($repeat_id >= 0)
-      {
-        $sql = "UPDATE $tbl_repeat
-                   SET reminded=$now,
-                       ical_sequence=ical_sequence+1
-                 WHERE id=$repeat_id";
-        return sql_command($sql);
-      }
-    }
+    case THIS_ENTRY:
+      $condition = "id=$id";
+      break;
+    case THIS_AND_FUTURE:
+      $condition = "repeat_id=$repeat_id AND start_time>=$entry_start_time";
+      break;
+    case WHOLE_SERIES:
+      $condition = "repeat_id=$repeat_id";
+      break;
+    default:
+      break;
   }
-  return -1;
+  $sql = "UPDATE $tbl_entry
+             SET reminded=$now,
+                 ical_sequence=ical_sequence+1
+           WHERE $condition";
+  $result = sql_command($sql);
+  if ($result < 0)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(FALSE, get_vocab("fatal_db_error"));
+  }
+  elseif ($result == 0)
+  {
+    trigger_error("Unexpected error: no rows returned", E_USER_NOTICE);
+  }
+  sql_commit();
+  
+  return $result;
 }
+
 
 // Update the entry/repeat tables with details about the last More Info
 // request (time, user, email text)
 //
-// If $series is TRUE then $id is the id of an entry in the repeat table
-// which is updated.   Otherwise $id is the id of an entry in the
-// entry table, which is updated.
-//
 // Returns the number of tuples affected if OK (a number >= 0).
-// Returns -1 on error; use sql_error to get the error message.
-function mrbsUpdateMoreInfo($id, $series, $user, $note)
+function mrbsUpdateMoreInfo($id, $time_subset, $user, $note)
 {
   global $tbl_entry, $tbl_repeat;
   
-  $table = ($series) ? $tbl_repeat : $tbl_entry;
+  // If it's some kind of series we need to get the repeat_id, the start_time
+  // of this entry and also work out in the case of THIS_AND_FUTURE whether
+  // we're really looking at a WHOLE_SERIES
+  if ($time_subset != THIS_ENTRY)
+  {
+    $row = get_start_times($id);
+    if (!empty($row))
+    {
+      $repeat_id = $row['repeat_id'];
+      $entry_start_time = $row['entry_start_time'];
+      $repeat_start_time = $row['repeat_start_time'];
+      // If the start_time of this entry is the same as the start_time of
+      // the whole series then it's really a special case of THIS_AND_FUTURE
+      //and we'll treat it as a WHOLE_SERIES
+      if ($entry_start_time == $repeat_start_time)
+      {
+        $time_subset == WHOLE_SERIES;
+      }
+    }
+  }
+  
   $now = time();
-  $sql = "UPDATE $table SET";
-  $sql .= " info_time=$now";
-  $sql .= ", info_user='" . sql_escape($user) . "'";
-  $sql .= ", info_text='" . sql_escape($note) . "'";
-  $sql .= " WHERE id=$id";
-  return sql_command($sql);
+    
+  sql_begin();
+  // Update the repeat table if we're doing the whole series
+  if ($time_subset == WHOLE_SERIES)
+  {
+    $sql = "UPDATE $tbl_repeat
+               SET info_time=$now,
+                   info_user='" . sql_escape($user) . "',
+                   info_text='" . sql_escape($note) . "'
+             WHERE id=$repeat_id";
+    $result = sql_command($sql);
+    if ($result < 0)
+    {
+      trigger_error(sql_error(), E_USER_WARNING);
+      fatal_error(FALSE, get_vocab("fatal_db_error"));
+    }
+    elseif ($result == 0)
+    {
+      trigger_error("Unexpected error: no rows returned", E_USER_NOTICE);
+      return 0;
+    }
+  }
+  
+  // Then update the entry table
+  switch ($time_subset)
+  {
+    case THIS_ENTRY:
+      $condition = "id=$id";
+      break;
+    case THIS_AND_FUTURE:
+      $condition = "repeat_id=$repeat_id AND start_time>=$entry_start_time";
+      break;
+    case WHOLE_SERIES:
+      $condition = "repeat_id=$repeat_id";
+      break;
+    default:
+      break;
+  }
+  $sql = "UPDATE $tbl_entry
+             SET info_time=$now,
+                 info_user='" . sql_escape($user) . "',
+                 info_text='" . sql_escape($note) . "'
+           WHERE id=$id";
+  $result = sql_command($sql);
+  if ($result < 0)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(FALSE, get_vocab("fatal_db_error"));
+  }
+  elseif ($result == 0)
+  {
+    trigger_error("Unexpected error: no rows returned", E_USER_NOTICE);
+  }
+  sql_commit();
+  
+  return $result;
 }
+
+
+// Given the id $id of a row in the entry table returns an associative
+// array containing
+//
+//    'entry_start_time'  the start time of this entry
+//    'repeat_start_time' the start time of the series
+//    'repeat_id'         the repeat_id of the series
+//
+// returns FALSE if the entry is not part of a series.
+//
+// Useful for THIS_AND_FUTURE operations on series
+function get_start_times($id)
+{
+  global $tbl_entry, $tbl_repeat;
+  
+  $sql = "SELECT E.start_time AS entry_start_time,
+                 R.start_time AS repeat_start_time,
+                 E.repeat_id
+            FROM $tbl_entry E, $tbl_repeat R
+           WHERE E.id=$id
+             AND R.id=E.repeat_id
+           LIMIT 1";
+  $res = sql_query($sql);
+  if ($res === FALSE)
+  {
+    trigger_error(sql_error(), E_USER_WARNING);
+    fatal_error(FALSE, get_vocab("fatal_db_error"));
+  }
+  elseif (sql_count($res) == 0)
+  {
+    trigger_error("Unexpected error: no rows returned", E_USER_NOTICE);
+    return FALSE;
+  }
+  else
+  {
+    return sql_row_keyed($res, 0);
+  }
+}
+
 
 // mrbsApproveEntry($id, $series)
 //
-// Approve an entry with id $id.   If series is set to TRUE
-// then the id is the id in the repeat table and we must approve
-// all the individual entries.
+// Approve an entry with id in the entry table of $id.  $time_subset
+// can be set to THIS_ENTRY, THIS_AND_FUTURE or WHOLE_SERIES.
+//
 // We also update the ical_sequence number so that any emails that
 // are generated will be treated by calendar clients as referring 
 // to the same meeting, rather than a new meeting.
 //
 // Returns FALSE on failure, otherwise an array of start times that
 // have been approved
-function mrbsApproveEntry($id, $series)
+function mrbsApproveEntry($id, $time_subset=THIS_ENTRY)
 {
   global $tbl_entry, $tbl_repeat;
   
-  if ($series)
+  // If it's some kind of series we need to get the repeat_id, the start_time
+  // of this entry and also work out in the case of THIS_AND_FUTURE whether
+  // we're really looking at a WHOLE_SERIES
+  if ($time_subset != THIS_ENTRY)
   {
-    // First update the repeat table if it's a series
-    $sql = "UPDATE $tbl_repeat 
-               SET status=status&(~" . STATUS_AWAITING_APPROVAL . "),
-                   ical_sequence=ical_sequence+1
-             WHERE id=$id";  // PostgreSQL does not support LIMIT with UPDATE
-    if (sql_command($sql) < 0)
+    $row = get_start_times($id);
+    if (!empty($row))
     {
-      trigger_error(sql_error(), E_USER_WARNING);
-      fatal_error(FALSE, get_vocab("fatal_db_error"));
+      $repeat_id = $row['repeat_id'];
+      $entry_start_time = $row['entry_start_time'];
+      $repeat_start_time = $row['repeat_start_time'];
+      // If the start_time of this entry is the same as the start_time of
+      // the whole series then it's really a special case of THIS_AND_FUTURE
+      //and we'll treat it as a WHOLE_SERIES
+      if ($entry_start_time == $repeat_start_time)
+      {
+        $time_subset == WHOLE_SERIES;
+      }
     }
-    $id_column = 'repeat_id';
   }
-  else
+  
+  switch ($time_subset)
   {
-    $id_column = 'id';
+    case THIS_ENTRY:
+      $condition = "id=$id";
+      break;
+    case THIS_AND_FUTURE:
+      $condition = "repeat_id=$repeat_id AND start_time>=$entry_start_time";
+      break;
+    case WHOLE_SERIES:
+      $condition = "repeat_id=$repeat_id";
+      break;
+    default:
+      break;
   }
-  // Then update the entry table.  First of all we get a list of the
-  // start times that will be approved, then we do the approval.
-  $condition = "$id_column=$id AND status&" . STATUS_AWAITING_APPROVAL . "!=0";
+  $condition .= " AND status&" . STATUS_AWAITING_APPROVAL . "!=0";
+  
+  // First of all get the start times of those entries that will be affected
   $sql = "SELECT start_time
             FROM $tbl_entry
            WHERE $condition";
   $start_times = sql_query_array($sql);
-
+  
   if (($start_times !== FALSE) && (count($start_times) != 0))
   {
+    sql_begin();
+    // Update the entry table
     $sql = "UPDATE $tbl_entry 
                SET status=status&(~" . STATUS_AWAITING_APPROVAL . "),
                    ical_sequence=ical_sequence+1
              WHERE $condition";  // PostgreSQL does not support LIMIT with UPDATE
-    
     if (sql_command($sql) < 0)
     {
       trigger_error(sql_error(), E_USER_WARNING);
       fatal_error(FALSE, get_vocab("fatal_db_error"));
     }
-  }
-  
-  if (is_array($start_times))
-  {
-    asort($start_times);
+    // and if necessary the repeat table
+    // First update the repeat table if it's a series
+    if ($time_subset == WHOLE_SERIES)
+    {
+      $sql = "UPDATE $tbl_repeat 
+                 SET status=status&(~" . STATUS_AWAITING_APPROVAL . "),
+                     ical_sequence=ical_sequence+1
+               WHERE id=$repeat_id";  // PostgreSQL does not support LIMIT with UPDATE
+      if (sql_command($sql) < 0)
+      {
+        trigger_error(sql_error(), E_USER_WARNING);
+        fatal_error(FALSE, get_vocab("fatal_db_error"));
+      }
+    }
+    sql_commit();
   }
   
   return $start_times;
@@ -1447,7 +1620,7 @@ function mrbsAddRoom($name, $area, &$error, $description='', $capacity='')
 // Makes bookings
 //    $bookings     an array of bookings
 //    $id           the id of the current booking when editing an existing entry
-function mrbsMakeBookings($bookings, $id=NULL, $just_check=FALSE, $skip=FALSE, $original_room_id=NULL, $send_mail=FALSE, $time_subset=THIS_ENTRY)
+function mrbsMakeBookings($bookings, $id=NULL, $just_check=FALSE, $skip=FALSE, $original_room_id=NULL, $send_mail=FALSE, $time_subset=THIS_ENTRY, $truncate_note=NULL)
 {
   global $max_rep_entrys, $enable_periods, $resolution, $mail_settings;
   global $tbl_entry, $tbl_room, $tbl_area;
@@ -1752,7 +1925,17 @@ function mrbsMakeBookings($bookings, $id=NULL, $just_check=FALSE, $skip=FALSE, $
         }
         // Send the email
         $is_new = !isset($id) || ($time_subset == THIS_AND_FUTURE);
-        notifyAdminOnBooking($booking, $mail_previous, $is_new, $is_repeat_table, $result['start_times']);
+        if (isset($truncate_note))
+        {
+          $action = 'truncate';
+          $note = $truncate_note;
+        }
+        else
+        {
+          $action = 'book';
+          $note = '';
+        }
+        notifyAdminOnBooking($booking, $mail_previous, $is_new, $is_repeat_table, $result['start_times'], $action, $note);
       }
     }   
   } // end foreach $bookings

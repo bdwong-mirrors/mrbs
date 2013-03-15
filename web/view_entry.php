@@ -6,81 +6,7 @@ require_once "mrbs_sql.inc";
 require_once "functions_view.inc";
 
 
-// Generates a single button
-function generateButton($form_action, $id, $series, $action_type, $returl, $submit_value, $title='')
-{
-  global $room_id;
-  
-  echo "<form action=\"" . htmlspecialchars($form_action).
-    "?id=$id&amp;series=$series\" method=\"post\">\n";
-  echo "<fieldset>\n";
-  echo "<legend></legend>\n";
-  echo "<input type=\"hidden\" name=\"action\" value=\"$action_type\">\n";
-  echo "<input type=\"hidden\" name=\"room_id\" value=\"$room_id\">\n";
-  echo "<input type=\"hidden\" name=\"returl\" value=\"" . htmlspecialchars($returl) . "\">\n";
-  echo "<input type=\"submit\" title=\"" . htmlspecialchars($title) . "\" value=\"$submit_value\">\n";
-  echo "</fieldset>\n";
-  echo "</form>\n";  
-}
-
-// Generates the Approve, Reject and More Info buttons
-function generateApproveButtons($id, $series)
-{
-  global $returl, $PHP_SELF;
-  global $entry_info_time, $entry_info_user, $repeat_info_time, $repeat_info_user;
-  
-  $info_time = ($series) ? $repeat_info_time : $entry_info_time;
-  $info_user = ($series) ? $repeat_info_user : $entry_info_user;
-  
-  $this_page = basename($PHP_SELF);
-  if (empty($info_time))
-  {
-    $info_title = get_vocab("no_request_yet");
-  }
-  else
-  {
-    $info_title = get_vocab("last_request") . ' ' . time_date_string($info_time);
-    if (!empty($info_user))
-    {
-      $info_title .= " " . get_vocab("by") . " $info_user";
-    }
-  }
-  
-  echo "<tr>\n";
-  echo "<td>" . ($series ? get_vocab("series") : get_vocab("entry")) . ":</td>\n";
-  echo "<td>\n";
-  generateButton("approve_entry_handler.php", $id, $series, "approve", $returl, get_vocab("approve"));
-  generateButton($this_page, $id, $series, "reject", $returl, get_vocab("reject"));
-  generateButton($this_page, $id, $series, "more_info", $returl, get_vocab("more_info"), $info_title);
-  echo "</td>\n";
-  echo "</tr>\n";
-}
-
-function generateOwnerButtons($id, $series)
-{
-  global $user, $create_by, $status, $area;
-  global $PHP_SELF, $reminders_enabled, $last_reminded, $reminder_interval;
-  
-  $this_page = basename($PHP_SELF);
-  
-  // Remind button if you're the owner AND there's a booking awaiting
-  // approval AND sufficient time has passed since the last reminder
-  // AND we want reminders in the first place
-  if (($reminders_enabled) &&
-      ($user == $create_by) && 
-      ($status & STATUS_AWAITING_APPROVAL) &&
-      (working_time_diff(time(), $last_reminded) >= $reminder_interval))
-  {
-    echo "<tr>\n";
-    echo "<td>&nbsp;</td>\n";
-    echo "<td>\n";
-    generateButton("approve_entry_handler.php", $id, $series, "remind", $this_page . "?id=$id&amp;area=$area", get_vocab("remind_admin"));
-    echo "</td>\n";
-    echo "</tr>\n";
-  } 
-}
-
-function generateTextArea($form_action, $id, $series, $action_type, $returl, $submit_value, $caption, $value='')
+function generateTextArea($form_action, $id, $time_subset, $action_type, $returl, $submit_value, $caption, $value='')
 {
   echo "<tr><td id=\"caption\" colspan=\"2\">$caption:</td></tr>\n";
   echo "<tr>\n";
@@ -90,7 +16,7 @@ function generateTextArea($form_action, $id, $series, $action_type, $returl, $su
   echo "<legend></legend>\n";
   echo "<textarea name=\"note\">" . htmlspecialchars($value) . "</textarea>\n";
   echo "<input type=\"hidden\" name=\"id\" value=\"$id\">\n";
-  echo "<input type=\"hidden\" name=\"series\" value=\"$series\">\n";
+  echo "<input type=\"hidden\" name=\"time_subset\" value=\"$time_subset\">\n";
   echo "<input type=\"hidden\" name=\"returl\" value=\"$returl\">\n";
   echo "<input type=\"hidden\" name=\"action\" value=\"$action_type\">\n";
   echo "<input type=\"submit\" value=\"$submit_value\">\n";
@@ -115,6 +41,10 @@ $edit_button = get_form_var('edit_button', 'string');
 $delete_button = get_form_var('delete_button', 'string');
 $copy_button = get_form_var('copy_button', 'string');
 $export_button = get_form_var('export_button', 'string');
+$approve_button = get_form_var('approve_button', 'string');
+$reject_button = get_form_var('reject_button', 'string');
+$more_info_button = get_form_var('more_info_button', 'string');
+$remind_button = get_form_var('remind_button', 'string');
 
 // Check the user is authorised for this page
 checkAuthorised();
@@ -137,6 +67,21 @@ if (isset($copy_button))
   header("Location: edit_entry.php?id=$id&copy=1&time_subset=$time_subset&day=$day&month=$month&year=$year&returl=" . urlencode($returl));
   exit;
 }
+
+if (isset($approve_button))
+{
+  header("Location: approve_entry_handler.php?id=$id&time_subset=$time_subset&action=approve&day=$day&month=$month&year=$year&returl=" . urlencode($returl));
+  exit;
+}
+
+if (isset($remind_button))
+{
+  header("Location: approve_entry_handler.php?id=$id&time_subset=$time_subset&action=remind&day=$day&month=$month&year=$year&returl=" . urlencode($returl));
+  exit;
+}
+
+// We'll deal with the Reject and More_info buttons later
+$is_phase1 = !isset($reject_button) && !isset($more_info_button);
 
 
 // Also need to know whether they have admin rights
@@ -343,23 +288,16 @@ if ($approval_enabled && !$room_disabled && ($status & STATUS_AWAITING_APPROVAL)
 {
   echo "<tfoot id=\"approve_buttons\">\n";
   // PHASE 2 - REJECT
-  if (isset($action) && ($action == "reject"))
+  if (isset($reject_button))
   {
-    // del_entry expects the id of a member of a series
-    // when deleting a series and not the repeat_id
-    generateTextArea("del_entry.php", $id, $series,
+    generateTextArea("del_entry.php", $id, $time_subset,
                      "reject", $returl,
                      get_vocab("reject"),
                      get_vocab("reject_reason"));
   }
   // PHASE 2 - MORE INFO
-  elseif (isset($action) && ($action == "more_info"))
+  elseif (isset($more_info_button))
   {
-    // but approve_entry_handler expects the id to be a repeat_id
-    // if $series is true (ie behaves like the rest of MRBS).
-    // Sometime this difference in behaviour should be rationalised
-    // because it is very confusing!
-    $target_id = ($series) ? $repeat_id : $id;
     $info_time = ($series) ? $repeat_info_time : $entry_info_time;
     $info_user = ($series) ? $repeat_info_user : $entry_info_user;
     $info_text = ($series) ? $repeat_info_text : $entry_info_text;
@@ -378,43 +316,18 @@ if ($approval_enabled && !$room_disabled && ($status & STATUS_AWAITING_APPROVAL)
       $value .= "\n----\n";
       $value .= $info_text;
     }
-    generateTextArea("approve_entry_handler.php", $target_id, $series,
+    generateTextArea("approve_entry_handler.php", $id, $time_subset,
                      "more_info", $returl,
                      get_vocab("send"),
                      get_vocab("request_more_info"),
                      $value);
   }
-  // PHASE 1 - first time through this page
-  else
-  {
-    // Buttons for those who are allowed to approve this booking
-    if (auth_book_admin($user, $row['room_id']))
-    {
-      if (!$series)
-      {
-        generateApproveButtons($id, FALSE);
-      }
-      if (!empty($repeat_id) || $series)
-      {
-        generateApproveButtons($repeat_id, TRUE);
-      }    
-    }
-    // Buttons for the owner of this booking
-    elseif ($user == $create_by)
-    {
-      generateOwnerButtons($id, $series);
-    }
-    // Others don't get any buttons
-    else
-    {
-      // But valid HTML requires that there's something inside the <tfoot></tfoot>
-      echo "<tr><td></td><td></td></tr>\n";
-    }
-  }
   echo "</tfoot>\n";
 }
 
 echo create_details_body($row, TRUE, $keep_private, $room_disabled);
+
+
 
 ?>
 </table>
@@ -422,137 +335,191 @@ echo create_details_body($row, TRUE, $keep_private, $room_disabled);
 
 <?php
 
-echo "<form id=\"view_nav\" method=\"post\" action=\"" . htmlspecialchars(basename($PHP_SELF)) . "\">\n";
-echo "<fieldset>\n";
-echo "<legend></legend>\n";
-
-if ((empty($repeat_id) && !$series) || !$repeats_allowed)
+if ($is_phase1)
 {
-  $time_subset = THIS_ENTRY;
-  echo "<input type=\"hidden\" name=\"time_subset\" value=\"$time_subset\">\n";
-}
-else
-{
-  $time_subset = ($repeats_allowed) ? WHOLE_SERIES : THIS_ENTRY;
-  $options = array(THIS_ENTRY      => get_vocab("this_entry"),
-                   THIS_AND_FUTURE => get_vocab("this_and_future"),
-                   WHOLE_SERIES    => get_vocab("whole_series"));
-  $params = array('name'    => 'time_subset',
-                  'value'   => $time_subset,
-                  'label'   => '',
-                  'options' => $options);
-  generate_radio_group($params);
+  echo "<form id=\"view_nav\" method=\"post\" action=\"" . htmlspecialchars(basename($PHP_SELF)) . "\">\n";
+  echo "<fieldset>\n";
+  echo "<legend></legend>\n";
 
-  // Don't display the table, but leave the JavaScript to display it.  (The table
-  // is only useful if JavaScript is enabled)
-  $n_rows = 1;  // ready for when we support linked bookings
-  $n_cols = 9;
-  $n_past_cols = 3;
-  $n_future_cols = $n_cols - ($n_past_cols + 1);
-  echo "<table style=\"display: none\">\n";
-  echo "<thead>\n";
-  echo "<tr>\n";
-  // We'll put the left and right arrows in using CSS as this makes it easier to
-  // cope with RTL languages such as Hebrew.   If browsers don't support :before
-  // and :after then the absence of the arrows isn't a major problem
-  echo "<th colspan=\"$n_past_cols\"><span id=\"past\">" . get_vocab("past") . "</span></th>\n";
-  echo "<th colspan=\"" . ($n_future_cols + 1) . "\" class=\"now\"><span id=\"future\">" . get_vocab("future") . "</span></th>\n";
-  if ($n_rows > 1)  // linked bookings
+  if ((empty($repeat_id) && !$series) || !$repeats_allowed)
   {
-    echo "<th></th>\n";
+    $time_subset = THIS_ENTRY;
+    echo "<input type=\"hidden\" name=\"time_subset\" value=\"$time_subset\">\n";
   }
-  echo "</tr>\n";
-  echo "</thead>\n";
-
-  echo "<tbody>\n";
-  for ($i=0; $i<$n_rows; $i++)
+  else
   {
-    echo "<tr>";
-    for ($j=0; $j<$n_cols; $j++)
+    $time_subset = ($repeats_allowed) ? WHOLE_SERIES : THIS_ENTRY;
+    $options = array(THIS_ENTRY      => get_vocab("this_entry"),
+                     THIS_AND_FUTURE => get_vocab("this_and_future"),
+                     WHOLE_SERIES    => get_vocab("whole_series"));
+    $params = array('name'    => 'time_subset',
+                    'value'   => $time_subset,
+                    'label'   => '',
+                    'options' => $options);
+    generate_radio_group($params);
+
+    // Don't display the table, but leave the JavaScript to display it.  (The table
+    // is only useful if JavaScript is enabled)
+    $n_rows = 1;  // ready for when we support linked bookings
+    $n_cols = 9;
+    $n_past_cols = 3;
+    $n_future_cols = $n_cols - ($n_past_cols + 1);
+    echo "<table style=\"display: none\">\n";
+    echo "<thead>\n";
+    echo "<tr>\n";
+    // We'll put the left and right arrows in using CSS as this makes it easier to
+    // cope with RTL languages such as Hebrew.   If browsers don't support :before
+    // and :after then the absence of the arrows isn't a major problem
+    echo "<th colspan=\"$n_past_cols\"><span id=\"past\">" . get_vocab("past") . "</span></th>\n";
+    echo "<th colspan=\"" . ($n_future_cols + 1) . "\" class=\"now\"><span id=\"future\">" . get_vocab("future") . "</span></th>\n";
+    if ($n_rows > 1)  // linked bookings
     {
-      echo "<td class=\"event ";
-      if ($j < $n_past_cols)
-      {
-        echo "past";
-      }
-      elseif ($j == $n_past_cols)
-      {
-        echo "now";
-      }
-      else
-      {
-        echo "future";
-      }
-      echo "\"><div></div></td>\n";
-    }
-    if ($n_rows > 1)  // ie when we have linked bookings
-    {
-      echo "<td>";
-      if ($i==0)
-      {
-        $params = array('name'    => 'this_room',
-                        'options' => array('1' => get_vocab('this_room_only')));
-        generate_radio($params);
-      }
-      elseif ($i==1)
-      {
-        $params = array('name'    => 'this_room',
-                        'options' => array('0' => get_vocab('all_linked_rooms')));
-        generate_radio($params);
-      }
-      echo "</td>\n";
+      echo "<th></th>\n";
     }
     echo "</tr>\n";
+    echo "</thead>\n";
+
+    echo "<tbody>\n";
+    for ($i=0; $i<$n_rows; $i++)
+    {
+      echo "<tr>";
+      for ($j=0; $j<$n_cols; $j++)
+      {
+        echo "<td class=\"event ";
+        if ($j < $n_past_cols)
+        {
+          echo "past";
+        }
+        elseif ($j == $n_past_cols)
+        {
+          echo "now";
+        }
+        else
+        {
+          echo "future";
+        }
+        echo "\"><div></div></td>\n";
+      }
+      if ($n_rows > 1)  // ie when we have linked bookings
+      {
+        echo "<td>";
+        if ($i==0)
+        {
+          $params = array('name'    => 'this_room',
+                          'options' => array('1' => get_vocab('this_room_only')));
+          generate_radio($params);
+        }
+        elseif ($i==1)
+        {
+          $params = array('name'    => 'this_room',
+                          'options' => array('0' => get_vocab('all_linked_rooms')));
+          generate_radio($params);
+        }
+        echo "</td>\n";
+      }
+      echo "</tr>\n";
+    }
+    echo "</tbody>\n";
+
+    echo "</table>\n";
   }
-  echo "</tbody>\n";
 
-  echo "</table>\n";
-}
+  echo "<input type=\"hidden\" name=\"returl\" value=\"" . htmlspecialchars($returl) . "\">\n";
+  echo "<input type=\"hidden\" name=\"day\" value=\"$day\">\n";
+  echo "<input type=\"hidden\" name=\"month\" value=\"$month\">\n";
+  echo "<input type=\"hidden\" name=\"year\" value=\"$year\">\n";
+  echo "<input type=\"hidden\" name=\"id\" value=\"$id\">\n";
 
-echo "<input type=\"hidden\" name=\"returl\" value=\"" . htmlspecialchars($returl) . "\">\n";
-echo "<input type=\"hidden\" name=\"day\" value=\"$day\">\n";
-echo "<input type=\"hidden\" name=\"month\" value=\"$month\">\n";
-echo "<input type=\"hidden\" name=\"year\" value=\"$year\">\n";
-echo "<input type=\"hidden\" name=\"id\" value=\"$id\">\n";
+  echo "<fieldset>\n";
+  echo "<legend></legend>\n";
 
-echo "<fieldset>\n";
-echo "<legend></legend>\n";
-$params = array();
-$buttons = array();
-
-// If we're looking at a series and repeats are not allowed then we can't edit,
-// delete or copy this booking, so don't show the buttons
-if (!$series || $repeats_allowed)
-{
-  // Only show the buttons for Edit and Delete if the room is enabled.    We're
-  // allowed to view and copy existing bookings in disabled rooms, but not to
-  // modify or delete them.
-  if (!$room_disabled)
+  // If bookings require approval, and the room is enabled, add the buttons
+  // to do with approving the bookings
+  if ($approval_enabled && !$room_disabled && ($status & STATUS_AWAITING_APPROVAL))
   {
-    $buttons['edit_button'] = get_vocab("edit");
-    $buttons['delete_button'] = get_vocab("delete");
+    $is_booking_admin = auth_book_admin($user, $row['room_id']);
+    $is_owner = ($user == $create_by);
+    if ($is_booking_admin || ($is_owner && $reminders_enabled))
+    {
+      echo "<fieldset>\n";
+      echo "<legend></legend>\n";
+      // Buttons for those who are allowed to approve this booking
+      if ($is_booking_admin)
+      {
+        $approval_buttons[] = array('name'  => 'approve_button',
+                                    'value' => get_vocab("approve"));
+        $approval_buttons[] = array('name'  => 'reject_button',
+                                    'value' => get_vocab("reject"));
+        $approval_buttons[] = array('name'  => 'more_info_button',
+                                    'value' => get_vocab("more_info"));
+      }
+      else
+      // Buttons for the owner of this booking as long as reminders are enabled
+      {
+        $disabled = (working_time_diff(time(), $last_reminded) < $reminder_interval);
+        $params = array('name'     => 'remind_button',
+                        'value'    => get_vocab("remind_admin"),
+                        'disabled' => $disabled);
+        if ($disabled)
+        {
+          $format = ($twentyfourhour_format) ? $strftime_format['datetime24'] : $strftime_format['datetime12'];
+          $next_reminder = get_vocab("next_reminder_possible");
+          $next_reminder .= utf8_strftime($format, working_time_add($last_reminded, $reminder_interval));
+          $params['title'] = $next_reminder;
+        }
+        $approval_buttons[] = $params;
+      }
+      foreach($approval_buttons as $params)
+      {
+        generate_submit($params);
+      }
+      echo "</fieldset>\n";
+    }
   }
-  $buttons['copy_button'] = get_vocab("copy");
-}
 
-// The iCalendar information has the full booking details in it, so we will not allow
-// it to be exported if it is private and the user is not authorised to see it.
-// iCalendar information doesn't work with periods at the moment (no periods to times mapping)
-if (!$keep_private && !$enable_periods)
-{
-  $buttons['export_button'] = get_vocab("export");
-}
+  // And now the Edit/Delete/Copy/Export buttons
+  echo "<fieldset>\n";
+  echo "<legend></legend>\n";
 
-foreach($buttons as $name => $value)
-{
-  $params['name'] = $name;
-  $params['value'] = $value;
-  generate_submit($params);
-}
-echo "</fieldset>\n";
+  $buttons = array();
 
-echo "</fieldset>\n";
-echo "</form>\n";
+  // If we're looking at a series and repeats are not allowed then we can't edit,
+  // delete or copy this booking, so don't show the buttons
+  if (!$series || $repeats_allowed)
+  {
+    // Only show the buttons for Edit and Delete if the room is enabled.    We're
+    // allowed to view and copy existing bookings in disabled rooms, but not to
+    // modify or delete them.
+    if (!$room_disabled)
+    {
+      $buttons[] = array('name'  => 'edit_button',
+                         'value' => get_vocab("edit"));
+      $buttons[] = array('name'  => 'delete_button',
+                         'value' => get_vocab("delete"));
+    }
+    $buttons[] = array('name'  => 'copy_button',
+                       'value' =>  get_vocab("copy"));
+  }
+
+  // The iCalendar information has the full booking details in it, so we will not allow
+  // it to be exported if it is private and the user is not authorised to see it.
+  // iCalendar information doesn't work with periods at the moment (no periods to times mapping)
+  if (!$keep_private && !$enable_periods)
+  {
+    $buttons[] = array('name'  => 'export_button',
+                       'value' => get_vocab("export"));
+  }
+
+  foreach($buttons as $params)
+  {
+    generate_submit($params);
+  }
+  echo "</fieldset>\n";
+
+  echo "</fieldset>\n";
+  echo "</fieldset>\n";
+  echo "</form>\n";
+}  // if ($is_phase1)
 
 ?>
 

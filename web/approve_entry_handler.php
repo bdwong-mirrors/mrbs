@@ -10,7 +10,7 @@ require_once "functions_mail.inc";
 // Get non-standard form variables
 $action = get_form_var('action', 'string');
 $id = get_form_var('id', 'int');
-$series = get_form_var('series', 'int');
+$time_subset = get_form_var('time_subset', 'int');
 $returl = get_form_var('returl', 'string');
 $room_id = get_form_var('room_id', 'int');
 $note = get_form_var('note', 'string');
@@ -55,9 +55,9 @@ if (isset($action))
       {
         $is_new_entry = FALSE;
         // Get the current booking data, before we change anything, for use in emails
-        $mail_previous = mrbsGetBookingInfo($id, $series);
+        $mail_previous = mrbsGetBookingInfo($id, FALSE);
       }
-      $start_times = mrbsApproveEntry($id, $series);
+      $start_times = mrbsApproveEntry($id, $time_subset);
       $result = ($start_times !== FALSE);
       if ($result === FALSE)
       {
@@ -70,9 +70,9 @@ if (isset($action))
     case 'more_info':
       // update the last reminded time (the ball is back in the 
       // originator's court, so the clock gets reset)
-      mrbsUpdateLastReminded($id, $series);
+      mrbsUpdateLastReminded($id, $time_subset);
       // update the more info fields
-      mrbsUpdateMoreInfo($id, $series, $user, $note);
+      mrbsUpdateMoreInfo($id, $time_subset, $user, $note);
       $result = TRUE;  // We'll assume success and end an email anyway
       break;
     
@@ -80,7 +80,7 @@ if (isset($action))
     // ACTION = "REMIND"
     case 'remind':
       // update the last reminded time
-      mrbsUpdateLastReminded($id, $series);
+      mrbsUpdateLastReminded($id, $time_subset);
       $result = TRUE;  // We'll assume success and end an email anyway
       break;
       
@@ -96,12 +96,12 @@ if (isset($action))
   if ($result && $need_to_send_mail)
   {
     // Retrieve the booking details which we will need for the email
-    $data = mrbsGetBookingInfo($id, $series);
+    $data = mrbsGetBookingInfo($id, FALSE);
     // Get the area settings for this area (we will need to know if periods are enabled
-    // so that we will kniow whether to include iCalendar information in the email)
+    // so that we will know whether to include iCalendar information in the email)
     get_area_settings($data['area_id']);
     // Send the email
-    $result = notifyAdminOnBooking($data, $mail_previous, $is_new_entry, $series, $start_times, $action, $note);
+    $result = notifyAdminOnBooking($data, $mail_previous, $is_new_entry, FALSE, $start_times, $action, $note);
   }
 }
 

@@ -465,6 +465,7 @@ function create_body($data, $mail_previous, $compare, $series, $action, $as_html
       $body .= get_mail_vocab("mail_body_reminder");
       break;
     case "reject":
+    case "truncate":
       $body .= get_mail_vocab("mail_body_rej_entry");
       $body .= ($as_html) ? "</p><p>" : "\n\n";
       $body .= get_mail_vocab("reason") . ': ';
@@ -974,7 +975,9 @@ function notifyAdminOnBooking($data, $mail_previous, $new_entry, $series, $start
   
   // Create the iCalendar if required
   $attachment = array();
-  if ($mail_settings['icalendar'] && !$enable_periods)
+  if ($mail_settings['icalendar'] &&
+      !$enable_periods &&
+      !in_array($action, array('more_info', 'remind')))
   {
     $attachment['method']   = "REQUEST";
     $ical_components = array();
@@ -1121,7 +1124,7 @@ function sendMail($addresses, $subject, $text_body, $html_body, $attachment, $ch
   require_once "Mail/mime.php";
   require_once "Mail/mimePart.php";
 
-  global $mail_settings, $sendmail_settings, $smtp_settings, $enable_periods;
+  global $mail_settings, $sendmail_settings, $smtp_settings;
   
   // Don't do aything if mail has been disabled.   Useful for testing MRBS without
   // sending emails to those who don't want them
@@ -1239,7 +1242,7 @@ function sendMail($addresses, $subject, $text_body, $html_body, $attachment, $ch
     unset($mime_params['cid']);
   }
   
-  if (!$mail_settings['icalendar'] || $enable_periods)
+  if (empty($attachment))
   {
     // If we're not sending iCalendar information we've now got everything,
     // so we'll make the "inner" section the complete mime.

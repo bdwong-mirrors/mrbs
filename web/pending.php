@@ -12,6 +12,8 @@ function display_buttons($row, $is_series)
   $returl = $PHP_SELF;
                                     
   $target_id = ($is_series) ? $row['repeat_id'] : $row['id'];
+  $time_subset = ($is_series) ? WHOLE_SERIES : THIS_ENTRY;
+  $id = $row['id'];
 
   // When we're going to view_entry.php we need to pass the id and series
   // in a query string rather than as hidden inputs.   That's because some
@@ -26,8 +28,8 @@ function display_buttons($row, $is_series)
     echo "<form action=\"approve_entry_handler.php\" method=\"post\">\n";
     echo "<div>\n";
     echo "<input type=\"hidden\" name=\"action\" value=\"approve\">\n";
-    echo "<input type=\"hidden\" name=\"id\" value=\"$target_id\">\n";
-    echo "<input type=\"hidden\" name=\"series\" value=\"$is_series\">\n";
+    echo "<input type=\"hidden\" name=\"id\" value=\"$id\">\n";
+    echo "<input type=\"hidden\" name=\"time_subset\" value=\"$time_subset\">\n";
     echo "<input type=\"hidden\" name=\"returl\" value=\"" . htmlspecialchars($returl) . "\">\n";
     echo "<input type=\"submit\" value=\"" . get_vocab("approve") . "\">\n";
     echo "</div>\n";

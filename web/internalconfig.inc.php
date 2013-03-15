@@ -98,6 +98,7 @@ define('IS_XHTML', FALSE);
 define('MINUTES_PER_DAY',  24*60);
 define('SECONDS_PER_DAY',  MINUTES_PER_DAY * 60);
 define('SECONDS_PER_HOUR', 3600);
+define('SECONDS_PER_WEEK', SECONDS_PER_DAY * 7);
  
 define('NBSP', '\a0');    // non-breaking space
 define('LARR', '\2190');  // left arrow
