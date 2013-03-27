@@ -433,12 +433,14 @@ if ($is_phase1)
   echo "<fieldset>\n";
   echo "<legend></legend>\n";
 
+  $is_booking_admin = auth_book_admin($user, $row['room_id']);
+  $is_owner = ($user == $create_by);
+  
   // If bookings require approval, and the room is enabled, add the buttons
   // to do with approving the bookings
   if ($approval_enabled && !$room_disabled && ($status & STATUS_AWAITING_APPROVAL))
   {
-    $is_booking_admin = auth_book_admin($user, $row['room_id']);
-    $is_owner = ($user == $create_by);
+
     if ($is_booking_admin || ($is_owner && $reminders_enabled))
     {
       $approval_buttons = array();
@@ -492,7 +494,7 @@ if ($is_phase1)
     // Only show the buttons for Edit and Delete if the room is enabled.    We're
     // allowed to view and copy existing bookings in disabled rooms, but not to
     // modify or delete them.
-    if (!$room_disabled)
+    if (!$room_disabled && ($is_booking_admin || $is_owner))
     {
       $buttons[] = array('name'  => 'edit_button',
                          'value' => get_vocab("edit"));
