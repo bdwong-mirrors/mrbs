@@ -441,6 +441,8 @@ if ($is_phase1)
     $is_owner = ($user == $create_by);
     if ($is_booking_admin || ($is_owner && $reminders_enabled))
     {
+      $approval_buttons = array();
+      
       echo "<fieldset>\n";
       echo "<legend></legend>\n";
       // Buttons for those who are allowed to approve this booking
