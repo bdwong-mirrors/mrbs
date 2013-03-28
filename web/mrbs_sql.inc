@@ -1136,7 +1136,6 @@ function get_start_times($id)
   }
   elseif (sql_count($res) == 0)
   {
-    trigger_error("Unexpected error: no rows returned", E_USER_NOTICE);
     return FALSE;
   }
   else
