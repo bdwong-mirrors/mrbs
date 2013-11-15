@@ -79,9 +79,7 @@ function validate_password($password)
       switch($rule)
       {
         case 'length':
-          // assumes that the site has enabled multi-byte string function
-          // overloading if necessary in php.ini
-          if (strlen($password) < $pwd_policy[$rule])
+          if (utf8_strlen($password) < $pwd_policy[$rule])
           {
             return FALSE;
           }
@@ -552,7 +550,7 @@ if (isset($Action) && ($Action == "Update"))
       // Truncate the field to the maximum length as a precaution.
       if (isset($maxlength["users.$fieldname"]))
       {
-        $values[$fieldname] = substr($values[$fieldname], 0, $maxlength["users.$fieldname"]);
+        $values[$fieldname] = utf8_substr($values[$fieldname], 0, $maxlength["users.$fieldname"]);
       }
       // we will also put the data into a query string which we will use for passing
       // back to this page if we fail validation.   This will enable us to reload the
@@ -718,9 +716,7 @@ if (isset($Action) && ($Action == "Update"))
   
       foreach ($sql_fields as $fieldname => $value)
       {
-        // Note that we don't have to escape or quote the fieldname
-        // thanks to the restriction on custom field names
-        array_push($assign_array,"$fieldname=$value");
+        array_push($assign_array, sql_quote($fieldname) . "=$value");
       }
       $operation .= implode(",", $assign_array) . " WHERE id=$Id;";
     }
@@ -736,11 +732,11 @@ if (isset($Action) && ($Action == "Update"))
         array_push($fields_list,$fieldname);
         array_push($values_list,$value);
       }
-      // Note that we don't have to escape or quote the fieldname
-      // thanks to the restriction on custom field names
+
+      $fields_list = array_map('sql_quote', $fields_list);
       $operation = "INSERT INTO $tbl_users " .
-        "(". implode(",",$fields_list) . ")" .
-        " VALUES " . "(" . implode(",",$values_list) . ");";
+        "(". implode(",", $fields_list) . ")" .
+        " VALUES " . "(" . implode(",", $values_list) . ");";
     }
   
     /* DEBUG lines - check the actual sql statement going into the db */

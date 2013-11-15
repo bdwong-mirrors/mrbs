@@ -50,6 +50,13 @@ function sql_mysqli_escape($str, $db_conn = null)
 }
 
 
+// Quote a table or column name
+function sql_mysqli_quote($identifier)
+{
+  return '`' . $identifier . '`';
+}
+
+
 // Execute a non-SELECT SQL command (insert/update/delete).
 // Returns the number of tuples affected if OK (a number >= 0).
 // Returns -1 on error; use sql_error to get the error message.
@@ -295,7 +302,7 @@ function sql_mysqli_syntax_casesensitive_equals($fieldname, $s, $db_conn = null)
 {
   sql_mysqli_ensure_handle($db_conn);
 
-  return " BINARY `$fieldname`='" . sql_mysqli_escape($s) . "'";
+  return " BINARY " . sql_mysqli_quote($fieldname) . "='" . sql_mysqli_escape($s) . "'";
 }
 
 // Generate non-standard SQL to match a string anywhere in a field's value
@@ -501,8 +508,13 @@ function sql_mysqli_field_info($table, $db_conn = null)
 // Connect to a database server and select a database, optionally using
 // persistent connections
 function sql_mysqli_connect($host, $username, $password,
-                            $db_name, $persist = 0)
+                            $db_name, $persist = 0, $db_port = 3306)
 {
+  if (empty($db_port))
+  {
+    $db_port = 3306;
+  }
+
   // Establish a database connection.
 
   // On connection error, the message will be output without a proper HTML
@@ -520,7 +532,7 @@ function sql_mysqli_connect($host, $username, $password,
     $full_host = $host;
   }
   
-  $db_conn = new mysqli($full_host, $username, $password, $db_name);
+  $db_conn = new mysqli($full_host, $username, $password, $db_name, $db_port);
 
   /* check connection */
   if (mysqli_connect_errno())
@@ -544,7 +556,7 @@ function sql_mysqli_connect($host, $username, $password,
 function sql_mysqli_default_connect()
 {
   global $sql_mysqli_conn, $db_nopersist, $db_host, $db_login, $db_password,
-         $db_database;
+         $db_database, $db_port;
 
   /////////////////////////////////////////////
   // Open the standard MRBS database connection
@@ -555,8 +567,15 @@ function sql_mysqli_default_connect()
     $persist = 0;
   }
 
+  $port = NULL;
+  // If a port is specified, cast it to int as mysqli doesn't accept
+  // a string port specifier
+  if (isset($db_port))
+  {
+    $port = (int)$db_port;
+  }
   $sql_mysqli_conn = sql_mysqli_connect($db_host, $db_login, $db_password,
-                                        $db_database, $persist);
+                                        $db_database, $persist, $port);
 }
 
 

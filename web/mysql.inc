@@ -50,6 +50,13 @@ function sql_mysql_escape($str, $db_conn = null)
 }
 
 
+// Quote a table or column name
+function sql_mysql_quote($identifier)
+{
+  return '`' . $identifier . '`';
+}
+
+
 // Execute a non-SELECT SQL command (insert/update/delete).
 // Returns the number of tuples affected if OK (a number >= 0).
 // Returns -1 on error; use sql_error to get the error message.
@@ -287,7 +294,7 @@ function sql_mysql_syntax_casesensitive_equals($fieldname, $s, $db_conn = null)
 {
   sql_mysql_ensure_handle($db_conn);
 
-  return " BINARY `$fieldname`='" . sql_mysql_escape($s) . "'";
+  return " BINARY " . sql_mysql_quote($fieldname) . "='" . sql_mysql_escape($s) . "'";
 }
 
 // Generate non-standard SQL to match a string anywhere in a field's value
@@ -470,8 +477,14 @@ function sql_mysql_field_info($table, $db_conn = null)
 
 // Connect to a database server and select a database, optionally using
 // persistent connections
-function sql_mysql_connect($host, $username, $password, $db_name, $persist = 0)
+function sql_mysql_connect($host, $username, $password, $db_name, $persist = 0,
+                           $db_port = 3306)
 {
+  if (empty($db_port))
+  {
+    $db_port = 3306;
+  }
+
   // Establish a database connection.
 
   // On connection error, the message will be output without a proper HTML
@@ -481,11 +494,11 @@ function sql_mysql_connect($host, $username, $password, $db_name, $persist = 0)
 
   if ($persist)
   {
-    $db_conn = mysql_pconnect($host, $username, $password);
+    $db_conn = mysql_pconnect("$host:$db_port", $username, $password);
   }
   else
   {
-    $db_conn = mysql_connect($host, $username, $password);
+    $db_conn = mysql_connect("$host:$db_port", $username, $password);
   }
 
   if (!$db_conn || !mysql_select_db ($db_name, $db_conn))
@@ -509,7 +522,7 @@ function sql_mysql_connect($host, $username, $password, $db_name, $persist = 0)
 function sql_mysql_default_connect()
 {
   global $sql_mysql_conn, $db_nopersist, $db_host, $db_login, $db_password,
-         $db_database;
+         $db_database, $db_port;
 
   /////////////////////////////////////////////
   // Open the standard MRBS database connection
@@ -520,8 +533,15 @@ function sql_mysql_default_connect()
     $persist = 0;
   }
 
+  $port = null;
+  // If a port is specified, cast it to int for safety
+  if (isset($db_port))
+  {
+    $port = (int)$db_port;
+  }
+
   $sql_mysql_conn = sql_mysql_connect($db_host, $db_login, $db_password,
-                                      $db_database, $persist);
+                                      $db_database, $persist, $port);
 }
 
 

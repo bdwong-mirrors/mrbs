@@ -77,6 +77,17 @@ function sql_escape($str)
 }
 
 
+// Quote a table or column name
+function sql_quote($identifier)
+{
+  global $dbsys;
+  
+  $db_sys = $dbsys;
+  $f = "sql_${db_sys}_quote";
+  return $f($identifier);
+}
+
+
 // Run an SQL query that doesn't produce results
 function sql_command($sql)
 {

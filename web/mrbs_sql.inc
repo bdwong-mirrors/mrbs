@@ -19,7 +19,7 @@ function mrbsCheckFree(&$booking, $ignore, $repignore)
 {
   global $tbl_entry;
   global $enable_periods, $periods, $twentyfourhour_format;
-  global $strftime_format;
+  global $strftime_format, $is_private_field;
 
   $room_id = $booking['room_id'];
   $user = getUserName();
@@ -579,9 +579,8 @@ function mrbsCreateEntry($table, $data)
     } // if
   } // foreach
   
-  // Note that we don't have to escape or quote the fieldname
-  // thanks to the restriction on custom field names
-  $sql = "INSERT INTO $table (" . implode(', ',$sql_col) . ") VALUES (" . implode(', ',$sql_val) . ")";
+  $sql_col = array_map('sql_quote', $sql_col);
+  $sql = "INSERT INTO $table (" . implode(', ', $sql_col) . ") VALUES (" . implode(', ',$sql_val) . ")";
 
   if (sql_command($sql) < 0)
   {
@@ -1211,6 +1210,7 @@ function mrbsApproveEntry($id, $time_subset=THIS_ENTRY)
                SET status=status&(~" . STATUS_AWAITING_APPROVAL . "),
                    ical_sequence=ical_sequence+1
              WHERE $condition";  // PostgreSQL does not support LIMIT with UPDATE
+    
     if (sql_command($sql) < 0)
     {
       trigger_error(sql_error(), E_USER_WARNING);
@@ -1500,7 +1500,7 @@ function mrbsAddArea($name, &$error)
   }
   
   // Truncate the name field to the maximum length as a precaution.
-  $name = substr($name, 0, $maxlength['area.area_name']);
+  $name = utf8_substr($name, 0, $maxlength['area.area_name']);
   $area_name_q = sql_escape($name);
   // Acquire a mutex to lock out others who might be editing the area
   if (!sql_mutex_lock("$tbl_area"))
@@ -1580,8 +1580,8 @@ function mrbsAddRoom($name, $area, &$error, $description='', $capacity='')
   }
   
   // Truncate the name and description fields to the maximum length as a precaution.
-  $name = substr($name, 0, $maxlength['room.room_name']);
-  $description = substr($description, 0, $maxlength['room.description']);
+  $name = utf8_substr($name, 0, $maxlength['room.room_name']);
+  $description = utf8_substr($description, 0, $maxlength['room.description']);
   // Add SQL escaping
   $room_name_q = sql_escape($name);
   $description_q = sql_escape($description);

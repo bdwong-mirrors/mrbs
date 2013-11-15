@@ -62,6 +62,9 @@ $dbsys = "mysqli";
 // Hostname of database server. For pgsql, can use "" instead of localhost
 // to use Unix Domain Sockets instead of TCP/IP.
 $db_host = "localhost";
+// If you need to specify a non-standard port for the database connection
+// you can define this
+//$db_port = 1234;
 // Database name:
 $db_database = "mrbs";
 // Database login user name:
@@ -83,7 +86,8 @@ $maxlength['room.room_name']   = 25;  // characters   (room_name field in room t
 $maxlength['room.description'] = 60;  // characters   (description field in room table)
 $maxlength['users.name']       = 30;  // characters   (name field in users table)
 $maxlength['users.email']      = 75;  // characters   (email field in users table)
-// other values for the users table need to follow the $maxlength['users.fieldname'] pattern
+// other values for the entry or users table need to follow the $maxlength['tablename.fieldname']
+// pattern
 
 
 /*********************************
@@ -147,6 +151,9 @@ $url_base = "";
 // "classic126"     Same colour scheme as MRBS 1.2.6
 
 $theme = "default";
+
+// Use the $custom_css_url to override the standard MRBS CSS.
+//$custom_css_url = 'css/custom.css';
 
 
 /*******************
@@ -523,6 +530,17 @@ $working_days = array(1,2,3,4,5);  // Mon-Fri
 // be useful if the database table is being shared with another application.
 // MRBS will auto-detect whether the array is associative.
 //
+// Note that an array such as
+//
+// $select_options['entry.catering'] = array('2' => 'Coffee', 
+//                                           '4' => 'Sandwiches',
+//                                           '5' => 'Hot Lunch');
+//
+// will be treated as a simple indexed array rather than as an associative array.
+// That's because (a) strictly speaking PHP does not distinguish between indexed
+// and associative arrays and (b) PHP will cast any string key that looks like a
+// valid integer into an integer.
+//
 // If you want to make the select field a mandatory field (see below) then include
 // an empty string as one of the values, eg
 //
@@ -614,11 +632,20 @@ $auth["session_cookie"]["include_ip"] = TRUE;
 
 // Configuration parameters for 'php' session scheme
 
-// The expiry time of a session, in seconds
+// The expiry time of a session cookie, in seconds
 // N.B. Long session expiry times rely on PHP not retiring the session
 // on the server too early. If you only want session cookies to be used,
 // set this to 0.
 $auth["session_php"]["session_expire_time"] = (60*60*24*30); // 30 days
+
+// Set this to the expiry time for a session after a period of inactivity
+// in seconds.   Setting to zero means that the sesion will not expire after
+// a period of activity - but note that it will expire if the session cookie
+// happens to expire (see above).  Note that if you have $refresh_rate set and
+// your system is not capable of doing Ajax refreshes but instead uses a <meta>
+// tag to do the refresh, then these refreshes will count as activity - this
+// be the case if you have JavaScript disabled on the client.
+$auth["session_php"]["inactivity_expire_time"] = 0; // seconds
 
 
 // Cookie path override. If this value is set it will be used by the
@@ -684,8 +711,11 @@ $min_user_editing_level = 2;
 // The 'db_system' variable is equivalent to the core MRBS $dbsys variable,
 // and allows you to use any of MRBS's database abstraction layers for
 // db_ext authentication.
-$auth['db_ext']['db_system'] = 'mysql';
+$auth['db_ext']['db_system'] = 'mysqli';
 $auth['db_ext']['db_host'] = 'localhost';
+// If you need to specify a non-standard port for the database connection
+// you can define this
+//$auth['db_ext']['db_port'] = 1234;
 $auth['db_ext']['db_username'] = 'authuser';
 $auth['db_ext']['db_password'] = 'authpass';
 $auth['db_ext']['db_name'] = 'authdb';

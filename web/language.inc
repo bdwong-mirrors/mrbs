@@ -71,6 +71,8 @@ $lang_map_windows = array
   'es' => 'esp',
   'es-es' => 'esp',
   'es-mx' => 'esm',
+  'et' => 'eti',
+  'et-ee' => 'eti',
   'eu' => 'eus',
   'eu-es' => 'eus',
   'fi' => 'fin',
@@ -162,6 +164,7 @@ $winlocale_codepage_map = array
   'esm' => 'CP1252',
   'esp' => 'CP1252',
   'eus' => 'CP1252',
+  'eti' => 'CP1257',
   'fin' => 'CP1252',
   'fra' => 'CP1252',
   'frb' => 'CP1252',
@@ -203,6 +206,7 @@ $lang_map_unix = array
   'da' => 'da_DK',
   'el' => 'el_GR',
   'en' => 'en_GB',
+  'et' => 'et_EE',
   'eu' => 'eu_ES',
   'ja' => 'ja_JP',
   'ko' => 'ko_KR',
@@ -544,7 +548,7 @@ function determine_mrbs_locale()
   {
     if ($server_os == "windows")
     {
-      if ($lang_map_windows[strtolower($locale)])
+      if (array_key_exists(strtolower($locale), $lang_map_windows))
       {
         $mrbs_locale = $lang_map_windows[strtolower($locale)];
         $windows_locale = $mrbs_locale;
@@ -1016,7 +1020,7 @@ function utf8_convert_from_locale($string)
 
   if ($server_os == "windows")
   {
-    if ($winlocale_codepage_map[$windows_locale])
+    if (array_key_exists($windows_locale, $winlocale_codepage_map))
     {
       $string = iconv($winlocale_codepage_map[$windows_locale],"utf-8",
                       $string);
